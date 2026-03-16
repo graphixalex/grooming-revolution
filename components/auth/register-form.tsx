@@ -1,17 +1,57 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { COUNTRY_OPTIONS, getCountryMeta } from "@/lib/geo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-export function RegisterForm({ action }: { action: (formData: FormData) => void | Promise<void> }) {
+export function RegisterForm() {
+  const router = useRouter();
   const [country, setCountry] = useState("IT");
   const [timezone, setTimezone] = useState(getCountryMeta("IT").defaultTimezone);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const currency = useMemo(() => getCountryMeta(country).currency, [country]);
 
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    try {
+      setLoading(true);
+      setError("");
+      const formData = new FormData(event.currentTarget);
+      const payload = {
+        nomeAttivita: String(formData.get("nomeAttivita") || ""),
+        nomeSede: String(formData.get("nomeSede") || ""),
+        indirizzo: String(formData.get("indirizzo") || ""),
+        paese: String(formData.get("paese") || ""),
+        valuta: String(formData.get("valuta") || ""),
+        timezone: String(formData.get("timezone") || ""),
+        email: String(formData.get("email") || ""),
+        password: String(formData.get("password") || ""),
+      };
+
+      const res = await fetch("/api/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Errore registrazione");
+        return;
+      }
+      router.push("/login");
+      router.refresh();
+    } catch {
+      setError("Errore registrazione");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
-    <form className="space-y-3" action={action}>
+    <form className="space-y-3" onSubmit={onSubmit}>
       <Input name="nomeAttivita" placeholder="Nome attivita" required />
       <Input name="nomeSede" placeholder="Nome sede (es. Centro)" required />
       <Input name="indirizzo" placeholder="Indirizzo sede" required />
@@ -54,8 +94,10 @@ export function RegisterForm({ action }: { action: (formData: FormData) => void 
         Piano trial: fino a 100 clienti. Poi piano FULL a 20 EUR/mese + IVA con addebito automatico.
       </div>
 
-      <Button type="submit" className="w-full">
-        Registrati
+      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+
+      <Button type="submit" className="w-full" disabled={loading}>
+        {loading ? "Creazione account in corso..." : "Registrati"}
       </Button>
     </form>
   );

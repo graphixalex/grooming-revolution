@@ -1,7 +1,5 @@
-"use server";
-
+import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { registerSchema } from "@/lib/validators";
 import { getCountryMeta } from "@/lib/geo";
@@ -19,20 +17,11 @@ const defaultTreatments = [
   "Trattamento Dermatologico",
 ];
 
-export async function registerAction(formData: FormData) {
-  const parsed = registerSchema.safeParse({
-    nomeAttivita: formData.get("nomeAttivita"),
-    nomeSede: formData.get("nomeSede"),
-    indirizzo: formData.get("indirizzo"),
-    paese: formData.get("paese"),
-    valuta: formData.get("valuta"),
-    timezone: formData.get("timezone"),
-    email: formData.get("email"),
-    password: formData.get("password"),
-  });
-
+export async function POST(req: NextRequest) {
+  const body = await req.json();
+  const parsed = registerSchema.safeParse(body);
   if (!parsed.success) {
-    throw new Error("Dati registrazione non validi");
+    return NextResponse.json({ error: "Dati registrazione non validi" }, { status: 400 });
   }
 
   const { nomeAttivita, nomeSede, indirizzo, paese, timezone, email, password } = parsed.data;
@@ -41,7 +30,7 @@ export async function registerAction(formData: FormData) {
 
   const existing = await prisma.user.findFirst({ where: { email: normalizedEmail } });
   if (existing) {
-    throw new Error("Email già registrata");
+    return NextResponse.json({ error: "Email gia registrata" }, { status: 400 });
   }
 
   const passwordHash = await bcrypt.hash(password, 12);
@@ -85,6 +74,5 @@ export async function registerAction(formData: FormData) {
     },
   });
 
-  redirect("/login");
+  return NextResponse.json({ ok: true });
 }
-
