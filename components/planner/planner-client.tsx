@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import FullCalendar from "@fullcalendar/react";
@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
 type Cliente = { id: string; nome: string; cognome: string; telefono: string; email?: string | null };
-type Cane = { id: string; nome: string; razza?: string | null; clienteId: string };
+type Cane = { id: string; nome: string; razza?: string | null; taglia: "XS" | "S" | "M" | "L" | "XL" | "XXL"; clienteId: string };
 type Treatment = { id: string; nome: string; attivo: boolean };
 type DayKey = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
 
@@ -31,11 +31,18 @@ type Appointment = {
   startAt: string;
   endAt: string;
   noteAppuntamento?: string | null;
-  cane: { nome: string; razza?: string | null };
+  cane: { id: string; nome: string; razza?: string | null; taglia: "XS" | "S" | "M" | "L" | "XL" | "XXL" };
   cliente: { nome: string; cognome: string; telefono: string };
   trattamentiSelezionati: Array<{ treatment: { id: string; nome: string } }>;
   transactions: Array<{ id: string }>;
   stato: string;
+};
+
+type ListinoQuote = {
+  suggestedDuration: number;
+  suggestedAmount: number;
+  currency: string;
+  missingTreatmentIds: string[];
 };
 
 const durations = Array.from({ length: 20 }, (_, i) => (i + 1) * 15);
@@ -173,6 +180,7 @@ export function PlannerClient({
   treatments,
   workingHoursJson,
   whatsappConfig,
+  currency,
   branchSwitcher,
 }: {
   treatments: Treatment[];
@@ -182,6 +190,7 @@ export function PlannerClient({
     nomeAttivita: string;
     indirizzoAttivita: string;
   };
+  currency: string;
   branchSwitcher: {
     currentSalonId: string;
     branches: Array<{ id: string; label: string }>;
@@ -211,6 +220,8 @@ export function PlannerClient({
   const [incassoTipAmount, setIncassoTipAmount] = useState<string>("");
   const [incassoMethod, setIncassoMethod] = useState<"POS" | "CASH">("POS");
   const [incassoNote, setIncassoNote] = useState<string>("");
+  const [listinoQuote, setListinoQuote] = useState<ListinoQuote | null>(null);
+  const [quoteLoading, setQuoteLoading] = useState(false);
 
   const [newClientForm, setNewClientForm] = useState({ nome: "", cognome: "", telefono: "", email: "", noteCliente: "", consensoPromemoria: true });
   const [newDogForm, setNewDogForm] = useState({ nome: "", razza: "", taglia: "M", noteCane: "", tagRapidiIds: [] as string[] });
@@ -299,6 +310,25 @@ export function PlannerClient({
     return () => clearTimeout(timer);
   }, [search, isNewClient]);
 
+  useEffect(() => {
+    if (!showModal || !selectedDog) return;
+    if (!selectedTreatments.length) {
+      setListinoQuote(null);
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      const quote = await computeListinoQuote(selectedDog.id, selectedTreatments);
+      if (!quote || cancelled) return;
+      setDurata(quote.suggestedDuration);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [showModal, selectedDog, selectedTreatments]);
+
   async function loadDogs(clienteId: string) {
     const res = await fetch(`/api/dogs?clienteId=${clienteId}`);
     const data = await res.json();
@@ -332,6 +362,27 @@ export function PlannerClient({
 
     setSelectedDog(dogData);
     alert("Cliente e cane creati. Completa ora l'appuntamento.");
+  }
+
+  async function computeListinoQuote(caneId: string, trattamentoIds: string[]) {
+    if (!trattamentoIds.length) {
+      setListinoQuote(null);
+      return null;
+    }
+    setQuoteLoading(true);
+    try {
+      const res = await fetch("/api/pricing-rules/quote", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ caneId, treatmentIds: trattamentoIds }),
+      });
+      const data = await res.json();
+      if (!res.ok) return null;
+      setListinoQuote(data);
+      return data as ListinoQuote;
+    } finally {
+      setQuoteLoading(false);
+    }
   }
 
   async function saveAppointment() {
@@ -372,6 +423,7 @@ export function PlannerClient({
     setNote("");
     setDurata(60);
     setSelectedTreatments([]);
+    setListinoQuote(null);
     if (visibleRange) {
       await loadAppointments(visibleRange.from, visibleRange.to);
     } else {
@@ -397,6 +449,15 @@ export function PlannerClient({
     } else {
       await loadAppointments();
     }
+  }
+
+  async function prefillIncassoFromListino(appt: Appointment) {
+    if ((appt.transactions?.length ?? 0) > 0) return;
+    const treatmentIds = appt.trattamentiSelezionati.map((t) => t.treatment.id);
+    if (!treatmentIds.length) return;
+    const quote = await computeListinoQuote(appt.cane.id, treatmentIds);
+    if (!quote) return;
+    setIncassoAmount(quote.suggestedAmount.toFixed(2));
   }
 
   async function registraIncasso() {
@@ -526,6 +587,7 @@ export function PlannerClient({
         }}
         select={(info: { start: Date }) => {
           setSlotStart(info.start);
+          setListinoQuote(null);
           setShowModal(true);
         }}
         events={allEvents}
@@ -536,7 +598,12 @@ export function PlannerClient({
             setDurata((new Date(appt.endAt).getTime() - new Date(appt.startAt).getTime()) / 60000);
             setNote(appt.noteAppuntamento || "");
             setSelectedTreatments(appt.trattamentiSelezionati.map((t) => t.treatment.id));
+            setIncassoAmount("");
+            setIncassoTipAmount("");
+            setIncassoNote("");
             setShowEdit(true);
+            setListinoQuote(null);
+            void prefillIncassoFromListino(appt);
           }
         }}
         eventContent={(arg: { event: { title: string; extendedProps: Record<string, unknown> } }) => (
@@ -644,6 +711,18 @@ export function PlannerClient({
                   ))}
                 </select>
                 <p className="text-xs text-zinc-500">Fine: {slotStart ? format(addMinutes(slotStart, durata), "HH:mm") : "-"}</p>
+                {quoteLoading ? <p className="text-xs text-zinc-500">Calcolo automatico da listino in corso...</p> : null}
+                {listinoQuote ? (
+                  <p className="text-xs text-zinc-600">
+                    Da listino: {listinoQuote.suggestedDuration} minuti, {listinoQuote.currency} {listinoQuote.suggestedAmount.toFixed(2)}.
+                    Puoi modificare manualmente.
+                  </p>
+                ) : null}
+                {listinoQuote?.missingTreatmentIds.length ? (
+                  <p className="text-xs text-amber-700">
+                    Alcuni trattamenti non hanno ancora una regola nel listino.
+                  </p>
+                ) : null}
 
                 <label className="text-sm font-medium">Trattamenti</label>
                 <div className="grid gap-2 md:grid-cols-2">
@@ -724,7 +803,7 @@ export function PlannerClient({
                   type="number"
                   min="0"
                   step="0.01"
-                  placeholder="Importo (EUR)"
+                  placeholder={`Importo (${currency})`}
                   value={incassoAmount}
                   onChange={(e) => setIncassoAmount(e.target.value)}
                 />
@@ -732,7 +811,7 @@ export function PlannerClient({
                   type="number"
                   min="0"
                   step="0.01"
-                  placeholder="Mancia (EUR)"
+                  placeholder={`Mancia (${currency})`}
                   value={incassoTipAmount}
                   onChange={(e) => setIncassoTipAmount(e.target.value)}
                 />
@@ -752,6 +831,9 @@ export function PlannerClient({
                 value={incassoNote}
                 onChange={(e) => setIncassoNote(e.target.value)}
               />
+              <p className="mt-2 text-xs text-zinc-500">
+                Importo precompilato dal listino quando disponibile. Puoi modificarlo liberamente per sconti o variazioni.
+              </p>
             </div>
             <div className="flex justify-end">
               <Button variant="outline" onClick={() => setShowEdit(false)}>
@@ -764,3 +846,4 @@ export function PlannerClient({
     </Card>
   );
 }
+
