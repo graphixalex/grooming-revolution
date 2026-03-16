@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { registerSchema } from "@/lib/validators";
 import { getCountryMeta } from "@/lib/geo";
@@ -76,13 +77,28 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({ ok: true });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("register_error", error);
-    const message = String(error?.message || "");
 
-    if (message.includes("P2021") || message.includes("P2022")) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === "P2002") {
+        return NextResponse.json({ error: "Email gia registrata" }, { status: 400 });
+      }
+      if (error.code === "P2021" || error.code === "P2022") {
+        return NextResponse.json(
+          { error: "Database non aggiornato. Eseguire le migration in produzione." },
+          { status: 500 },
+        );
+      }
       return NextResponse.json(
-        { error: "Database non aggiornato. Eseguire le migration in produzione." },
+        { error: `Errore database (${error.code}). Controllare migration e schema.` },
+        { status: 500 },
+      );
+    }
+
+    if (error instanceof Prisma.PrismaClientInitializationError) {
+      return NextResponse.json(
+        { error: "Connessione database fallita. Verificare DATABASE_URL in Vercel." },
         { status: 500 },
       );
     }
