@@ -580,9 +580,12 @@ export function PlannerClient({
                   <Input placeholder="Nome cane" value={newDogForm.nome} onChange={(e) => setNewDogForm({ ...newDogForm, nome: e.target.value })} />
                   <Input placeholder="Razza" value={newDogForm.razza} onChange={(e) => setNewDogForm({ ...newDogForm, razza: e.target.value })} />
                   <select className="h-10 rounded-md border border-zinc-300 px-3 text-sm" value={newDogForm.taglia} onChange={(e) => setNewDogForm({ ...newDogForm, taglia: e.target.value })}>
+                    <option value="XS">Taglia XS</option>
                     <option value="S">Taglia S</option>
                     <option value="M">Taglia M</option>
                     <option value="L">Taglia L</option>
+                    <option value="XL">Taglia XL</option>
+                    <option value="XXL">Taglia XXL</option>
                   </select>
                 </div>
                 <Textarea placeholder="Note cane" value={newDogForm.noteCane} onChange={(e) => setNewDogForm({ ...newDogForm, noteCane: e.target.value })} />

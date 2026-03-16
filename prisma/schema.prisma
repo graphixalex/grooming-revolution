@@ -14,9 +14,12 @@ enum UserRole {
 }
 
 enum DogSize {
+  XS
   S
   M
   L
+  XL
+  XXL
 }
 
 enum AppointmentStatus {

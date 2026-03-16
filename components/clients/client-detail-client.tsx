@@ -44,7 +44,7 @@ export function ClientDetailClient({
           <Input placeholder="Nome" value={dogForm.nome} onChange={(e) => setDogForm({ ...dogForm, nome: e.target.value })} />
           <Input placeholder="Razza" value={dogForm.razza} onChange={(e) => setDogForm({ ...dogForm, razza: e.target.value })} />
           <select className="h-10 rounded-md border border-zinc-300 px-3 text-sm" value={dogForm.taglia} onChange={(e) => setDogForm({ ...dogForm, taglia: e.target.value })}>
-            <option value="S">S</option><option value="M">M</option><option value="L">L</option>
+            <option value="XS">XS</option><option value="S">S</option><option value="M">M</option><option value="L">L</option><option value="XL">XL</option><option value="XXL">XXL</option>
           </select>
         </div>
         <Textarea placeholder="Note cane" value={dogForm.noteCane} onChange={(e) => setDogForm({ ...dogForm, noteCane: e.target.value })} />

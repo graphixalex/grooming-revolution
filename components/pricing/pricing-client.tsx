@@ -11,7 +11,7 @@ type Treatment = { id: string; nome: string };
 type RuleRow = {
   id: string;
   treatment: { nome: string };
-  dogSize: "S" | "M" | "L" | null;
+  dogSize: "XS" | "S" | "M" | "L" | "XL" | "XXL" | null;
   razzaPattern: string | null;
   extraLabel: string | null;
   basePrice: number | string;
@@ -23,7 +23,17 @@ type RuleRow = {
   note: string | null;
 };
 
-export function PricingClient({ treatments, initialRules, canEdit }: { treatments: Treatment[]; initialRules: RuleRow[]; canEdit: boolean }) {
+export function PricingClient({
+  treatments,
+  initialRules,
+  canEdit,
+  currency,
+}: {
+  treatments: Treatment[];
+  initialRules: RuleRow[];
+  canEdit: boolean;
+  currency: string;
+}) {
   const [rules, setRules] = useState(initialRules);
   const [form, setForm] = useState({
     treatmentId: treatments[0]?.id ?? "",
@@ -104,37 +114,70 @@ export function PricingClient({ treatments, initialRules, canEdit }: { treatment
 
       <Card className="space-y-3">
         <h2 className="font-semibold">Nuova regola prezzo</h2>
-        <div className="grid gap-2 md:grid-cols-3">
-          <select
-            className="h-10 rounded-md border border-zinc-300 px-3 text-sm"
-            value={form.treatmentId}
-            onChange={(e) => setForm((prev) => ({ ...prev, treatmentId: e.target.value }))}
-            disabled={!canEdit}
-          >
-            {treatments.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.nome}
-              </option>
-            ))}
-          </select>
-          <select
-            className="h-10 rounded-md border border-zinc-300 px-3 text-sm"
-            value={form.dogSize}
-            onChange={(e) => setForm((prev) => ({ ...prev, dogSize: e.target.value }))}
-            disabled={!canEdit}
-          >
-            <option value="">Taglia qualsiasi</option>
-            <option value="S">S</option>
-            <option value="M">M</option>
-            <option value="L">L</option>
-          </select>
-          <Input placeholder="Razza (pattern opzionale)" value={form.razzaPattern} onChange={(e) => setForm((prev) => ({ ...prev, razzaPattern: e.target.value }))} disabled={!canEdit} />
-          <Input placeholder="Prezzo base EUR" type="number" min="0" step="0.01" value={form.basePrice} onChange={(e) => setForm((prev) => ({ ...prev, basePrice: e.target.value }))} disabled={!canEdit} />
-          <Input placeholder="Extra EUR" type="number" min="0" step="0.01" value={form.extraPrice} onChange={(e) => setForm((prev) => ({ ...prev, extraPrice: e.target.value }))} disabled={!canEdit} />
-          <Input placeholder="Durata minuti" type="number" min="15" step="15" value={form.durataMinuti} onChange={(e) => setForm((prev) => ({ ...prev, durataMinuti: e.target.value }))} disabled={!canEdit} />
-          <Input placeholder="Valido da" type="datetime-local" value={form.validoDa} onChange={(e) => setForm((prev) => ({ ...prev, validoDa: e.target.value }))} disabled={!canEdit} />
-          <Input placeholder="Valido a (opz.)" type="datetime-local" value={form.validoA} onChange={(e) => setForm((prev) => ({ ...prev, validoA: e.target.value }))} disabled={!canEdit} />
-          <Input placeholder="Nome extra (opzionale)" value={form.extraLabel} onChange={(e) => setForm((prev) => ({ ...prev, extraLabel: e.target.value }))} disabled={!canEdit} />
+        <p className="text-sm text-zinc-600">
+          I campi servono a creare regole specifiche per taglia/razza/extra, con durata e periodo di validita.
+        </p>
+        <div className="grid gap-3 md:grid-cols-3">
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-zinc-600">Trattamento</label>
+            <select
+              className="h-10 w-full rounded-md border border-zinc-300 px-3 text-sm"
+              value={form.treatmentId}
+              onChange={(e) => setForm((prev) => ({ ...prev, treatmentId: e.target.value }))}
+              disabled={!canEdit}
+            >
+              {treatments.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.nome}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-zinc-600">Taglia</label>
+            <select
+              className="h-10 w-full rounded-md border border-zinc-300 px-3 text-sm"
+              value={form.dogSize}
+              onChange={(e) => setForm((prev) => ({ ...prev, dogSize: e.target.value }))}
+              disabled={!canEdit}
+            >
+              <option value="">Taglia qualsiasi</option>
+              <option value="XS">XS</option>
+              <option value="S">S</option>
+              <option value="M">M</option>
+              <option value="L">L</option>
+              <option value="XL">XL</option>
+              <option value="XXL">XXL</option>
+            </select>
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-zinc-600">Razza (opzionale)</label>
+            <Input placeholder="Es. Barboncino" value={form.razzaPattern} onChange={(e) => setForm((prev) => ({ ...prev, razzaPattern: e.target.value }))} disabled={!canEdit} />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-zinc-600">Prezzo base ({currency})</label>
+            <Input type="number" min="0" step="0.01" value={form.basePrice} onChange={(e) => setForm((prev) => ({ ...prev, basePrice: e.target.value }))} disabled={!canEdit} />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-zinc-600">Extra ({currency})</label>
+            <Input type="number" min="0" step="0.01" value={form.extraPrice} onChange={(e) => setForm((prev) => ({ ...prev, extraPrice: e.target.value }))} disabled={!canEdit} />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-zinc-600">Durata (minuti)</label>
+            <Input type="number" min="15" step="15" value={form.durataMinuti} onChange={(e) => setForm((prev) => ({ ...prev, durataMinuti: e.target.value }))} disabled={!canEdit} />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-zinc-600">Valida dal</label>
+            <Input type="datetime-local" value={form.validoDa} onChange={(e) => setForm((prev) => ({ ...prev, validoDa: e.target.value }))} disabled={!canEdit} />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-zinc-600">Valida fino al (opzionale)</label>
+            <Input type="datetime-local" value={form.validoA} onChange={(e) => setForm((prev) => ({ ...prev, validoA: e.target.value }))} disabled={!canEdit} />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-zinc-600">Nome extra (opzionale)</label>
+            <Input placeholder="Es. Snodatura intensa" value={form.extraLabel} onChange={(e) => setForm((prev) => ({ ...prev, extraLabel: e.target.value }))} disabled={!canEdit} />
+          </div>
         </div>
         <Textarea placeholder="Note regola (opzionale)" value={form.note} onChange={(e) => setForm((prev) => ({ ...prev, note: e.target.value }))} disabled={!canEdit} />
         <Button onClick={createRule} disabled={!canEdit}>
@@ -148,7 +191,7 @@ export function PricingClient({ treatments, initialRules, canEdit }: { treatment
           {rules.map((r) => (
             <div key={r.id} className="rounded border border-zinc-200 p-3">
               <p className="font-medium">
-                {r.treatment.nome} | EUR {Number(r.basePrice).toFixed(2)} + EUR {Number(r.extraPrice).toFixed(2)} extra | {r.durataMinuti} min
+                {r.treatment.nome} | {currency} {Number(r.basePrice).toFixed(2)} + {currency} {Number(r.extraPrice).toFixed(2)} extra | {r.durataMinuti} min
               </p>
               <p>Taglia: {r.dogSize ?? "qualsiasi"} | Razza: {r.razzaPattern || "-"} | Extra: {r.extraLabel || "-"}</p>
               <p>Validita: {new Date(r.validoDa).toLocaleString("it-IT")} - {r.validoA ? new Date(r.validoA).toLocaleString("it-IT") : "aperta"}</p>

@@ -24,7 +24,7 @@ export const dogSchema = z.object({
   clienteId: z.string().min(1),
   nome: z.string().min(1),
   razza: z.string().optional(),
-  taglia: z.enum(["S", "M", "L"]),
+  taglia: z.enum(["XS", "S", "M", "L", "XL", "XXL"]),
   noteCane: z.string().optional(),
   tagRapidiIds: z.array(z.string()).default([]),
 });
@@ -48,7 +48,7 @@ export const transactionSchema = z.object({
 
 export const servicePriceRuleSchema = z.object({
   treatmentId: z.string().min(1),
-  dogSize: z.enum(["S", "M", "L"]).optional().nullable(),
+  dogSize: z.enum(["XS", "S", "M", "L", "XL", "XXL"]).optional().nullable(),
   razzaPattern: z.string().optional().nullable(),
   extraLabel: z.string().optional().nullable(),
   basePrice: z.number().min(0),

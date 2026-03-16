@@ -6,7 +6,8 @@ export default async function PricingPage() {
   const session = await getRequiredSession();
   const salonId = session.user.salonId;
 
-  const [treatments, rules] = await Promise.all([
+  const [salon, treatments, rules] = await Promise.all([
+    prisma.salon.findUnique({ where: { id: salonId }, select: { valuta: true } }),
     prisma.treatment.findMany({ where: { salonId }, orderBy: { ordine: "asc" }, select: { id: true, nome: true } }),
     prisma.servicePriceRule.findMany({
       where: { salonId },
@@ -18,7 +19,12 @@ export default async function PricingPage() {
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-semibold">Listino intelligente</h1>
-      <PricingClient initialRules={rules as any[]} treatments={treatments} canEdit={session.user.role !== "STAFF"} />
+      <PricingClient
+        initialRules={rules as any[]}
+        treatments={treatments}
+        canEdit={session.user.role !== "STAFF"}
+        currency={salon?.valuta || "EUR"}
+      />
     </div>
   );
 }
