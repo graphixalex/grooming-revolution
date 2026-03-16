@@ -15,22 +15,37 @@ export default function LoginPage() {
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setLoading(true);
-    setError("");
-    const form = new FormData(event.currentTarget);
-    const email = String(form.get("email") || "");
-    const password = String(form.get("password") || "");
+    try {
+      setLoading(true);
+      setError("");
+      const form = new FormData(event.currentTarget);
+      const email = String(form.get("email") || "");
+      const password = String(form.get("password") || "");
 
-    const result = await signIn("credentials", { email, password, redirect: false });
+      const result = await signIn("credentials", { email, password, redirect: false });
 
-    if (result?.error) {
-      setError("Credenziali non valide");
+      if (!result) {
+        setError("Errore temporaneo di accesso. Riprova.");
+        return;
+      }
+
+      if (result.error) {
+        setError("Credenziali non valide");
+        return;
+      }
+
+      if (result.ok) {
+        router.push("/dashboard");
+        router.refresh();
+        return;
+      }
+
+      setError("Accesso non completato. Riprova.");
+    } catch {
+      setError("Errore temporaneo di accesso. Riprova.");
+    } finally {
       setLoading(false);
-      return;
     }
-
-    router.push("/dashboard");
-    router.refresh();
   }
 
   return (
