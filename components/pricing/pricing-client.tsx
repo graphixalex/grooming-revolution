@@ -156,15 +156,39 @@ export function PricingClient({
           </div>
           <div className="space-y-1">
             <label className="text-xs font-medium text-zinc-600">Prezzo base ({currency})</label>
-            <Input type="number" min="0" step="0.01" value={form.basePrice} onChange={(e) => setForm((prev) => ({ ...prev, basePrice: e.target.value }))} disabled={!canEdit} />
+            <Input
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder={`Es. 45.00 ${currency}`}
+              value={form.basePrice}
+              onChange={(e) => setForm((prev) => ({ ...prev, basePrice: e.target.value }))}
+              disabled={!canEdit}
+            />
           </div>
           <div className="space-y-1">
             <label className="text-xs font-medium text-zinc-600">Extra ({currency})</label>
-            <Input type="number" min="0" step="0.01" value={form.extraPrice} onChange={(e) => setForm((prev) => ({ ...prev, extraPrice: e.target.value }))} disabled={!canEdit} />
+            <Input
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder={`Es. 10.00 ${currency}`}
+              value={form.extraPrice}
+              onChange={(e) => setForm((prev) => ({ ...prev, extraPrice: e.target.value }))}
+              disabled={!canEdit}
+            />
           </div>
           <div className="space-y-1">
             <label className="text-xs font-medium text-zinc-600">Durata (minuti)</label>
-            <Input type="number" min="15" step="15" value={form.durataMinuti} onChange={(e) => setForm((prev) => ({ ...prev, durataMinuti: e.target.value }))} disabled={!canEdit} />
+            <Input
+              type="number"
+              min="15"
+              step="15"
+              placeholder="Es. 60"
+              value={form.durataMinuti}
+              onChange={(e) => setForm((prev) => ({ ...prev, durataMinuti: e.target.value }))}
+              disabled={!canEdit}
+            />
           </div>
           <div className="space-y-1">
             <label className="text-xs font-medium text-zinc-600">Valida dal</label>
@@ -183,6 +207,10 @@ export function PricingClient({
         <Button onClick={createRule} disabled={!canEdit}>
           Aggiungi regola
         </Button>
+        <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-600">
+          Come compilare: &quot;Extra&quot; e il supplemento da sommare al prezzo base quando serve un lavoro aggiuntivo.
+          &quot;Durata&quot; sono i minuti previsti per il servizio. Se metti &quot;Taglia qualsiasi&quot;, la regola vale per tutte le taglie.
+        </div>
       </Card>
 
       <Card>
