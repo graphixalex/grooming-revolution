@@ -25,14 +25,14 @@ export default function OpenGraphImage() {
       >
         <div
           style={{
-            display: "inline-flex",
+            display: "flex",
             alignItems: "center",
             gap: 12,
             fontSize: 28,
             fontWeight: 700,
           }}
         >
-          <span
+          <div
             style={{
               width: 16,
               height: 16,
