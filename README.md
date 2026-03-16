@@ -1,85 +1,112 @@
 # Grooming Revolution
 
-SaaS gestionale multi-tenant per toelettatura (UI solo in italiano), basato su Next.js + Prisma + PostgreSQL.
+IT: Gestionale SaaS multi-tenant per toelettatura cani, con UI in italiano.
+EN: Multi-tenant SaaS management platform for dog grooming businesses, with Italian UI.
 
-## Stack implementato
+## Highlights (IT / EN)
+
+- Agenda smart con FullCalendar / Smart calendar with FullCalendar
+- Incasso rapido POS/CASH + mancia / Fast POS/CASH checkout + tips
+- WhatsApp manuale con template precompilato / Manual WhatsApp send with prefilled template
+- Multi-sede con sede attiva / Multi-branch with active branch switch
+- Contabilita per singola sede o tutte le sedi / Accounting by single branch or all branches
+- Paese e valuta automatici / Automatic country and currency handling
+- Trial fino a 100 clienti, poi FULL 20 EUR/mese + IVA / Trial up to 100 clients, then FULL at 20 EUR/month + VAT
+
+## Stack
 
 - Next.js 16 (App Router) + TypeScript
-- Tailwind CSS + componenti stile shadcn/ui
+- Tailwind CSS 4
 - PostgreSQL + Prisma
-- NextAuth Credentials + password hash `argon2`
-- Multi-tenant (`salonId` in ogni query)
-- Stripe (webhook endpoint e base billing page)
+- NextAuth Credentials + argon2
 - Zod validation
-- Security headers + proxy auth guard + login rate limit in-memory
-- Audit log base
+- Stripe (billing base + webhook endpoint)
 
-## Funzionalita principali coperte
+## Funzionalita / Features
 
 - Auth: `/login`, `/register`
 - Dashboard KPI: `/dashboard`
-- Agenda FullCalendar: `/planner`
-  - Click slot => flow nuovo cliente/esistente
-  - Durata 15-300 min
-  - Trattamenti multi-select
-  - Note appuntamento visibili nella card evento
-  - Modifica stato (completato/no-show/cancellato) e incasso rapido POS/CASH
-- Clienti: `/clients`, `/clients/[id]`
-  - note cliente
-  - export CSV contatti
-- Cani: `/dogs/[id]`
-  - note cane + tag rapidi
-  - storico completo paginato server-side
-  - promemoria manuale WhatsApp (`wa.me`) e mailto
-- Movimenti: `/payments`
-  - filtri date + export CSV
-- Import clienti: CSV e VCF (`.vcf`) da pagina `/clients`
-- Impostazioni: `/settings`
-  - dati attivita, orari/sovrapposizione, template messaggi, tag rapidi, trattamenti, staff
+- Agenda / Planner: `/planner`
+  - Nuovo appuntamento cliente nuovo/esistente / New appointment for new or existing clients
+  - Durata 15-300 min / Duration 15-300 min
+  - Trattamenti multipli / Multiple treatments
+  - Stati appuntamento / Appointment statuses
+  - Incasso + mancia / Checkout + tip
+  - Prompt WhatsApp precompilato / Prefilled WhatsApp prompt
+- Clienti / Clients: `/clients`, `/clients/[id]`
+- Cani / Dogs: `/dogs/[id]`
+- Movimenti / Payments: `/payments`
+  - Filtri periodo / Date filtering
+  - Export CSV coerente con scope / CSV export consistent with selected scope
+- Listino intelligente / Smart pricing: `/pricing`
+- Report avanzati / Advanced reports: `/reports`
+- Multi-sede / Multi-branch: `/branches`
+- Impostazioni / Settings: `/settings`
 - Billing: `/billing`
-- Legali: `/legal/privacy`, `/legal/terms`, `/legal/cookies`, `/legal/subprocessors`
 
-## Regole business implementate
+## Regole business / Business Rules
 
-- Piano Free: max 100 clienti per tenant (`/api/clients` blocca oltre soglia)
-- Max 4 cani per cliente (enforced server-side)
-- Orari di lavoro e pause (JSON settings) validati in creazione/modifica appuntamento
-- Sovrapposizioni appuntamenti bloccate di default (toggle in settings)
-- Soft delete su cliente/cane/appuntamenti
+- Trial: max 100 clienti per tenant / max 100 clients per tenant
+- FULL plan: 20 EUR/month + VAT
+- Max 4 dogs per client
+- Working-hours validation (including breaks)
+- Overlap blocked by default (configurable)
+- Soft delete for clients/dogs/appointments
 
-## Modello dati Prisma
+## Multi-branch Data Model
 
-Definito in `prisma/schema.prisma` con entita:
+IT:
+- Dati operativi separati per sede selezionata (agenda/clienti/incassi)
+- In contabilia, owner puo scegliere singola sede o tutte le sedi
 
-- `Salon`, `User`
+EN:
+- Operational data is isolated per selected branch (planner/clients/revenue)
+- In accounting views, owner can select one branch or all branches
+
+## Country & Currency Automation
+
+IT:
+- In registrazione imposti attivita, sede, indirizzo, paese
+- Valuta assegnata automaticamente dal paese
+- In modifica sede, cambio paese aggiorna automaticamente la valuta
+
+EN:
+- During registration you set business, branch, address, country
+- Currency is auto-assigned from country
+- In branch edit, changing country auto-updates currency
+
+## Prisma Models (core)
+
+- `SalonGroup`, `Salon`, `User`
 - `Client`, `Dog`, `QuickTag`, `DogQuickTag`
-- `Treatment`, `Appointment`, `AppointmentTreatment`
+- `Treatment`, `ServicePriceRule`
+- `Appointment`, `AppointmentTreatment`
 - `Transaction`
 - `AuditLog`
 
-## Seed demo
+## Local Setup
 
-`prisma/seed.ts` crea:
+### Prerequisites
 
-- salone demo
-- owner + staff
-- trattamenti default obbligatori
-- quick tags demo
-- clienti/cani/appuntamenti/transazioni demo
+- Node.js 20+
+- PostgreSQL (local or remote)
 
-Credenziali demo:
+### 1) Install dependencies
 
-- `owner@groomingrevolution.local`
-- `Password123!`
+```bash
+npm install
+```
 
-## Env vars necessarie
+### 2) Environment
 
-Copia `.env.example` in `.env`.
+Copy `.env.example` to `.env` and fill values.
+
+Minimal example:
 
 ```env
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/grooming_revolution?schema=public"
 NEXTAUTH_URL="http://localhost:3000"
-NEXTAUTH_SECRET="cambia-questa-chiave-lunga"
+NEXTAUTH_SECRET="change-this-long-secret"
 STRIPE_SECRET_KEY="sk_test_xxx"
 STRIPE_WEBHOOK_SECRET="whsec_xxx"
 STRIPE_PRICE_ID_PRO="price_xxx"
@@ -87,100 +114,61 @@ UPSTASH_REDIS_REST_URL=""
 UPSTASH_REDIS_REST_TOKEN=""
 ```
 
-## Comandi npm
-
-Installazione:
+### 3) Prisma migrate + generate
 
 ```bash
-npm install
-```
-
-Avvio DB locale con Docker:
-
-```bash
-docker compose up -d
-```
-
-Genera Prisma Client:
-
-```bash
+npx prisma migrate deploy
 npm run prisma:generate
 ```
 
-Applica migration su DB locale:
-
-```bash
-npx prisma migrate dev --name init
-```
-
-Seed demo:
+### 4) Optional demo seed
 
 ```bash
 npm run prisma:seed
 ```
 
-Sviluppo:
+Demo credentials:
+
+- `owner@groomingrevolution.local`
+- `Password123!`
+
+### 5) Start dev server
 
 ```bash
 npm run dev
 ```
 
-Lint:
+App URL: `http://localhost:3000`
+
+## Useful Scripts
 
 ```bash
+npm run dev
+npm run build
+npm start
 npm run lint
-```
-
-Build produzione:
-
-```bash
-npm run build
-npm start
-```
-
-## Deploy Docker (base)
-
-Esempio rapido:
-
-```bash
-docker compose up -d db
 npm run prisma:generate
-npx prisma migrate deploy
-npm run build
-npm start
+npm run prisma:migrate
+npm run prisma:seed
+npm run db:push
 ```
 
-Per produzione reale: usare immagine app dedicata, secrets manager e DB gestito.
+## Main API Endpoints
 
-## API principali
-
-- `POST/GET /api/clients`
-- `GET/PATCH/DELETE /api/clients/[id]`
-- `GET /api/clients/export`
-- `POST /api/clients/import` (CSV/VCF)
-- `GET /api/clients/import-template`
-- `POST/GET /api/dogs`
-- `GET/PATCH/DELETE /api/dogs/[id]`
 - `POST/GET/PATCH /api/appointments`
-- `GET/PATCH /api/settings`
+- `POST/GET/PATCH/DELETE /api/branches`
+- `POST/GET/PATCH /api/settings`
 - `GET /api/payments/export`
+- `POST/GET/PATCH /api/pricing-rules`
+- `POST /api/active-salon`
 - `POST /api/stripe/webhook`
 
-## Checklist test manuale MVP
+## Billing Note
 
-1. Registrazione nuovo tenant e login owner
-2. Creazione cliente fino a 100 (101 deve fallire)
-3. Creazione 5o cane su stesso cliente (deve fallire)
-4. Creazione appuntamento da planner (nuovo cliente + cliente esistente)
-5. Validazione fuori orario lavorativo (deve fallire)
-6. Validazione sovrapposizione (deve fallire se overlap OFF)
-7. Modifica appuntamento e cambio stato
-8. Registrazione transazione POS/CASH su appuntamento completato
-9. Export CSV clienti e movimenti
-10. Reminder manuale WhatsApp e mailto dalla scheda cane
-11. Verifica isolamento tenant con due account distinti
-12. Verifica pagine legali e pagine protette da auth
+IT: Trial fino a 100 clienti, poi FULL a 20 EUR/mese + IVA (addebito automatico Stripe previsto).
+EN: Trial up to 100 clients, then FULL at 20 EUR/month + VAT (Stripe automatic billing flow intended).
 
-## Nota legale
+## Legal Note
 
-I testi legali inclusi sono placeholder ben formati ma **richiedono revisione legale professionale**.
+IT: I testi legali inclusi sono placeholder e richiedono revisione legale professionale.
+EN: Included legal texts are placeholders and require professional legal review.
