@@ -23,9 +23,13 @@ export default async function BillingPage() {
           Stato addebito automatico: {salon?.stripeSubscriptionId ? "ATTIVO" : "NON ATTIVO"}
         </p>
         <p className="text-sm text-zinc-600">VAT: {salon?.billingVatNumber || "non impostata"} - Paese: {salon?.billingCountry || "-"}</p>
-        <div className="mt-3 flex gap-2">
-          <Button>Attiva FULL (addebito automatico)</Button>
-          <Button variant="outline">Gestisci o annulla abbonamento</Button>
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          <Button className="h-auto whitespace-normal py-3 text-center leading-tight">
+            Attiva FULL (addebito automatico)
+          </Button>
+          <Button variant="outline" className="h-auto whitespace-normal py-3 text-center leading-tight">
+            Gestisci o annulla abbonamento
+          </Button>
         </div>
       </Card>
       <Card>

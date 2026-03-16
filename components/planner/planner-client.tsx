@@ -301,6 +301,16 @@ export function PlannerClient({
   }, []);
 
   useEffect(() => {
+    const shouldLockBodyScroll = showModal || showEdit;
+    if (!shouldLockBodyScroll) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [showModal, showEdit]);
+
+  useEffect(() => {
     if (!search || isNewClient !== false) return;
     const timer = setTimeout(async () => {
       const res = await fetch(`/api/clients?q=${encodeURIComponent(search)}`);
@@ -565,8 +575,8 @@ export function PlannerClient({
         <div className="w-full text-sm font-semibold md:ml-auto md:w-auto">{title}</div>
       </div>
 
-      <div className="overflow-x-auto">
-        <div className="min-w-[780px] md:min-w-0">
+      <div className="overflow-hidden">
+        <div className="min-w-0">
       <FullCalendar
         ref={calendarRef}
         plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
@@ -576,14 +586,26 @@ export function PlannerClient({
         height="auto"
         weekNumbers={!isMobile}
         buttonText={{ today: "Oggi", month: "Mese", week: "Settimana", day: "Giorno" }}
-        headerToolbar={{ left: "timeGridDay,timeGridWeek,dayGridMonth", center: "", right: "" }}
+        headerToolbar={
+          isMobile
+            ? { left: "title", center: "", right: "today prev,next" }
+            : { left: "timeGridDay,timeGridWeek,dayGridMonth", center: "", right: "" }
+        }
         slotMinTime={hoursConfig.slotMinTime}
         slotMaxTime={hoursConfig.slotMaxTime}
         businessHours={hoursConfig.businessHours}
         selectable
+        selectLongPressDelay={120}
+        eventLongPressDelay={120}
         datesSet={(info: { start: Date; end: Date; view: { title: string } }) => {
           setTitle(info.view.title);
           loadAppointments(info.start.toISOString(), info.end.toISOString());
+        }}
+        dateClick={(info: { date: Date; allDay: boolean }) => {
+          if (showModal || showEdit || info.allDay) return;
+          setSlotStart(info.date);
+          setListinoQuote(null);
+          setShowModal(true);
         }}
         select={(info: { start: Date }) => {
           setSlotStart(info.start);

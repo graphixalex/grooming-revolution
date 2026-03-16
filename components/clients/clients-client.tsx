@@ -17,10 +17,18 @@ type Client = {
   dogs: Array<{ id: string; nome: string; razza?: string | null }>;
 };
 
+type NewDogForm = {
+  nome: string;
+  razza: string;
+  taglia: "XS" | "S" | "M" | "L" | "XL" | "XXL";
+  noteCane: string;
+};
+
 export function ClientsClient() {
   const [q, setQ] = useState("");
   const [clients, setClients] = useState<Client[]>([]);
   const [form, setForm] = useState({ nome: "", cognome: "", telefono: "", email: "", noteCliente: "", consensoPromemoria: false });
+  const [dogsForm, setDogsForm] = useState<NewDogForm[]>([{ nome: "", razza: "", taglia: "M", noteCane: "" }]);
   const [importFile, setImportFile] = useState<File | null>(null);
 
   async function load(search = "") {
@@ -44,7 +52,36 @@ export function ClientsClient() {
       alert(data.error || "Errore creazione cliente");
       return;
     }
+
+    const validDogs = dogsForm.filter((d) => d.nome.trim());
+    if (validDogs.length) {
+      const dogResults = await Promise.all(
+        validDogs.map(async (dog) => {
+          const dogRes = await fetch("/api/dogs", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              clienteId: data.id,
+              nome: dog.nome.trim(),
+              razza: dog.razza.trim(),
+              taglia: dog.taglia,
+              noteCane: dog.noteCane.trim(),
+              tagRapidiIds: [],
+            }),
+          });
+          const dogData = await dogRes.json();
+          return { ok: dogRes.ok, error: dogData?.error as string | undefined };
+        }),
+      );
+
+      const failed = dogResults.filter((r) => !r.ok);
+      if (failed.length) {
+        alert("Cliente creato, ma alcuni cani non sono stati salvati. Controlla i dati cane.");
+      }
+    }
+
     setForm({ nome: "", cognome: "", telefono: "", email: "", noteCliente: "", consensoPromemoria: false });
+    setDogsForm([{ nome: "", razza: "", taglia: "M", noteCane: "" }]);
     load(q);
   }
 
@@ -72,6 +109,7 @@ export function ClientsClient() {
     <div className="space-y-4">
       <Card className="space-y-3">
         <h2 className="font-semibold">Nuovo cliente</h2>
+        <p className="text-sm text-zinc-600">Compila i dati cliente e aggiungi subito uno o piu cani.</p>
         <div className="grid gap-2 md:grid-cols-2">
           <Input placeholder="Nome" value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} />
           <Input placeholder="Cognome" value={form.cognome} onChange={(e) => setForm({ ...form, cognome: e.target.value })} />
@@ -79,11 +117,79 @@ export function ClientsClient() {
           <Input placeholder="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
         </div>
         <Textarea placeholder="Note cliente" value={form.noteCliente} onChange={(e) => setForm({ ...form, noteCliente: e.target.value })} />
+
+        <div className="space-y-2 rounded-md border border-zinc-200 p-3">
+          <div className="flex items-center justify-between">
+            <h3 className="font-medium">Cani del cliente</h3>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDogsForm((prev) => [...prev, { nome: "", razza: "", taglia: "M", noteCane: "" }])}
+            >
+              Aggiungi cane
+            </Button>
+          </div>
+          {dogsForm.map((dog, index) => (
+            <div key={index} className="space-y-2 rounded-md border border-zinc-200 p-3">
+              <div className="grid gap-2 md:grid-cols-2">
+                <Input
+                  placeholder="Nome cane"
+                  value={dog.nome}
+                  onChange={(e) =>
+                    setDogsForm((prev) => prev.map((d, i) => (i === index ? { ...d, nome: e.target.value } : d)))
+                  }
+                />
+                <Input
+                  placeholder="Razza"
+                  value={dog.razza}
+                  onChange={(e) =>
+                    setDogsForm((prev) => prev.map((d, i) => (i === index ? { ...d, razza: e.target.value } : d)))
+                  }
+                />
+                <select
+                  className="h-10 rounded-md border border-zinc-300 px-3 text-sm"
+                  value={dog.taglia}
+                  onChange={(e) =>
+                    setDogsForm((prev) =>
+                      prev.map((d, i) => (i === index ? { ...d, taglia: e.target.value as NewDogForm["taglia"] } : d)),
+                    )
+                  }
+                >
+                  <option value="XS">Taglia XS</option>
+                  <option value="S">Taglia S</option>
+                  <option value="M">Taglia M</option>
+                  <option value="L">Taglia L</option>
+                  <option value="XL">Taglia XL</option>
+                  <option value="XXL">Taglia XXL</option>
+                </select>
+                {dogsForm.length > 1 ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setDogsForm((prev) => prev.filter((_, i) => i !== index))}
+                  >
+                    Rimuovi cane
+                  </Button>
+                ) : (
+                  <div />
+                )}
+              </div>
+              <Textarea
+                placeholder="Note cane"
+                value={dog.noteCane}
+                onChange={(e) =>
+                  setDogsForm((prev) => prev.map((d, i) => (i === index ? { ...d, noteCane: e.target.value } : d)))
+                }
+              />
+            </div>
+          ))}
+        </div>
+
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={form.consensoPromemoria} onChange={(e) => setForm({ ...form, consensoPromemoria: e.target.checked })} />
           Consenso promemoria
         </label>
-        <Button onClick={submit}>Salva cliente</Button>
+        <Button onClick={submit}>Salva cliente e cani</Button>
       </Card>
 
       <Card className="space-y-3">

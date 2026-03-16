@@ -62,7 +62,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="it">
-      <body className="min-h-screen bg-zinc-50 text-zinc-900 antialiased">
+      <body className="min-h-screen overflow-x-hidden bg-zinc-50 text-zinc-900 antialiased">
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
