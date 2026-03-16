@@ -1,6 +1,6 @@
 "use server";
 
-import argon2 from "argon2";
+import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { registerSchema } from "@/lib/validators";
@@ -44,7 +44,7 @@ export async function registerAction(formData: FormData) {
     throw new Error("Email già registrata");
   }
 
-  const passwordHash = await argon2.hash(password);
+  const passwordHash = await bcrypt.hash(password, 12);
 
   await prisma.salon.create({
     data: {

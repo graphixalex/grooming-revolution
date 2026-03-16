@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/api-auth";
-import argon2 from "argon2";
+import bcrypt from "bcryptjs";
 import { getCountryMeta } from "@/lib/geo";
 
 export async function GET() {
@@ -104,7 +104,7 @@ export async function PATCH(req: NextRequest) {
 
   if (body.section === "staff" && auth.session.user.role === "OWNER") {
     const role = body.role === "MANAGER" ? "MANAGER" : "STAFF";
-    const passwordHash = await argon2.hash(String(body.password || ""));
+    const passwordHash = await bcrypt.hash(String(body.password || ""), 12);
     const created = await prisma.user.create({
       data: {
         salonId,

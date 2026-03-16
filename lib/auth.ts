@@ -1,6 +1,6 @@
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import argon2 from "argon2";
+import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { checkLoginRateLimit } from "@/lib/rate-limit";
 
@@ -23,7 +23,7 @@ export const authOptions: NextAuthOptions = {
         const user = await prisma.user.findFirst({ where: { email } });
         if (!user) return null;
 
-        const valid = await argon2.verify(user.passwordHash, password);
+        const valid = await bcrypt.compare(password, user.passwordHash);
         if (!valid) return null;
 
         return { id: user.id, email: user.email, role: user.ruolo, salonId: user.salonId };
