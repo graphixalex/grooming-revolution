@@ -13,9 +13,7 @@ type RuleRow = {
   treatment: { nome: string };
   dogSize: "XS" | "S" | "M" | "L" | "XL" | "XXL" | null;
   razzaPattern: string | null;
-  extraLabel: string | null;
   basePrice: number | string;
-  extraPrice: number | string;
   durataMinuti: number;
   validoDa: string;
   validoA: string | null;
@@ -39,9 +37,7 @@ export function PricingClient({
     treatmentId: treatments[0]?.id ?? "",
     dogSize: "",
     razzaPattern: "",
-    extraLabel: "",
     basePrice: "",
-    extraPrice: "0",
     durataMinuti: "60",
     validoDa: new Date().toISOString().slice(0, 16),
     validoA: "",
@@ -57,9 +53,8 @@ export function PricingClient({
   async function createRule() {
     if (!canEdit) return;
     const basePrice = Number(form.basePrice);
-    const extraPrice = Number(form.extraPrice || "0");
     const durataMinuti = Number(form.durataMinuti);
-    if (!Number.isFinite(basePrice) || basePrice < 0 || !Number.isFinite(extraPrice) || extraPrice < 0 || !Number.isFinite(durataMinuti)) {
+    if (!Number.isFinite(basePrice) || basePrice < 0 || !Number.isFinite(durataMinuti)) {
       alert("Controlla i valori inseriti");
       return;
     }
@@ -71,9 +66,7 @@ export function PricingClient({
         treatmentId: form.treatmentId,
         dogSize: form.dogSize || null,
         razzaPattern: form.razzaPattern || null,
-        extraLabel: form.extraLabel || null,
         basePrice,
-        extraPrice,
         durataMinuti,
         validoDa: new Date(form.validoDa).toISOString(),
         validoA: form.validoA ? new Date(form.validoA).toISOString() : null,
@@ -115,7 +108,7 @@ export function PricingClient({
       <Card className="space-y-3">
         <h2 className="font-semibold">Nuova regola prezzo</h2>
         <p className="text-sm text-zinc-600">
-          I campi servono a creare regole specifiche per taglia/razza/extra, con durata e periodo di validita.
+          I campi servono a creare regole specifiche per taglia/razza, con durata e periodo di validita.
         </p>
         <div className="grid gap-3 md:grid-cols-3">
           <div className="space-y-1">
@@ -167,18 +160,6 @@ export function PricingClient({
             />
           </div>
           <div className="space-y-1">
-            <label className="text-xs font-medium text-zinc-600">Extra ({currency})</label>
-            <Input
-              type="number"
-              min="0"
-              step="0.01"
-              placeholder={`Es. 10.00 ${currency}`}
-              value={form.extraPrice}
-              onChange={(e) => setForm((prev) => ({ ...prev, extraPrice: e.target.value }))}
-              disabled={!canEdit}
-            />
-          </div>
-          <div className="space-y-1">
             <label className="text-xs font-medium text-zinc-600">Durata (minuti)</label>
             <Input
               type="number"
@@ -198,18 +179,14 @@ export function PricingClient({
             <label className="text-xs font-medium text-zinc-600">Valida fino al (opzionale)</label>
             <Input type="datetime-local" value={form.validoA} onChange={(e) => setForm((prev) => ({ ...prev, validoA: e.target.value }))} disabled={!canEdit} />
           </div>
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-zinc-600">Nome extra (opzionale)</label>
-            <Input placeholder="Es. Snodatura intensa" value={form.extraLabel} onChange={(e) => setForm((prev) => ({ ...prev, extraLabel: e.target.value }))} disabled={!canEdit} />
-          </div>
         </div>
         <Textarea placeholder="Note regola (opzionale)" value={form.note} onChange={(e) => setForm((prev) => ({ ...prev, note: e.target.value }))} disabled={!canEdit} />
         <Button onClick={createRule} disabled={!canEdit}>
           Aggiungi regola
         </Button>
         <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-600">
-          Come compilare: &quot;Extra&quot; e il supplemento da sommare al prezzo base quando serve un lavoro aggiuntivo.
-          &quot;Durata&quot; sono i minuti previsti per il servizio. Se metti &quot;Taglia qualsiasi&quot;, la regola vale per tutte le taglie.
+          Come compilare: &quot;Durata&quot; sono i minuti previsti per il servizio.
+          Se metti &quot;Taglia qualsiasi&quot;, la regola vale per tutte le taglie.
         </div>
       </Card>
 
@@ -219,9 +196,9 @@ export function PricingClient({
           {rules.map((r) => (
             <div key={r.id} className="rounded border border-zinc-200 p-3">
               <p className="font-medium">
-                {r.treatment.nome} | {currency} {Number(r.basePrice).toFixed(2)} + {currency} {Number(r.extraPrice).toFixed(2)} extra | {r.durataMinuti} min
+                {r.treatment.nome} | {currency} {Number(r.basePrice).toFixed(2)} | {r.durataMinuti} min
               </p>
-              <p>Taglia: {r.dogSize ?? "qualsiasi"} | Razza: {r.razzaPattern || "-"} | Extra: {r.extraLabel || "-"}</p>
+              <p>Taglia: {r.dogSize ?? "qualsiasi"} | Razza: {r.razzaPattern || "-"}</p>
               <p>Validita: {new Date(r.validoDa).toLocaleString("it-IT")} - {r.validoA ? new Date(r.validoA).toLocaleString("it-IT") : "aperta"}</p>
               <p>Stato: {r.attiva ? "Attiva" : "Disattivata"}</p>
               {canEdit ? (
