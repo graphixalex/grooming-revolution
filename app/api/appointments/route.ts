@@ -5,6 +5,57 @@ import { requireApiSession } from "@/lib/api-auth";
 import { appointmentSchema, transactionSchema } from "@/lib/validators";
 import { computeEndAt, hasOverlap, isInsideWorkingHours } from "@/lib/business-rules";
 
+const INTERNAL_NOTE_PHONE = "__NOTE__";
+const INTERNAL_NOTE_EMAIL = "note@sistema.local";
+const INTERNAL_NOTE_CLIENT_NAME = "Nota";
+const INTERNAL_NOTE_CLIENT_SURNAME = "Personale";
+const INTERNAL_NOTE_DOG_NAME = "Nota personale";
+
+async function ensurePersonalNoteEntities(salonId: string) {
+  let client = await prisma.client.findFirst({
+    where: {
+      salonId,
+      deletedAt: null,
+      telefono: INTERNAL_NOTE_PHONE,
+    },
+  });
+
+  if (!client) {
+    client = await prisma.client.create({
+      data: {
+        salonId,
+        nome: INTERNAL_NOTE_CLIENT_NAME,
+        cognome: INTERNAL_NOTE_CLIENT_SURNAME,
+        telefono: INTERNAL_NOTE_PHONE,
+        email: INTERNAL_NOTE_EMAIL,
+        consensoPromemoria: false,
+      },
+    });
+  }
+
+  let dog = await prisma.dog.findFirst({
+    where: {
+      salonId,
+      clienteId: client.id,
+      deletedAt: null,
+      nome: INTERNAL_NOTE_DOG_NAME,
+    },
+  });
+
+  if (!dog) {
+    dog = await prisma.dog.create({
+      data: {
+        salonId,
+        clienteId: client.id,
+        nome: INTERNAL_NOTE_DOG_NAME,
+        taglia: "M",
+      },
+    });
+  }
+
+  return { clientId: client.id, dogId: dog.id };
+}
+
 export async function GET(req: NextRequest) {
   const auth = await requireApiSession();
   if ("error" in auth) return auth.error;
@@ -37,13 +88,55 @@ export async function POST(req: NextRequest) {
   if ("error" in auth) return auth.error;
   const salonId = auth.session.user.salonId;
 
-  const parsed = appointmentSchema.safeParse(await req.json());
-  if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
-  }
+  const body = await req.json();
 
   const salon = await prisma.salon.findUnique({ where: { id: salonId }, select: { overlapAllowed: true, workingHoursJson: true } });
   if (!salon) return NextResponse.json({ error: "Salone non trovato" }, { status: 404 });
+
+  if (body.modalita === "NOTE") {
+    const startAt = new Date(String(body.startAt || ""));
+    const durataMinuti = Number(body.durataMinuti);
+    const noteAppuntamento = String(body.noteAppuntamento || "").trim();
+
+    if (!Number.isFinite(startAt.getTime()) || !Number.isFinite(durataMinuti) || durataMinuti < 15 || durataMinuti > 300 || durataMinuti % 15 !== 0) {
+      return NextResponse.json({ error: "Dati nota non validi" }, { status: 400 });
+    }
+    if (!noteAppuntamento) {
+      return NextResponse.json({ error: "Inserisci il testo della nota" }, { status: 400 });
+    }
+
+    const endAt = computeEndAt(startAt, durataMinuti);
+
+    if (!isInsideWorkingHours(salon.workingHoursJson, startAt, endAt)) {
+      return NextResponse.json({ error: "Orario fuori fascia lavorativa" }, { status: 400 });
+    }
+
+    if (!salon.overlapAllowed && (await hasOverlap(salonId, startAt, endAt))) {
+      return NextResponse.json({ error: "Sovrapposizione con altro appuntamento" }, { status: 400 });
+    }
+
+    const entities = await ensurePersonalNoteEntities(salonId);
+    const appointment = await prisma.appointment.create({
+      data: {
+        salonId,
+        clienteId: entities.clientId,
+        caneId: entities.dogId,
+        startAt,
+        endAt,
+        durataMinuti,
+        noteAppuntamento,
+        createdById: auth.session.user.id,
+      },
+      include: { trattamentiSelezionati: true },
+    });
+
+    return NextResponse.json(appointment, { status: 201 });
+  }
+
+  const parsed = appointmentSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+  }
 
   const startAt = new Date(parsed.data.startAt);
   const endAt = computeEndAt(startAt, parsed.data.durataMinuti);

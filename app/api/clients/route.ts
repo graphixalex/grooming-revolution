@@ -5,6 +5,8 @@ import { clientSchema } from "@/lib/validators";
 import { canCreateClient } from "@/lib/business-rules";
 import { addAuditLog } from "@/lib/audit";
 
+const INTERNAL_NOTE_PHONE = "__NOTE__";
+
 export async function GET(req: NextRequest) {
   const auth = await requireApiSession();
   if ("error" in auth) return auth.error;
@@ -15,6 +17,7 @@ export async function GET(req: NextRequest) {
     where: {
       salonId,
       deletedAt: null,
+      telefono: { not: INTERNAL_NOTE_PHONE },
       OR: q
         ? [
             { nome: { contains: q, mode: "insensitive" } },

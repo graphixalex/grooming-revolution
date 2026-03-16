@@ -45,6 +45,10 @@ type ListinoQuote = {
   missingTreatmentIds: string[];
 };
 
+function isPersonalNoteAppointment(a: Appointment) {
+  return a.cliente.telefono === "__NOTE__";
+}
+
 const durations = Array.from({ length: 20 }, (_, i) => (i + 1) * 15);
 const dayKeyToIndex: Record<DayKey, number> = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6 };
 
@@ -200,6 +204,7 @@ export function PlannerClient({
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
+  const [modalMode, setModalMode] = useState<"APPOINTMENT" | "NOTE">("APPOINTMENT");
   const [isNewClient, setIsNewClient] = useState<boolean | null>(null);
   const [slotStart, setSlotStart] = useState<Date | null>(null);
   const [selectedClient, setSelectedClient] = useState<Cliente | null>(null);
@@ -405,7 +410,47 @@ export function PlannerClient({
   }
 
   async function saveAppointment() {
-    if (!slotStart || !selectedClient || !selectedDog) return;
+    if (!slotStart) return;
+
+    if (modalMode === "NOTE") {
+      if (!note.trim()) {
+        alert("Inserisci il testo della nota");
+        return;
+      }
+      const res = await fetch("/api/appointments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          modalita: "NOTE",
+          startAt: slotStart.toISOString(),
+          durataMinuti: durata,
+          noteAppuntamento: note.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Errore creazione nota");
+        return;
+      }
+
+      setShowModal(false);
+      setModalMode("APPOINTMENT");
+      setIsNewClient(null);
+      setSelectedClient(null);
+      setSelectedDog(null);
+      setNote("");
+      setDurata(60);
+      setSelectedTreatments([]);
+      setListinoQuote(null);
+      if (visibleRange) {
+        await loadAppointments(visibleRange.from, visibleRange.to);
+      } else {
+        await loadAppointments();
+      }
+      return;
+    }
+
+    if (!selectedClient || !selectedDog) return;
     const startForMessage = slotStart;
     const clientForMessage = selectedClient;
     const dogForMessage = selectedDog;
@@ -436,6 +481,7 @@ export function PlannerClient({
     });
 
     setShowModal(false);
+    setModalMode("APPOINTMENT");
     setIsNewClient(null);
     setSelectedClient(null);
     setSelectedDog(null);
@@ -471,6 +517,7 @@ export function PlannerClient({
   }
 
   async function prefillIncassoFromListino(appt: Appointment) {
+    if (isPersonalNoteAppointment(appt)) return;
     if ((appt.transactions?.length ?? 0) > 0) return;
     const treatmentIds = appt.trattamentiSelezionati.map((t) => t.treatment.id);
     if (!treatmentIds.length) return;
@@ -511,10 +558,12 @@ export function PlannerClient({
         id: a.id,
         start: a.startAt,
         end: a.endAt,
-        title: `${a.cane.nome}${a.cane.razza ? ` (${a.cane.razza})` : ""} - ${a.cliente.nome} ${a.cliente.cognome}`,
+        title: isPersonalNoteAppointment(a)
+          ? `Nota: ${a.noteAppuntamento || "Impegno personale"}`
+          : `${a.cane.nome}${a.cane.razza ? ` (${a.cane.razza})` : ""} - ${a.cliente.nome} ${a.cliente.cognome}`,
         extendedProps: {
           note: a.noteAppuntamento,
-          treatments: a.trattamentiSelezionati.map((t) => t.treatment.nome).join(", "),
+          treatments: isPersonalNoteAppointment(a) ? "" : a.trattamentiSelezionati.map((t) => t.treatment.nome).join(", "),
           stato: a.stato,
           paid: (a.transactions?.length ?? 0) > 0,
         },
@@ -567,24 +616,20 @@ export function PlannerClient({
         <Button variant="outline" onClick={() => calendarRef.current?.getApi().next()}>
           {isMobile ? "Successiva" : "Settimana successiva"}
         </Button>
-        {!isMobile ? (
-          <>
-            <Input
-              type="date"
-              className="w-[180px]"
-              value={jumpDate}
-              onChange={(e) => setJumpDate(e.target.value)}
-            />
-            <Button
-              onClick={() => {
-                if (!jumpDate) return;
-                calendarRef.current?.getApi().gotoDate(jumpDate);
-              }}
-            >
-              Cerca giorno
-            </Button>
-          </>
-        ) : null}
+        <Input
+          type="date"
+          className={isMobile ? "w-full" : "w-[180px]"}
+          value={jumpDate}
+          onChange={(e) => setJumpDate(e.target.value)}
+        />
+        <Button
+          onClick={() => {
+            if (!jumpDate) return;
+            calendarRef.current?.getApi().gotoDate(jumpDate);
+          }}
+        >
+          Cerca giorno
+        </Button>
         <div className="w-full text-sm font-semibold md:ml-auto md:w-auto">{title}</div>
       </div>
 
@@ -607,6 +652,7 @@ export function PlannerClient({
         }
         slotMinTime={hoursConfig.slotMinTime}
         slotMaxTime={hoursConfig.slotMaxTime}
+        allDaySlot={false}
         businessHours={hoursConfig.businessHours}
         selectable
         selectLongPressDelay={120}
@@ -618,12 +664,16 @@ export function PlannerClient({
         dateClick={(info: { date: Date; allDay: boolean }) => {
           if (showModal || showEdit || info.allDay) return;
           setSlotStart(info.date);
+          setModalMode("APPOINTMENT");
           setListinoQuote(null);
+          setNote("");
           setShowModal(true);
         }}
         select={(info: { start: Date }) => {
           setSlotStart(info.start);
+          setModalMode("APPOINTMENT");
           setListinoQuote(null);
+          setNote("");
           setShowModal(true);
         }}
         events={allEvents}
@@ -656,7 +706,7 @@ export function PlannerClient({
 
       {showModal ? (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-black/40 p-2 md:items-center md:p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/40 p-2 md:p-4"
           onClick={(e) => {
             if (e.target === e.currentTarget) setShowModal(false);
           }}
@@ -665,6 +715,49 @@ export function PlannerClient({
             <h3 className="mb-3 text-lg font-semibold">Nuovo Appuntamento</h3>
             <p className="text-sm text-zinc-600">Slot: {slotStart ? format(slotStart, "dd/MM/yyyy HH:mm") : "-"}</p>
             <div className="my-3 flex flex-wrap gap-2">
+              <Button
+                variant={modalMode === "APPOINTMENT" ? "default" : "outline"}
+                onClick={() => setModalMode("APPOINTMENT")}
+              >
+                Appuntamento
+              </Button>
+              <Button
+                variant={modalMode === "NOTE" ? "default" : "outline"}
+                onClick={() => {
+                  setModalMode("NOTE");
+                  setIsNewClient(null);
+                  setSelectedClient(null);
+                  setSelectedDog(null);
+                  setSelectedTreatments([]);
+                  setListinoQuote(null);
+                }}
+              >
+                Nota
+              </Button>
+            </div>
+
+            {modalMode === "NOTE" ? (
+              <div className="space-y-2 border-t border-zinc-200 pt-3">
+                <label className="text-sm font-medium">Durata nota</label>
+                <select className="h-10 w-full rounded-md border border-zinc-300 px-3 text-sm" value={durata} onChange={(e) => setDurata(Number(e.target.value))}>
+                  {durations.map((d) => (
+                    <option key={d} value={d}>
+                      {d} minuti
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-zinc-500">Fine: {slotStart ? format(addMinutes(slotStart, durata), "HH:mm") : "-"}</p>
+                <label className="text-sm font-medium">Testo nota</label>
+                <Textarea
+                  placeholder="Es. Dentista, chiusura straordinaria, pausa personale..."
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                />
+              </div>
+            ) : null}
+
+            {modalMode === "APPOINTMENT" ? (
+            <div className="my-3 flex flex-wrap gap-2">
               <Button variant={isNewClient === true ? "default" : "outline"} onClick={() => setIsNewClient(true)}>
                 E un nuovo cliente? SI
               </Button>
@@ -672,8 +765,9 @@ export function PlannerClient({
                 E un nuovo cliente? NO
               </Button>
             </div>
+            ) : null}
 
-            {isNewClient === true ? (
+            {modalMode === "APPOINTMENT" && isNewClient === true ? (
               <div className="space-y-2">
                 <h4 className="font-medium">1) Crea Cliente</h4>
                 <div className="grid gap-2 md:grid-cols-2">
@@ -703,7 +797,7 @@ export function PlannerClient({
               </div>
             ) : null}
 
-            {isNewClient === false ? (
+            {modalMode === "APPOINTMENT" && isNewClient === false ? (
               <div className="space-y-2">
                 <h4 className="font-medium">1) Cerca Cliente</h4>
                 <Input placeholder="Nome, telefono o email" value={search} onChange={(e) => setSearch(e.target.value)} />
@@ -738,7 +832,7 @@ export function PlannerClient({
               </div>
             ) : null}
 
-            {selectedClient && selectedDog ? (
+            {modalMode === "APPOINTMENT" && selectedClient && selectedDog ? (
               <div className="mt-4 space-y-2 border-t border-zinc-200 pt-3">
                 <p className="text-sm">
                   Cliente: {selectedClient.nome} {selectedClient.cognome} - Cane: {selectedDog.nome}
@@ -792,8 +886,8 @@ export function PlannerClient({
               <Button variant="outline" onClick={() => setShowModal(false)}>
                 Chiudi
               </Button>
-              <Button onClick={saveAppointment} disabled={!selectedClient || !selectedDog}>
-                Salva appuntamento
+              <Button onClick={saveAppointment} disabled={modalMode === "APPOINTMENT" ? !selectedClient || !selectedDog : !note.trim()}>
+                {modalMode === "NOTE" ? "Salva nota" : "Salva appuntamento"}
               </Button>
             </div>
           </Card>
@@ -802,7 +896,7 @@ export function PlannerClient({
 
       {showEdit && selectedAppointment ? (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-black/40 p-2 md:items-center md:p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/40 p-2 md:p-4"
           onClick={(e) => {
             if (e.target === e.currentTarget) setShowEdit(false);
           }}
@@ -810,7 +904,9 @@ export function PlannerClient({
           <Card className="max-h-[88vh] w-full max-w-xl space-y-3 overflow-y-auto p-3 md:max-h-[96vh] md:p-4">
             <h3 className="text-lg font-semibold">Modifica Appuntamento</h3>
             <p className="text-sm">
-              {selectedAppointment.cane.nome} - {selectedAppointment.cliente.nome} {selectedAppointment.cliente.cognome}
+              {isPersonalNoteAppointment(selectedAppointment)
+                ? "Nota personale"
+                : `${selectedAppointment.cane.nome} - ${selectedAppointment.cliente.nome} ${selectedAppointment.cliente.cognome}`}
             </p>
             <select className="h-10 w-full rounded-md border border-zinc-300 px-3 text-sm" value={durata} onChange={(e) => setDurata(Number(e.target.value))}>
               {durations.map((d) => (
@@ -842,6 +938,7 @@ export function PlannerClient({
                 Cancella
               </Button>
             </div>
+            {!isPersonalNoteAppointment(selectedAppointment) ? (
             <div className="border-t border-zinc-200 pt-3">
               <p className="mb-2 text-sm font-medium">Registra incasso</p>
               <div className="grid gap-2 md:grid-cols-4">
@@ -881,6 +978,7 @@ export function PlannerClient({
                 Importo precompilato dal listino quando disponibile. Puoi modificarlo liberamente per sconti o variazioni.
               </p>
             </div>
+            ) : null}
             <div className="flex justify-end">
               <Button variant="outline" onClick={() => setShowEdit(false)}>
                 Chiudi
