@@ -655,8 +655,13 @@ export function PlannerClient({
       </div>
 
       {showModal ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-2 md:p-4">
-          <Card className="max-h-[96vh] w-full max-w-2xl overflow-y-auto p-3 md:p-4">
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-black/40 p-2 md:items-center md:p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowModal(false);
+          }}
+        >
+          <Card className="max-h-[88vh] w-full max-w-2xl overflow-y-auto p-3 md:max-h-[96vh] md:p-4">
             <h3 className="mb-3 text-lg font-semibold">Nuovo Appuntamento</h3>
             <p className="text-sm text-zinc-600">Slot: {slotStart ? format(slotStart, "dd/MM/yyyy HH:mm") : "-"}</p>
             <div className="my-3 flex flex-wrap gap-2">
@@ -796,8 +801,13 @@ export function PlannerClient({
       ) : null}
 
       {showEdit && selectedAppointment ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-2 md:p-4">
-          <Card className="max-h-[96vh] w-full max-w-xl space-y-3 overflow-y-auto p-3 md:p-4">
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-black/40 p-2 md:items-center md:p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowEdit(false);
+          }}
+        >
+          <Card className="max-h-[88vh] w-full max-w-xl space-y-3 overflow-y-auto p-3 md:max-h-[96vh] md:p-4">
             <h3 className="text-lg font-semibold">Modifica Appuntamento</h3>
             <p className="text-sm">
               {selectedAppointment.cane.nome} - {selectedAppointment.cliente.nome} {selectedAppointment.cliente.cognome}
