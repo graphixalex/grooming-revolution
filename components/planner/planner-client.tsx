@@ -301,6 +301,15 @@ export function PlannerClient({
   }, []);
 
   useEffect(() => {
+    const api = calendarRef.current?.getApi();
+    if (!api) return;
+    const targetView = isMobile ? "timeGridDay" : "timeGridWeek";
+    if (api.view.type !== targetView) {
+      api.changeView(targetView);
+    }
+  }, [isMobile]);
+
+  useEffect(() => {
     const shouldLockBodyScroll = showModal || showEdit;
     if (!shouldLockBodyScroll) return;
     const previousOverflow = document.body.style.overflow;
@@ -550,34 +559,39 @@ export function PlannerClient({
       ) : null}
       <div className="flex flex-wrap items-center gap-2">
         <Button variant="outline" onClick={() => calendarRef.current?.getApi().prev()}>
-          Settimana precedente
+          {isMobile ? "Precedente" : "Settimana precedente"}
         </Button>
         <Button variant="outline" onClick={() => calendarRef.current?.getApi().today()}>
           Oggi
         </Button>
         <Button variant="outline" onClick={() => calendarRef.current?.getApi().next()}>
-          Settimana successiva
+          {isMobile ? "Successiva" : "Settimana successiva"}
         </Button>
-        <Input
-          type="date"
-          className="w-[180px]"
-          value={jumpDate}
-          onChange={(e) => setJumpDate(e.target.value)}
-        />
-        <Button
-          onClick={() => {
-            if (!jumpDate) return;
-            calendarRef.current?.getApi().gotoDate(jumpDate);
-          }}
-        >
-          Cerca giorno
-        </Button>
+        {!isMobile ? (
+          <>
+            <Input
+              type="date"
+              className="w-[180px]"
+              value={jumpDate}
+              onChange={(e) => setJumpDate(e.target.value)}
+            />
+            <Button
+              onClick={() => {
+                if (!jumpDate) return;
+                calendarRef.current?.getApi().gotoDate(jumpDate);
+              }}
+            >
+              Cerca giorno
+            </Button>
+          </>
+        ) : null}
         <div className="w-full text-sm font-semibold md:ml-auto md:w-auto">{title}</div>
       </div>
 
       <div className="overflow-hidden">
         <div className="min-w-0">
       <FullCalendar
+        key={isMobile ? "fc-mobile" : "fc-desktop"}
         ref={calendarRef}
         plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
         initialView={isMobile ? "timeGridDay" : "timeGridWeek"}
@@ -588,7 +602,7 @@ export function PlannerClient({
         buttonText={{ today: "Oggi", month: "Mese", week: "Settimana", day: "Giorno" }}
         headerToolbar={
           isMobile
-            ? { left: "title", center: "", right: "today prev,next" }
+            ? false
             : { left: "timeGridDay,timeGridWeek,dayGridMonth", center: "", right: "" }
         }
         slotMinTime={hoursConfig.slotMinTime}
