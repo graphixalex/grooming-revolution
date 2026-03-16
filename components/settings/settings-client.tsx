@@ -1,0 +1,281 @@
+"use client";
+
+import { useState } from "react";
+import { COUNTRY_OPTIONS, getCountryMeta } from "@/lib/geo";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+
+type DayKey = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
+
+type DayHours = {
+  enabled: boolean;
+  start: string;
+  end: string;
+  hasBreak: boolean;
+  breakStart: string;
+  breakEnd: string;
+};
+
+type WorkingHoursState = Record<DayKey, DayHours>;
+
+const dayOrder: DayKey[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+const dayLabel: Record<DayKey, string> = {
+  mon: "Lunedi",
+  tue: "Martedi",
+  wed: "Mercoledi",
+  thu: "Giovedi",
+  fri: "Venerdi",
+  sat: "Sabato",
+  sun: "Domenica",
+};
+
+function normalizeWorkingHours(input: any): WorkingHoursState {
+  const out = {} as WorkingHoursState;
+  for (const day of dayOrder) {
+    const row = input?.[day];
+    const firstBreak = row?.breaks?.[0];
+    out[day] = {
+      enabled: Boolean(row?.enabled),
+      start: row?.start ?? "09:00",
+      end: row?.end ?? "18:00",
+      hasBreak: Boolean(firstBreak?.start && firstBreak?.end),
+      breakStart: firstBreak?.start ?? "",
+      breakEnd: firstBreak?.end ?? "",
+    };
+  }
+  return out;
+}
+
+function toWorkingHoursJson(state: WorkingHoursState) {
+  const out: Record<string, { enabled: boolean; start: string; end: string; breaks: Array<{ start: string; end: string }> }> = {};
+  for (const day of dayOrder) {
+    const row = state[day];
+    const hasBreak = row.hasBreak && row.breakStart && row.breakEnd;
+    out[day] = {
+      enabled: row.enabled,
+      start: row.start,
+      end: row.end,
+      breaks: hasBreak ? [{ start: row.breakStart, end: row.breakEnd }] : [],
+    };
+  }
+  return out;
+}
+
+export function SettingsClient({ initial }: { initial: any }) {
+  const [salon, setSalon] = useState(initial.salon);
+  const [tags, setTags] = useState(initial.tags);
+  const [treatments, setTreatments] = useState(initial.treatments);
+  const [staffEmail, setStaffEmail] = useState("");
+  const [staffPassword, setStaffPassword] = useState("Password123!");
+  const [staffRole, setStaffRole] = useState<"MANAGER" | "STAFF">("MANAGER");
+  const [workingHours, setWorkingHours] = useState<WorkingHoursState>(normalizeWorkingHours(initial.salon?.workingHoursJson));
+
+  async function saveSection(section: string, payload: Record<string, unknown>) {
+    const res = await fetch("/api/settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ section, ...payload }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data.error || "Errore salvataggio");
+      return;
+    }
+    alert("Salvato");
+  }
+
+  return (
+    <div className="space-y-4">
+      <Card className="space-y-2">
+        <h2 className="font-semibold">Dati attivita</h2>
+        <div className="grid gap-2 md:grid-cols-2">
+          <Input value={salon.nomeAttivita || ""} onChange={(e) => setSalon({ ...salon, nomeAttivita: e.target.value })} placeholder="Nome attivita" />
+          <select
+            className="h-10 rounded-md border border-zinc-300 bg-white px-3 text-sm"
+            value={salon.paese || "IT"}
+            onChange={(e) => {
+              const nextCountry = e.target.value;
+              const meta = getCountryMeta(nextCountry);
+              setSalon({ ...salon, paese: meta.code, valuta: meta.currency });
+            }}
+          >
+            {COUNTRY_OPTIONS.map((c) => (
+              <option key={c.code} value={c.code}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+          <Input value={salon.valuta || ""} readOnly placeholder="Valuta automatica" />
+          <Input value={salon.timezone || ""} onChange={(e) => setSalon({ ...salon, timezone: e.target.value })} placeholder="Timezone" />
+          <Input value={salon.indirizzo || ""} onChange={(e) => setSalon({ ...salon, indirizzo: e.target.value })} placeholder="Indirizzo" />
+          <Input value={salon.telefono || ""} onChange={(e) => setSalon({ ...salon, telefono: e.target.value })} placeholder="Telefono" />
+          <Input value={salon.email || ""} onChange={(e) => setSalon({ ...salon, email: e.target.value })} placeholder="Email" />
+          <Input value={salon.billingVatNumber || ""} onChange={(e) => setSalon({ ...salon, billingVatNumber: e.target.value })} placeholder="Partita IVA" />
+        </div>
+        <Button onClick={() => saveSection("salon", salon)}>Salva dati attivita</Button>
+      </Card>
+
+      <Card className="space-y-3">
+        <h2 className="font-semibold">Orari di lavoro</h2>
+        <p className="text-sm text-zinc-600">Configura gli orari per ogni giorno. La pausa e opzionale.</p>
+        <div className="space-y-2">
+          {dayOrder.map((day) => (
+            <div key={day} className="grid gap-2 rounded-md border border-zinc-200 p-3 md:grid-cols-7">
+              <label className="flex items-center gap-2 text-sm md:col-span-1">
+                <input
+                  type="checkbox"
+                  checked={workingHours[day].enabled}
+                  onChange={(e) => setWorkingHours((prev) => ({ ...prev, [day]: { ...prev[day], enabled: e.target.checked } }))}
+                />
+                {dayLabel[day]}
+              </label>
+              <div className="md:col-span-1">
+                <p className="text-xs text-zinc-500">Inizio</p>
+                <Input
+                  type="time"
+                  value={workingHours[day].start}
+                  onChange={(e) => setWorkingHours((prev) => ({ ...prev, [day]: { ...prev[day], start: e.target.value } }))}
+                  disabled={!workingHours[day].enabled}
+                />
+              </div>
+              <div className="md:col-span-1">
+                <p className="text-xs text-zinc-500">Fine</p>
+                <Input
+                  type="time"
+                  value={workingHours[day].end}
+                  onChange={(e) => setWorkingHours((prev) => ({ ...prev, [day]: { ...prev[day], end: e.target.value } }))}
+                  disabled={!workingHours[day].enabled}
+                />
+              </div>
+              <div className="md:col-span-1">
+                <p className="text-xs text-zinc-500">Pausa</p>
+                <label className="flex h-10 items-center gap-2 rounded-md border border-zinc-300 px-3 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={workingHours[day].hasBreak}
+                    onChange={(e) =>
+                      setWorkingHours((prev) => ({
+                        ...prev,
+                        [day]: {
+                          ...prev[day],
+                          hasBreak: e.target.checked,
+                          breakStart: e.target.checked ? prev[day].breakStart : "",
+                          breakEnd: e.target.checked ? prev[day].breakEnd : "",
+                        },
+                      }))
+                    }
+                    disabled={!workingHours[day].enabled}
+                  />
+                  Pausa attiva
+                </label>
+              </div>
+              <div className="md:col-span-1">
+                <p className="text-xs text-zinc-500">Pausa da</p>
+                <Input
+                  type="time"
+                  value={workingHours[day].breakStart}
+                  onChange={(e) => setWorkingHours((prev) => ({ ...prev, [day]: { ...prev[day], breakStart: e.target.value } }))}
+                  disabled={!workingHours[day].enabled || !workingHours[day].hasBreak}
+                />
+              </div>
+              <div className="md:col-span-1">
+                <p className="text-xs text-zinc-500">Pausa a</p>
+                <Input
+                  type="time"
+                  value={workingHours[day].breakEnd}
+                  onChange={(e) => setWorkingHours((prev) => ({ ...prev, [day]: { ...prev[day], breakEnd: e.target.value } }))}
+                  disabled={!workingHours[day].enabled || !workingHours[day].hasBreak}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={Boolean(salon.overlapAllowed)} onChange={(e) => setSalon({ ...salon, overlapAllowed: e.target.checked })} />
+          Consenti sovrapposizioni appuntamenti
+        </label>
+        <Button
+          onClick={() =>
+            saveSection("workingHours", {
+              workingHoursJson: toWorkingHoursJson(workingHours),
+              overlapAllowed: salon.overlapAllowed,
+            })
+          }
+        >
+          Salva orari
+        </Button>
+      </Card>
+
+      <Card className="space-y-2">
+        <h2 className="font-semibold">Modelli messaggi WhatsApp / Email</h2>
+        <p className="text-xs text-zinc-500">Placeholder: %nome_cliente% %nome_pet% %data_appuntamento% %orario_appuntamento% %nome_attivita% %indirizzo_attivita%</p>
+        <Textarea value={salon.whatsappTemplate || ""} onChange={(e) => setSalon({ ...salon, whatsappTemplate: e.target.value })} />
+        <Textarea value={salon.emailTemplate || ""} onChange={(e) => setSalon({ ...salon, emailTemplate: e.target.value })} />
+        <Button onClick={() => saveSection("templates", { whatsappTemplate: salon.whatsappTemplate, emailTemplate: salon.emailTemplate })}>Salva messaggio</Button>
+      </Card>
+
+      <Card className="space-y-2">
+        <h2 className="font-semibold">Tag rapidi cane</h2>
+        {tags.map((t: any, i: number) => (
+          <Input key={t.id || i} value={t.nome} onChange={(e) => setTags(tags.map((x: any, idx: number) => (idx === i ? { ...x, nome: e.target.value } : x)))} />
+        ))}
+        <Button variant="outline" onClick={() => setTags([...tags, { nome: "Nuovo tag", ordine: tags.length }])}>
+          Aggiungi tag
+        </Button>
+        <Button onClick={() => saveSection("tags", { tags: tags.map((t: any, i: number) => ({ nome: t.nome, ordine: i })) })}>Salva tag</Button>
+      </Card>
+
+      <Card className="space-y-2">
+        <h2 className="font-semibold">Catalogo trattamenti</h2>
+        {treatments.map((t: any, i: number) => (
+          <div key={t.id} className="flex items-center gap-2">
+            <Input value={t.nome} onChange={(e) => setTreatments(treatments.map((x: any, idx: number) => (idx === i ? { ...x, nome: e.target.value } : x)))} />
+            <label className="text-sm">
+              <input
+                type="checkbox"
+                checked={t.attivo}
+                onChange={(e) => setTreatments(treatments.map((x: any, idx: number) => (idx === i ? { ...x, attivo: e.target.checked } : x)))}
+              />{" "}
+              Attivo
+            </label>
+            <Button
+              variant="destructive"
+              onClick={() => setTreatments(treatments.filter((_: any, idx: number) => idx !== i))}
+            >
+              Rimuovi
+            </Button>
+          </div>
+        ))}
+        <Button
+          variant="outline"
+          onClick={() => setTreatments([...treatments, { id: `new-${Date.now()}`, nome: "Nuovo trattamento", attivo: true, ordine: treatments.length }])}
+        >
+          Aggiungi trattamento
+        </Button>
+        <Button onClick={() => saveSection("treatments", { treatments: treatments.map((t: any, i: number) => ({ ...t, ordine: i })) })}>Salva trattamenti</Button>
+      </Card>
+
+      <Card className="space-y-2">
+        <h2 className="font-semibold">Team e ruoli</h2>
+        <div className="grid gap-2 md:grid-cols-3">
+          <Input value={staffEmail} onChange={(e) => setStaffEmail(e.target.value)} placeholder="Email staff" />
+          <Input value={staffPassword} onChange={(e) => setStaffPassword(e.target.value)} placeholder="Password staff" />
+          <select className="h-10 rounded-md border border-zinc-300 px-3 text-sm" value={staffRole} onChange={(e) => setStaffRole(e.target.value as "MANAGER" | "STAFF")}>
+            <option value="MANAGER">Manager</option>
+            <option value="STAFF">Staff</option>
+          </select>
+        </div>
+        <Button onClick={() => saveSection("staff", { email: staffEmail, password: staffPassword, role: staffRole })}>Crea utente team</Button>
+        <div className="text-sm text-zinc-600">
+          {initial.staff.map((s: any) => (
+            <p key={s.id}>
+              {s.email} - {s.ruolo}
+            </p>
+          ))}
+        </div>
+      </Card>
+    </div>
+  );
+}

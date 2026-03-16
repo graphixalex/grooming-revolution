@@ -1,0 +1,167 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+
+type Treatment = { id: string; nome: string };
+
+type RuleRow = {
+  id: string;
+  treatment: { nome: string };
+  dogSize: "S" | "M" | "L" | null;
+  razzaPattern: string | null;
+  extraLabel: string | null;
+  basePrice: number | string;
+  extraPrice: number | string;
+  durataMinuti: number;
+  validoDa: string;
+  validoA: string | null;
+  attiva: boolean;
+  note: string | null;
+};
+
+export function PricingClient({ treatments, initialRules, canEdit }: { treatments: Treatment[]; initialRules: RuleRow[]; canEdit: boolean }) {
+  const [rules, setRules] = useState(initialRules);
+  const [form, setForm] = useState({
+    treatmentId: treatments[0]?.id ?? "",
+    dogSize: "",
+    razzaPattern: "",
+    extraLabel: "",
+    basePrice: "",
+    extraPrice: "0",
+    durataMinuti: "60",
+    validoDa: new Date().toISOString().slice(0, 16),
+    validoA: "",
+    note: "",
+  });
+
+  async function loadRules() {
+    const res = await fetch("/api/pricing-rules");
+    const data = await res.json();
+    if (res.ok) setRules(data);
+  }
+
+  async function createRule() {
+    if (!canEdit) return;
+    const basePrice = Number(form.basePrice);
+    const extraPrice = Number(form.extraPrice || "0");
+    const durataMinuti = Number(form.durataMinuti);
+    if (!Number.isFinite(basePrice) || basePrice < 0 || !Number.isFinite(extraPrice) || extraPrice < 0 || !Number.isFinite(durataMinuti)) {
+      alert("Controlla i valori inseriti");
+      return;
+    }
+
+    const res = await fetch("/api/pricing-rules", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        treatmentId: form.treatmentId,
+        dogSize: form.dogSize || null,
+        razzaPattern: form.razzaPattern || null,
+        extraLabel: form.extraLabel || null,
+        basePrice,
+        extraPrice,
+        durataMinuti,
+        validoDa: new Date(form.validoDa).toISOString(),
+        validoA: form.validoA ? new Date(form.validoA).toISOString() : null,
+        note: form.note || null,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data.error || "Errore creazione regola");
+      return;
+    }
+    await loadRules();
+  }
+
+  async function toggleRule(id: string, attiva: boolean) {
+    if (!canEdit) return;
+    const res = await fetch("/api/pricing-rules", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, attiva }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data.error || "Errore aggiornamento regola");
+      return;
+    }
+    setRules((prev) => prev.map((r) => (r.id === id ? { ...r, attiva } : r)));
+  }
+
+  const activeRules = useMemo(() => rules.filter((r) => r.attiva), [rules]);
+
+  return (
+    <div className="space-y-4">
+      <Card className="space-y-2">
+        <h2 className="font-semibold">Regole attive</h2>
+        <p className="text-sm text-zinc-600">Totale regole attive: {activeRules.length}</p>
+      </Card>
+
+      <Card className="space-y-3">
+        <h2 className="font-semibold">Nuova regola prezzo</h2>
+        <div className="grid gap-2 md:grid-cols-3">
+          <select
+            className="h-10 rounded-md border border-zinc-300 px-3 text-sm"
+            value={form.treatmentId}
+            onChange={(e) => setForm((prev) => ({ ...prev, treatmentId: e.target.value }))}
+            disabled={!canEdit}
+          >
+            {treatments.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.nome}
+              </option>
+            ))}
+          </select>
+          <select
+            className="h-10 rounded-md border border-zinc-300 px-3 text-sm"
+            value={form.dogSize}
+            onChange={(e) => setForm((prev) => ({ ...prev, dogSize: e.target.value }))}
+            disabled={!canEdit}
+          >
+            <option value="">Taglia qualsiasi</option>
+            <option value="S">S</option>
+            <option value="M">M</option>
+            <option value="L">L</option>
+          </select>
+          <Input placeholder="Razza (pattern opzionale)" value={form.razzaPattern} onChange={(e) => setForm((prev) => ({ ...prev, razzaPattern: e.target.value }))} disabled={!canEdit} />
+          <Input placeholder="Prezzo base EUR" type="number" min="0" step="0.01" value={form.basePrice} onChange={(e) => setForm((prev) => ({ ...prev, basePrice: e.target.value }))} disabled={!canEdit} />
+          <Input placeholder="Extra EUR" type="number" min="0" step="0.01" value={form.extraPrice} onChange={(e) => setForm((prev) => ({ ...prev, extraPrice: e.target.value }))} disabled={!canEdit} />
+          <Input placeholder="Durata minuti" type="number" min="15" step="15" value={form.durataMinuti} onChange={(e) => setForm((prev) => ({ ...prev, durataMinuti: e.target.value }))} disabled={!canEdit} />
+          <Input placeholder="Valido da" type="datetime-local" value={form.validoDa} onChange={(e) => setForm((prev) => ({ ...prev, validoDa: e.target.value }))} disabled={!canEdit} />
+          <Input placeholder="Valido a (opz.)" type="datetime-local" value={form.validoA} onChange={(e) => setForm((prev) => ({ ...prev, validoA: e.target.value }))} disabled={!canEdit} />
+          <Input placeholder="Nome extra (opzionale)" value={form.extraLabel} onChange={(e) => setForm((prev) => ({ ...prev, extraLabel: e.target.value }))} disabled={!canEdit} />
+        </div>
+        <Textarea placeholder="Note regola (opzionale)" value={form.note} onChange={(e) => setForm((prev) => ({ ...prev, note: e.target.value }))} disabled={!canEdit} />
+        <Button onClick={createRule} disabled={!canEdit}>
+          Aggiungi regola
+        </Button>
+      </Card>
+
+      <Card>
+        <h2 className="mb-2 font-semibold">Storico regole</h2>
+        <div className="space-y-2 text-sm">
+          {rules.map((r) => (
+            <div key={r.id} className="rounded border border-zinc-200 p-3">
+              <p className="font-medium">
+                {r.treatment.nome} | EUR {Number(r.basePrice).toFixed(2)} + EUR {Number(r.extraPrice).toFixed(2)} extra | {r.durataMinuti} min
+              </p>
+              <p>Taglia: {r.dogSize ?? "qualsiasi"} | Razza: {r.razzaPattern || "-"} | Extra: {r.extraLabel || "-"}</p>
+              <p>Validita: {new Date(r.validoDa).toLocaleString("it-IT")} - {r.validoA ? new Date(r.validoA).toLocaleString("it-IT") : "aperta"}</p>
+              <p>Stato: {r.attiva ? "Attiva" : "Disattivata"}</p>
+              {canEdit ? (
+                <Button variant="outline" onClick={() => toggleRule(r.id, !r.attiva)}>
+                  {r.attiva ? "Disattiva" : "Riattiva"}
+                </Button>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      </Card>
+    </div>
+  );
+}

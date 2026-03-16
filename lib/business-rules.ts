@@ -1,0 +1,71 @@
+import { addMinutes } from "date-fns";
+import { prisma } from "@/lib/prisma";
+
+const days = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
+
+function parseTime(time: string) {
+  const [h, m] = time.split(":").map(Number);
+  return { h, m };
+}
+
+export async function canCreateClient(salonId: string) {
+  const salon = await prisma.salon.findUnique({ where: { id: salonId }, select: { subscriptionPlan: true } });
+  if (!salon || salon.subscriptionPlan !== "FREE") return true;
+
+  const count = await prisma.client.count({ where: { salonId, deletedAt: null } });
+  return count < 100;
+}
+
+export async function ensureDogLimit(salonId: string, clienteId: string) {
+  const count = await prisma.dog.count({ where: { salonId, clienteId, deletedAt: null } });
+  if (count >= 4) {
+    throw new Error("Massimo 4 cani per cliente nel piano attuale");
+  }
+}
+
+export function computeEndAt(startAt: Date, durataMinuti: number) {
+  return addMinutes(startAt, durataMinuti);
+}
+
+export function isInsideWorkingHours(workingHoursJson: any, startAt: Date, endAt: Date) {
+  if (!workingHoursJson) return true;
+  const day = days[startAt.getDay()];
+  const config = workingHoursJson[day];
+  if (!config?.enabled) return false;
+
+  const { h: sh, m: sm } = parseTime(config.start);
+  const { h: eh, m: em } = parseTime(config.end);
+
+  const slotStart = startAt.getHours() * 60 + startAt.getMinutes();
+  const slotEnd = endAt.getHours() * 60 + endAt.getMinutes();
+  const workStart = sh * 60 + sm;
+  const workEnd = eh * 60 + em;
+
+  if (slotStart < workStart || slotEnd > workEnd) return false;
+
+  for (const b of config.breaks ?? []) {
+    const { h: bh1, m: bm1 } = parseTime(b.start);
+    const { h: bh2, m: bm2 } = parseTime(b.end);
+    const breakStart = bh1 * 60 + bm1;
+    const breakEnd = bh2 * 60 + bm2;
+    if (slotStart < breakEnd && slotEnd > breakStart) return false;
+  }
+
+  return true;
+}
+
+export async function hasOverlap(salonId: string, startAt: Date, endAt: Date, appointmentId?: string) {
+  const overlap = await prisma.appointment.findFirst({
+    where: {
+      salonId,
+      deletedAt: null,
+      id: appointmentId ? { not: appointmentId } : undefined,
+      stato: { notIn: ["CANCELLATO"] },
+      startAt: { lt: endAt },
+      endAt: { gt: startAt },
+    },
+    select: { id: true },
+  });
+  return Boolean(overlap);
+}
+

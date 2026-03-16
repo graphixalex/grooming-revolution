@@ -1,0 +1,192 @@
+import { endOfMonth, startOfMonth, subMonths } from "date-fns";
+import { prisma } from "@/lib/prisma";
+import { getRequiredSession } from "@/lib/session";
+import { Card } from "@/components/ui/card";
+import { getAccountingScope } from "@/lib/accounting-scope";
+import { AccountingScopeSwitcher } from "@/components/accounting/scope-switcher";
+import { aggregateByCurrency, formatCurrencyTotals } from "@/lib/money";
+
+type RevenueBySalon = { salonId: string; name: string; total: number; currency: string; appointments: number; noShowRate: number };
+
+export default async function ReportsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ scope?: string }>;
+}) {
+  const session = await getRequiredSession();
+  const { scope } = await searchParams;
+  const accountingScope = await getAccountingScope(session.user, scope);
+  const from = startOfMonth(subMonths(new Date(), 2));
+  const to = endOfMonth(new Date());
+  const salonsInScope = await prisma.salon.findMany({
+    where: { id: { in: accountingScope.salonIds } },
+    select: { id: true, nomeAttivita: true, nomeSede: true, valuta: true },
+  });
+  const salonIds = accountingScope.salonIds;
+
+  const [appointments, transactions, clients, appointmentTreatments] = await Promise.all([
+    prisma.appointment.findMany({
+      where: { salonId: { in: salonIds }, startAt: { gte: from, lte: to }, deletedAt: null },
+      include: { cliente: { select: { id: true } } },
+    }),
+    prisma.transaction.findMany({
+      where: { salonId: { in: salonIds }, dateTime: { gte: from, lte: to } },
+      include: { appointment: { select: { id: true, salonId: true, createdById: true } }, createdBy: { select: { email: true } } },
+    }),
+    prisma.client.findMany({
+      where: { salonId: { in: salonIds }, deletedAt: null },
+      select: { id: true, salonId: true },
+    }),
+    prisma.appointmentTreatment.findMany({
+      where: {
+        appointment: {
+          salonId: { in: salonIds },
+          startAt: { gte: from, lte: to },
+          deletedAt: null,
+        },
+      },
+      include: { treatment: { select: { nome: true } }, appointment: { select: { id: true } } },
+    }),
+  ]);
+
+  const currencyBySalon = new Map(salonsInScope.map((s) => [s.id, s.valuta || "EUR"]));
+  const totalRevenue = aggregateByCurrency(transactions, (t) => currencyBySalon.get(t.salonId) ?? "EUR", (t) => Number(t.grossAmount));
+  const totalTips = aggregateByCurrency(transactions, (t) => currencyBySalon.get(t.salonId) ?? "EUR", (t) => Number(t.tipAmount));
+  const noShowRate = appointments.length ? (appointments.filter((a) => a.stato === "NO_SHOW").length / appointments.length) * 100 : 0;
+
+  const appointmentsByClient = new Map<string, number>();
+  for (const a of appointments) {
+    appointmentsByClient.set(a.clienteId, (appointmentsByClient.get(a.clienteId) ?? 0) + 1);
+  }
+  const returningClients = [...appointmentsByClient.values()].filter((count) => count >= 2).length;
+  const returnRate = appointmentsByClient.size ? (returningClients / appointmentsByClient.size) * 100 : 0;
+
+  const txByAppointment = new Map<string, number>();
+  for (const t of transactions) {
+    txByAppointment.set(t.appointmentId, (txByAppointment.get(t.appointmentId) ?? 0) + Number(t.grossAmount));
+  }
+
+  const serviceAgg = new Map<string, { count: number; revenue: number }>();
+  for (const row of appointmentTreatments) {
+    const revenue = txByAppointment.get(row.appointmentId) ?? 0;
+    const key = row.treatment.nome;
+    const item = serviceAgg.get(key) ?? { count: 0, revenue: 0 };
+    item.count += 1;
+    item.revenue += revenue;
+    serviceAgg.set(key, item);
+  }
+  const topServices = [...serviceAgg.entries()]
+    .map(([name, data]) => ({ name, ...data }))
+    .sort((a, b) => b.revenue - a.revenue)
+    .slice(0, 5);
+
+  const staffAgg = new Map<string, number>();
+  for (const t of transactions) {
+    const key = t.createdBy.email;
+    staffAgg.set(key, (staffAgg.get(key) ?? 0) + Number(t.grossAmount));
+  }
+  const topStaff = [...staffAgg.entries()]
+    .map(([email, revenue]) => ({ email, revenue }))
+    .sort((a, b) => b.revenue - a.revenue)
+    .slice(0, 5);
+
+  const ltvByClient = await prisma.transaction.groupBy({
+    by: ["appointmentId"],
+    where: { salonId: { in: salonIds } },
+    _sum: { grossAmount: true },
+  });
+  const apptById = await prisma.appointment.findMany({
+    where: { id: { in: ltvByClient.map((x) => x.appointmentId) } },
+    select: { id: true, clienteId: true, salonId: true },
+  });
+  const apptToClient = new Map(apptById.map((a) => [a.id, a.clienteId]));
+  const ltvClientAgg = new Map<string, Record<string, number>>();
+  for (const row of ltvByClient) {
+    const clientId = apptToClient.get(row.appointmentId);
+    if (!clientId) continue;
+    const appt = apptById.find((a) => a.id === row.appointmentId);
+    const currency = currencyBySalon.get(appt?.salonId || "") ?? "EUR";
+    const existing = ltvClientAgg.get(clientId) ?? {};
+    existing[currency] = (existing[currency] ?? 0) + Number(row._sum.grossAmount ?? 0);
+    ltvClientAgg.set(clientId, existing);
+  }
+  const avgLtvByCurrency: Record<string, number> = {};
+  for (const row of ltvClientAgg.values()) {
+    for (const [currency, value] of Object.entries(row)) {
+      avgLtvByCurrency[currency] = (avgLtvByCurrency[currency] ?? 0) + value;
+    }
+  }
+  if (ltvClientAgg.size > 0) {
+    for (const currency of Object.keys(avgLtvByCurrency)) {
+      avgLtvByCurrency[currency] = avgLtvByCurrency[currency] / ltvClientAgg.size;
+    }
+  }
+
+  const compareBySalon: RevenueBySalon[] = salonsInScope.map((s) => {
+    const salonAppts = appointments.filter((a) => a.salonId === s.id);
+    const salonTx = transactions.filter((t) => t.salonId === s.id);
+    const salonRevenue = salonTx.reduce((sum, t) => sum + Number(t.grossAmount), 0);
+    const salonNoShow = salonAppts.length ? (salonAppts.filter((a) => a.stato === "NO_SHOW").length / salonAppts.length) * 100 : 0;
+    return {
+      salonId: s.id,
+      name: s.nomeSede || "Sede principale",
+      total: salonRevenue,
+      currency: s.valuta || "EUR",
+      appointments: salonAppts.length,
+      noShowRate: salonNoShow,
+    };
+  });
+
+  return (
+    <div className="space-y-4">
+      <h1 className="text-2xl font-semibold">Report avanzati</h1>
+      <AccountingScopeSwitcher basePath="/reports" selectedScope={String(accountingScope.selectedScope)} options={accountingScope.options} />
+      <p className="text-sm text-zinc-600">Periodo analizzato: ultimi 3 mesi (da {from.toLocaleDateString("it-IT")} a {to.toLocaleDateString("it-IT")})</p>
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <Card><p className="text-sm text-zinc-500">Fatturato periodo</p><p className="text-2xl font-semibold">{formatCurrencyTotals(totalRevenue)}</p></Card>
+        <Card><p className="text-sm text-zinc-500">LTV medio cliente</p><p className="text-2xl font-semibold">{formatCurrencyTotals(avgLtvByCurrency)}</p></Card>
+        <Card><p className="text-sm text-zinc-500">Tasso ritorno clienti</p><p className="text-2xl font-semibold">{returnRate.toFixed(1)}%</p></Card>
+        <Card><p className="text-sm text-zinc-500">No-show rate</p><p className="text-2xl font-semibold">{noShowRate.toFixed(1)}%</p></Card>
+        <Card><p className="text-sm text-zinc-500">Mance periodo</p><p className="text-2xl font-semibold">{formatCurrencyTotals(totalTips)}</p></Card>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <h2 className="mb-2 font-semibold">Top servizi</h2>
+          <div className="space-y-2 text-sm">
+            {topServices.map((s) => (
+              <p key={s.name}>
+                {s.name}: {s.count} appuntamenti - importo aggregato {s.revenue.toFixed(2)}
+              </p>
+            ))}
+          </div>
+        </Card>
+        <Card>
+          <h2 className="mb-2 font-semibold">Top staff per fatturato</h2>
+          <div className="space-y-2 text-sm">
+            {topStaff.map((s) => (
+              <p key={s.email}>
+                {s.email}: importo aggregato {s.revenue.toFixed(2)}
+              </p>
+            ))}
+          </div>
+        </Card>
+      </div>
+
+      <Card>
+        <h2 className="mb-2 font-semibold">Confronto sedi</h2>
+        <p className="mb-2 text-sm text-zinc-600">
+          Sedi analizzate: {salonsInScope.length}. Clienti attivi nel gruppo: {clients.length}
+        </p>
+        <div className="space-y-2 text-sm">
+          {compareBySalon.map((row) => (
+            <p key={row.salonId}>
+              {row.name}: {row.currency} {row.total.toFixed(2)} | Appuntamenti {row.appointments} | No-show {row.noShowRate.toFixed(1)}%
+            </p>
+          ))}
+        </div>
+      </Card>
+    </div>
+  );
+}
