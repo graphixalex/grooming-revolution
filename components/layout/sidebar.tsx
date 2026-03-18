@@ -29,7 +29,7 @@ export function Sidebar() {
             alt="Grooming Revolution"
             width={640}
             height={180}
-            className="h-full w-full origin-left object-contain object-left scale-[3.2]"
+            className="h-full w-full origin-center object-contain object-center scale-[3.2]"
             priority
           />
         </div>
@@ -61,7 +61,7 @@ export function Sidebar() {
             alt="Grooming Revolution"
             width={640}
             height={180}
-            className="h-full w-full origin-left object-contain object-left scale-[3]"
+            className="h-full w-full origin-center object-contain object-center scale-[3]"
           />
         </div>
         <nav className="space-y-1">
