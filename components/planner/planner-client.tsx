@@ -58,6 +58,16 @@ function isPersonalNoteAppointment(a: Appointment) {
 
 const durations = Array.from({ length: 20 }, (_, i) => (i + 1) * 15);
 const dayKeyToIndex: Record<DayKey, number> = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6 };
+const indexToDayKey: Record<number, DayKey> = { 0: "sun", 1: "mon", 2: "tue", 3: "wed", 4: "thu", 5: "fri", 6: "sat" };
+const dayLabel: Record<DayKey, string> = {
+  mon: "Lunedi",
+  tue: "Martedi",
+  wed: "Mercoledi",
+  thu: "Giovedi",
+  fri: "Venerdi",
+  sat: "Sabato",
+  sun: "Domenica",
+};
 
 function toMinutes(value: string) {
   const [h, m] = value.split(":").map(Number);
@@ -228,7 +238,6 @@ export function PlannerClient({
   const [visibleRange, setVisibleRange] = useState<{ from: string; to: string } | null>(null);
   const [title, setTitle] = useState("");
   const [jumpDate, setJumpDate] = useState("");
-  const [operatorBoardDate, setOperatorBoardDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [switchingSalonId, setSwitchingSalonId] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [incassoAmount, setIncassoAmount] = useState<string>("");
@@ -609,17 +618,45 @@ export function PlannerClient({
   }, [visibleRange]);
 
   const allEvents = useMemo(() => [...appointmentEvents, ...holidayEvents], [appointmentEvents, holidayEvents]);
-  const operatorBoard = useMemo(() => {
-    if (!operators.length || !operatorBoardDate) return [];
-    const start = new Date(`${operatorBoardDate}T00:00:00`);
-    const end = new Date(`${operatorBoardDate}T23:59:59`);
-    return operators.map((op) => {
-      const rows = appointments
-        .filter((a) => a.operator?.id === op.id && new Date(a.startAt) >= start && new Date(a.startAt) <= end)
-        .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
-      return { operator: op, rows };
+  const operatorWeekBoard = useMemo(() => {
+    if (!operators.length || !visibleRange) return [];
+    const weekStart = new Date(visibleRange.from);
+    const weekEnd = new Date(visibleRange.to);
+    const days: Date[] = [];
+    for (let d = new Date(weekStart); d < weekEnd; d = addDays(d, 1)) {
+      days.push(new Date(d));
+    }
+
+    return days.map((dayDate) => {
+      const dayKey = indexToDayKey[dayDate.getDay()];
+      const start = new Date(dayDate);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(dayDate);
+      end.setHours(23, 59, 59, 999);
+
+      const rows = operators
+        .map((op) => {
+          const working = (op.workingHoursJson as WorkingHoursJson | null | undefined)?.[dayKey];
+          if (!working?.enabled) return null;
+          const items = appointments
+            .filter((a) => a.operator?.id === op.id && new Date(a.startAt) >= start && new Date(a.startAt) <= end)
+            .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
+          return {
+            operator: op,
+            start: working.start,
+            end: working.end,
+            items,
+          };
+        })
+        .filter(Boolean) as Array<{ operator: Operator; start: string; end: string; items: Appointment[] }>;
+
+      return {
+        date: dayDate,
+        dayKey,
+        rows,
+      };
     });
-  }, [appointments, operatorBoardDate, operators]);
+  }, [appointments, operators, visibleRange]);
 
   return (
     <Card className="space-y-4">
@@ -689,31 +726,38 @@ export function PlannerClient({
       </div>
       {operators.length ? (
         <Card className="space-y-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <h3 className="font-semibold">Agenda operatori (giorno)</h3>
-            <Input
-              type="date"
-              className="w-[180px]"
-              value={operatorBoardDate}
-              onChange={(e) => setOperatorBoardDate(e.target.value)}
-            />
-          </div>
-          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-            {operatorBoard.map((col) => (
-              <div key={col.operator.id} className="rounded-md border border-zinc-200 p-3">
-                <p className="font-medium">{col.operator.nome}</p>
-                <div className="mt-2 space-y-1 text-sm">
-                  {col.rows.length === 0 ? (
-                    <p className="text-zinc-500">Nessun appuntamento</p>
-                  ) : (
-                    col.rows.map((r) => (
-                      <p key={r.id}>
-                        {format(new Date(r.startAt), "HH:mm")} - {format(new Date(r.endAt), "HH:mm")} |{" "}
-                        {isPersonalNoteAppointment(r) ? `Nota: ${r.noteAppuntamento || ""}` : `${r.cane.nome} / ${r.cliente.nome}`}
-                      </p>
-                    ))
-                  )}
-                </div>
+          <h3 className="font-semibold">Agenda operatori (settimana)</h3>
+          <div className="space-y-3">
+            {operatorWeekBoard.map((day) => (
+              <div key={day.date.toISOString()} className="rounded-md border border-zinc-200 p-3">
+                <p className="font-medium">
+                  {dayLabel[day.dayKey]} {format(day.date, "dd/MM")}
+                </p>
+                {day.rows.length === 0 ? (
+                  <p className="mt-2 text-sm text-zinc-500">Nessun operatore in turno.</p>
+                ) : (
+                  <div className="mt-2 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                    {day.rows.map((row) => (
+                      <div key={`${day.date.toISOString()}-${row.operator.id}`} className="rounded border border-zinc-100 p-2">
+                        <p className="text-sm font-semibold">
+                          {row.operator.nome} ({row.start} - {row.end})
+                        </p>
+                        <div className="mt-1 space-y-1 text-xs">
+                          {row.items.length === 0 ? (
+                            <p className="text-zinc-500">Nessun appuntamento</p>
+                          ) : (
+                            row.items.map((r) => (
+                              <p key={r.id}>
+                                {format(new Date(r.startAt), "HH:mm")} - {format(new Date(r.endAt), "HH:mm")} |{" "}
+                                {isPersonalNoteAppointment(r) ? `Nota: ${r.noteAppuntamento || ""}` : `${r.cane.nome} / ${r.cliente.nome}`}
+                              </p>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>
