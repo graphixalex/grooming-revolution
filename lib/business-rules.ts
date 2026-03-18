@@ -54,10 +54,17 @@ export function isInsideWorkingHours(workingHoursJson: any, startAt: Date, endAt
   return true;
 }
 
-export async function hasOverlap(salonId: string, startAt: Date, endAt: Date, appointmentId?: string) {
+export async function hasOverlap(
+  salonId: string,
+  startAt: Date,
+  endAt: Date,
+  appointmentId?: string,
+  operatorId?: string | null,
+) {
   const overlap = await prisma.appointment.findFirst({
     where: {
       salonId,
+      operatorId: operatorId || undefined,
       deletedAt: null,
       id: appointmentId ? { not: appointmentId } : undefined,
       stato: { notIn: ["CANCELLATO"] },

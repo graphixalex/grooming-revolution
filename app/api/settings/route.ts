@@ -3,20 +3,22 @@ import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/api-auth";
 import bcrypt from "bcryptjs";
 import { getCountryMeta } from "@/lib/geo";
+import { Prisma } from "@prisma/client";
 
 export async function GET() {
   const auth = await requireApiSession();
   if ("error" in auth) return auth.error;
   const salonId = auth.session.user.salonId;
 
-  const [salon, tags, treatments, staff] = await Promise.all([
+  const [salon, tags, treatments, staff, operators] = await Promise.all([
     prisma.salon.findUnique({ where: { id: salonId } }),
     prisma.quickTag.findMany({ where: { salonId }, orderBy: { ordine: "asc" } }),
     prisma.treatment.findMany({ where: { salonId }, orderBy: { ordine: "asc" } }),
     prisma.user.findMany({ where: { salonId }, orderBy: { createdAt: "asc" }, select: { id: true, email: true, ruolo: true } }),
+    prisma.operator.findMany({ where: { salonId }, orderBy: { ordine: "asc" } }),
   ]);
 
-  return NextResponse.json({ salon, tags, treatments, staff });
+  return NextResponse.json({ salon, tags, treatments, staff, operators });
 }
 
 export async function PATCH(req: NextRequest) {
@@ -115,6 +117,67 @@ export async function PATCH(req: NextRequest) {
       select: { id: true, email: true, ruolo: true },
     });
     return NextResponse.json(created);
+  }
+
+  if (body.section === "operators") {
+    const incoming = (body.operators as Array<{
+      id?: string;
+      nome: string;
+      attivo: boolean;
+      ordine: number;
+      color?: string | null;
+      workingHoursJson?: unknown;
+      kpiTargetRevenue?: number | string | null;
+      kpiTargetAppointments?: number | null;
+    }>).filter((o) => String(o.nome || "").trim().length > 0);
+
+    const existing = await prisma.operator.findMany({ where: { salonId }, select: { id: true } });
+    const existingIds = new Set(existing.map((e) => e.id));
+    const incomingExistingIds = new Set(
+      incoming
+        .map((o) => o.id)
+        .filter((v): v is string => typeof v === "string" && v.length > 0)
+        .filter((v) => existingIds.has(v)),
+    );
+    const idsToDelete = existing.filter((e) => !incomingExistingIds.has(e.id)).map((e) => e.id);
+
+    if (idsToDelete.length) {
+      const assignedAppointments = await prisma.appointment.count({
+        where: { salonId, operatorId: { in: idsToDelete }, deletedAt: null },
+      });
+      if (assignedAppointments > 0) {
+        return NextResponse.json(
+          { error: "Impossibile eliminare operatori con appuntamenti assegnati. Disattivali invece di rimuoverli." },
+          { status: 400 },
+        );
+      }
+      await prisma.operator.deleteMany({ where: { salonId, id: { in: idsToDelete } } });
+    }
+
+    for (const o of incoming) {
+      const payload = {
+        nome: o.nome.trim(),
+        attivo: Boolean(o.attivo),
+        ordine: o.ordine,
+        color: o.color || "#2563eb",
+        workingHoursJson: o.workingHoursJson ?? Prisma.JsonNull,
+        kpiTargetRevenue:
+          o.kpiTargetRevenue === null || o.kpiTargetRevenue === undefined || o.kpiTargetRevenue === ""
+            ? null
+            : Number(o.kpiTargetRevenue),
+        kpiTargetAppointments:
+          o.kpiTargetAppointments === null || o.kpiTargetAppointments === undefined
+            ? null
+            : Number(o.kpiTargetAppointments),
+      };
+      if (o.id && existingIds.has(o.id)) {
+        await prisma.operator.update({ where: { id: o.id }, data: payload });
+      } else {
+        await prisma.operator.create({ data: { salonId, ...payload } });
+      }
+    }
+
+    return NextResponse.json({ ok: true });
   }
 
   return NextResponse.json({ error: "Sezione non supportata" }, { status: 400 });

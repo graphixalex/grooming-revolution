@@ -71,6 +71,18 @@ export function SettingsClient({ initial }: { initial: any }) {
   const [staffPassword, setStaffPassword] = useState("Password123!");
   const [staffRole, setStaffRole] = useState<"MANAGER" | "STAFF">("MANAGER");
   const [workingHours, setWorkingHours] = useState<WorkingHoursState>(normalizeWorkingHours(initial.salon?.workingHoursJson));
+  const [operators, setOperators] = useState(
+    (initial.operators || []).map((o: any, idx: number) => ({
+      id: o.id,
+      nome: o.nome || "",
+      attivo: Boolean(o.attivo),
+      ordine: o.ordine ?? idx,
+      color: o.color || "#2563eb",
+      kpiTargetRevenue: o.kpiTargetRevenue != null ? String(o.kpiTargetRevenue) : "",
+      kpiTargetAppointments: o.kpiTargetAppointments != null ? String(o.kpiTargetAppointments) : "",
+      workingHours: normalizeWorkingHours(o.workingHoursJson),
+    })),
+  );
 
   async function saveSection(section: string, payload: Record<string, unknown>) {
     const res = await fetch("/api/settings", {
@@ -205,6 +217,228 @@ export function SettingsClient({ initial }: { initial: any }) {
           }
         >
           Salva orari
+        </Button>
+      </Card>
+
+      <Card className="space-y-3">
+        <h2 className="font-semibold">Operatori e KPI</h2>
+        <p className="text-sm text-zinc-600">
+          Crea gli operatori della sede, definisci i loro orari e imposta target KPI mensili.
+        </p>
+        {operators.map((op: any, opIndex: number) => (
+          <div key={op.id || opIndex} className="space-y-3 rounded-md border border-zinc-200 p-3">
+            <div className="grid gap-2 md:grid-cols-6">
+              <Input
+                placeholder="Nome operatore"
+                value={op.nome}
+                onChange={(e) =>
+                  setOperators((prev: any[]) => prev.map((x, i) => (i === opIndex ? { ...x, nome: e.target.value } : x)))
+                }
+              />
+              <Input
+                placeholder="Colore #hex"
+                value={op.color}
+                onChange={(e) =>
+                  setOperators((prev: any[]) => prev.map((x, i) => (i === opIndex ? { ...x, color: e.target.value } : x)))
+                }
+              />
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="Target fatturato"
+                value={op.kpiTargetRevenue}
+                onChange={(e) =>
+                  setOperators((prev: any[]) =>
+                    prev.map((x, i) => (i === opIndex ? { ...x, kpiTargetRevenue: e.target.value } : x)),
+                  )
+                }
+              />
+              <Input
+                type="number"
+                min="0"
+                step="1"
+                placeholder="Target appuntamenti"
+                value={op.kpiTargetAppointments}
+                onChange={(e) =>
+                  setOperators((prev: any[]) =>
+                    prev.map((x, i) => (i === opIndex ? { ...x, kpiTargetAppointments: e.target.value } : x)),
+                  )
+                }
+              />
+              <label className="flex h-10 items-center gap-2 rounded-md border border-zinc-300 px-3 text-sm">
+                <input
+                  type="checkbox"
+                  checked={op.attivo}
+                  onChange={(e) =>
+                    setOperators((prev: any[]) => prev.map((x, i) => (i === opIndex ? { ...x, attivo: e.target.checked } : x)))
+                  }
+                />
+                Attivo
+              </label>
+              <Button
+                variant="destructive"
+                onClick={() => setOperators((prev: any[]) => prev.filter((_, i) => i !== opIndex))}
+              >
+                Rimuovi
+              </Button>
+            </div>
+            <div className="space-y-2">
+              {dayOrder.map((day) => (
+                <div key={`${op.id || opIndex}-${day}`} className="grid gap-2 rounded border border-zinc-100 p-2 md:grid-cols-6">
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={op.workingHours[day].enabled}
+                      onChange={(e) =>
+                        setOperators((prev: any[]) =>
+                          prev.map((x, i) =>
+                            i === opIndex
+                              ? {
+                                  ...x,
+                                  workingHours: {
+                                    ...x.workingHours,
+                                    [day]: { ...x.workingHours[day], enabled: e.target.checked },
+                                  },
+                                }
+                              : x,
+                          ),
+                        )
+                      }
+                    />
+                    {dayLabel[day]}
+                  </label>
+                  <Input
+                    type="time"
+                    value={op.workingHours[day].start}
+                    onChange={(e) =>
+                      setOperators((prev: any[]) =>
+                        prev.map((x, i) =>
+                          i === opIndex
+                            ? { ...x, workingHours: { ...x.workingHours, [day]: { ...x.workingHours[day], start: e.target.value } } }
+                            : x,
+                        ),
+                      )
+                    }
+                    disabled={!op.workingHours[day].enabled}
+                  />
+                  <Input
+                    type="time"
+                    value={op.workingHours[day].end}
+                    onChange={(e) =>
+                      setOperators((prev: any[]) =>
+                        prev.map((x, i) =>
+                          i === opIndex
+                            ? { ...x, workingHours: { ...x.workingHours, [day]: { ...x.workingHours[day], end: e.target.value } } }
+                            : x,
+                        ),
+                      )
+                    }
+                    disabled={!op.workingHours[day].enabled}
+                  />
+                  <label className="flex h-10 items-center gap-2 rounded-md border border-zinc-300 px-3 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={op.workingHours[day].hasBreak}
+                      onChange={(e) =>
+                        setOperators((prev: any[]) =>
+                          prev.map((x, i) =>
+                            i === opIndex
+                              ? {
+                                  ...x,
+                                  workingHours: {
+                                    ...x.workingHours,
+                                    [day]: {
+                                      ...x.workingHours[day],
+                                      hasBreak: e.target.checked,
+                                      breakStart: e.target.checked ? x.workingHours[day].breakStart : "",
+                                      breakEnd: e.target.checked ? x.workingHours[day].breakEnd : "",
+                                    },
+                                  },
+                                }
+                              : x,
+                          ),
+                        )
+                      }
+                      disabled={!op.workingHours[day].enabled}
+                    />
+                    Pausa
+                  </label>
+                  <Input
+                    type="time"
+                    value={op.workingHours[day].breakStart}
+                    onChange={(e) =>
+                      setOperators((prev: any[]) =>
+                        prev.map((x, i) =>
+                          i === opIndex
+                            ? {
+                                ...x,
+                                workingHours: { ...x.workingHours, [day]: { ...x.workingHours[day], breakStart: e.target.value } },
+                              }
+                            : x,
+                        ),
+                      )
+                    }
+                    disabled={!op.workingHours[day].enabled || !op.workingHours[day].hasBreak}
+                  />
+                  <Input
+                    type="time"
+                    value={op.workingHours[day].breakEnd}
+                    onChange={(e) =>
+                      setOperators((prev: any[]) =>
+                        prev.map((x, i) =>
+                          i === opIndex
+                            ? {
+                                ...x,
+                                workingHours: { ...x.workingHours, [day]: { ...x.workingHours[day], breakEnd: e.target.value } },
+                              }
+                            : x,
+                        ),
+                      )
+                    }
+                    disabled={!op.workingHours[day].enabled || !op.workingHours[day].hasBreak}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+        <Button
+          variant="outline"
+          onClick={() =>
+            setOperators((prev: any[]) => [
+              ...prev,
+              {
+                nome: `Operatore ${prev.length + 1}`,
+                attivo: true,
+                ordine: prev.length,
+                color: "#2563eb",
+                kpiTargetRevenue: "",
+                kpiTargetAppointments: "",
+                workingHours: normalizeWorkingHours(salon?.workingHoursJson),
+              },
+            ])
+          }
+        >
+          Aggiungi operatore
+        </Button>
+        <Button
+          onClick={() =>
+            saveSection("operators", {
+              operators: operators.map((o: any, i: number) => ({
+                id: o.id,
+                nome: o.nome,
+                attivo: o.attivo,
+                ordine: i,
+                color: o.color,
+                kpiTargetRevenue: o.kpiTargetRevenue === "" ? null : Number(o.kpiTargetRevenue),
+                kpiTargetAppointments: o.kpiTargetAppointments === "" ? null : Number(o.kpiTargetAppointments),
+                workingHoursJson: toWorkingHoursJson(o.workingHours),
+              })),
+            })
+          }
+        >
+          Salva operatori
         </Button>
       </Card>
 

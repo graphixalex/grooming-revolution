@@ -24,14 +24,17 @@ export default async function ReportsPage({
   });
   const salonIds = accountingScope.salonIds;
 
-  const [appointments, transactions, clients, appointmentTreatments] = await Promise.all([
+  const [appointments, transactions, clients, appointmentTreatments, operators] = await Promise.all([
     prisma.appointment.findMany({
       where: { salonId: { in: salonIds }, startAt: { gte: from, lte: to }, deletedAt: null },
-      include: { cliente: { select: { id: true } } },
+      include: { cliente: { select: { id: true } }, operator: { select: { id: true, nome: true } } },
     }),
     prisma.transaction.findMany({
       where: { salonId: { in: salonIds }, dateTime: { gte: from, lte: to } },
-      include: { appointment: { select: { id: true, salonId: true, createdById: true } }, createdBy: { select: { email: true } } },
+      include: {
+        appointment: { select: { id: true, salonId: true, createdById: true, operatorId: true } },
+        createdBy: { select: { email: true } },
+      },
     }),
     prisma.client.findMany({
       where: { salonId: { in: salonIds }, deletedAt: null },
@@ -46,6 +49,10 @@ export default async function ReportsPage({
         },
       },
       include: { treatment: { select: { nome: true } }, appointment: { select: { id: true } } },
+    }),
+    prisma.operator.findMany({
+      where: { salonId: { in: salonIds } },
+      select: { id: true, nome: true, kpiTargetRevenue: true, kpiTargetAppointments: true, salonId: true },
     }),
   ]);
 
@@ -89,6 +96,45 @@ export default async function ReportsPage({
     .map(([email, revenue]) => ({ email, revenue }))
     .sort((a, b) => b.revenue - a.revenue)
     .slice(0, 5);
+
+  const operatorAgg = new Map<
+    string,
+    { name: string; revenue: number; tips: number; appointments: number; noShow: number; currency: string; targetRevenue: number; targetAppointments: number }
+  >();
+  for (const op of operators) {
+    operatorAgg.set(op.id, {
+      name: op.nome,
+      revenue: 0,
+      tips: 0,
+      appointments: 0,
+      noShow: 0,
+      currency: currencyBySalon.get(op.salonId) ?? "EUR",
+      targetRevenue: Number(op.kpiTargetRevenue ?? 0),
+      targetAppointments: Number(op.kpiTargetAppointments ?? 0),
+    });
+  }
+  for (const a of appointments) {
+    if (!a.operator?.id) continue;
+    const row = operatorAgg.get(a.operator.id);
+    if (!row) continue;
+    row.appointments += 1;
+    if (a.stato === "NO_SHOW") row.noShow += 1;
+  }
+  for (const t of transactions) {
+    const operatorId = t.appointment.operatorId;
+    if (!operatorId) continue;
+    const row = operatorAgg.get(operatorId);
+    if (!row) continue;
+    row.revenue += Number(t.grossAmount);
+    row.tips += Number(t.tipAmount);
+  }
+  const operatorRows = [...operatorAgg.entries()].map(([id, row]) => ({
+    id,
+    ...row,
+    noShowRate: row.appointments ? (row.noShow / row.appointments) * 100 : 0,
+    targetRevenuePct: row.targetRevenue > 0 ? (row.revenue / row.targetRevenue) * 100 : null,
+    targetAppointmentsPct: row.targetAppointments > 0 ? (row.appointments / row.targetAppointments) * 100 : null,
+  }));
 
   const ltvByClient = await prisma.transaction.groupBy({
     by: ["appointmentId"],
@@ -185,6 +231,21 @@ export default async function ReportsPage({
               {row.name}: {row.currency} {row.total.toFixed(2)} | Appuntamenti {row.appointments} | No-show {row.noShowRate.toFixed(1)}%
             </p>
           ))}
+        </div>
+      </Card>
+
+      <Card>
+        <h2 className="mb-2 font-semibold">KPI operatori</h2>
+        <div className="space-y-2 text-sm">
+          {operatorRows.length === 0 ? (
+            <p className="text-zinc-500">Nessun operatore configurato.</p>
+          ) : (
+            operatorRows.map((row) => (
+              <p key={row.id}>
+                {row.name}: {row.currency} {row.revenue.toFixed(2)} ({row.targetRevenuePct ? `${row.targetRevenuePct.toFixed(0)}% target` : "target non impostato"}) | Appuntamenti {row.appointments} ({row.targetAppointmentsPct ? `${row.targetAppointmentsPct.toFixed(0)}% target` : "target non impostato"}) | No-show {row.noShowRate.toFixed(1)}% | Mance {row.tips.toFixed(2)}
+              </p>
+            ))
+          )}
         </div>
       </Card>
     </div>

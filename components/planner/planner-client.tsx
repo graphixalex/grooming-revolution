@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import FullCalendar from "@fullcalendar/react";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import dayGridPlugin from "@fullcalendar/daygrid";
@@ -15,6 +15,12 @@ import { Textarea } from "@/components/ui/textarea";
 type Cliente = { id: string; nome: string; cognome: string; telefono: string; email?: string | null };
 type Cane = { id: string; nome: string; razza?: string | null; taglia: "XS" | "S" | "M" | "L" | "XL" | "XXL"; clienteId: string };
 type Treatment = { id: string; nome: string; attivo: boolean };
+type Operator = {
+  id: string;
+  nome: string;
+  color?: string | null;
+  workingHoursJson?: WorkingHoursJson | null;
+};
 type DayKey = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
 
 type WorkingHoursRow = {
@@ -31,6 +37,7 @@ type Appointment = {
   startAt: string;
   endAt: string;
   noteAppuntamento?: string | null;
+  operator?: { id: string; nome: string; color?: string | null } | null;
   cane: { id: string; nome: string; razza?: string | null; taglia: "XS" | "S" | "M" | "L" | "XL" | "XXL" };
   cliente: { nome: string; cognome: string; telefono: string };
   trattamentiSelezionati: Array<{ treatment: { id: string; nome: string } }>;
@@ -185,6 +192,7 @@ export function PlannerClient({
   workingHoursJson,
   whatsappConfig,
   currency,
+  operators,
   branchSwitcher,
 }: {
   treatments: Treatment[];
@@ -195,6 +203,7 @@ export function PlannerClient({
     indirizzoAttivita: string;
   };
   currency: string;
+  operators: Operator[];
   branchSwitcher: {
     currentSalonId: string;
     branches: Array<{ id: string; label: string }>;
@@ -219,6 +228,7 @@ export function PlannerClient({
   const [visibleRange, setVisibleRange] = useState<{ from: string; to: string } | null>(null);
   const [title, setTitle] = useState("");
   const [jumpDate, setJumpDate] = useState("");
+  const [operatorBoardDate, setOperatorBoardDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [switchingSalonId, setSwitchingSalonId] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [incassoAmount, setIncassoAmount] = useState<string>("");
@@ -227,11 +237,22 @@ export function PlannerClient({
   const [incassoNote, setIncassoNote] = useState<string>("");
   const [listinoQuote, setListinoQuote] = useState<ListinoQuote | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
+  const [selectedOperatorId, setSelectedOperatorId] = useState<string>(operators[0]?.id || "");
+  const [agendaOperatorFilter, setAgendaOperatorFilter] = useState<string>("ALL");
+
+  useEffect(() => {
+    if (!selectedOperatorId && operators.length) {
+      setSelectedOperatorId(operators[0].id);
+    }
+  }, [operators, selectedOperatorId]);
 
   const [newClientForm, setNewClientForm] = useState({ nome: "", cognome: "", telefono: "", email: "", noteCliente: "", consensoPromemoria: true });
   const [newDogForm, setNewDogForm] = useState({ nome: "", razza: "", taglia: "M", noteCane: "", tagRapidiIds: [] as string[] });
 
-  const hoursConfig = useMemo(() => getWorkingHoursConfig(workingHoursJson), [workingHoursJson]);
+  const hoursConfig = useMemo(() => {
+    const selected = operators.find((o) => o.id === agendaOperatorFilter);
+    return getWorkingHoursConfig((selected?.workingHoursJson as WorkingHoursJson | null | undefined) ?? workingHoursJson);
+  }, [agendaOperatorFilter, operators, workingHoursJson]);
 
   function maybeOpenWhatsappReminder(args: {
     clientPhone: string;
@@ -284,19 +305,20 @@ export function PlannerClient({
     window.location.reload();
   }
 
-  async function loadAppointments(from?: string, to?: string) {
+  const loadAppointments = useCallback(async (from?: string, to?: string) => {
     const now = new Date();
     const fromDate = from ?? new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
     const toDate = to ?? new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString();
     setVisibleRange({ from: fromDate, to: toDate });
-    const res = await fetch(`/api/appointments?from=${encodeURIComponent(fromDate)}&to=${encodeURIComponent(toDate)}`);
+    const operatorQuery = agendaOperatorFilter !== "ALL" ? `&operatorId=${encodeURIComponent(agendaOperatorFilter)}` : "";
+    const res = await fetch(`/api/appointments?from=${encodeURIComponent(fromDate)}&to=${encodeURIComponent(toDate)}${operatorQuery}`);
     const data = await res.json();
     setAppointments(data);
-  }
+  }, [agendaOperatorFilter]);
 
   useEffect(() => {
     loadAppointments();
-  }, []);
+  }, [loadAppointments]);
 
   useEffect(() => {
     const update = () => setIsMobile(window.innerWidth < 768);
@@ -422,6 +444,7 @@ export function PlannerClient({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           modalita: "NOTE",
+          operatorId: selectedOperatorId || null,
           startAt: slotStart.toISOString(),
           durataMinuti: durata,
           noteAppuntamento: note.trim(),
@@ -458,6 +481,7 @@ export function PlannerClient({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        operatorId: selectedOperatorId || null,
         clienteId: selectedClient.id,
         caneId: selectedDog.id,
         startAt: slotStart.toISOString(),
@@ -560,7 +584,7 @@ export function PlannerClient({
         end: a.endAt,
         title: isPersonalNoteAppointment(a)
           ? `Nota: ${a.noteAppuntamento || "Impegno personale"}`
-          : `${a.cane.nome}${a.cane.razza ? ` (${a.cane.razza})` : ""} - ${a.cliente.nome} ${a.cliente.cognome}`,
+          : `${a.cane.nome}${a.cane.razza ? ` (${a.cane.razza})` : ""} - ${a.cliente.nome} ${a.cliente.cognome}${a.operator?.nome ? ` · ${a.operator.nome}` : ""}`,
         extendedProps: {
           note: a.noteAppuntamento,
           treatments: isPersonalNoteAppointment(a) ? "" : a.trattamentiSelezionati.map((t) => t.treatment.nome).join(", "),
@@ -574,7 +598,7 @@ export function PlannerClient({
               ? "#ef4444"
               : (a.transactions?.length ?? 0) > 0
                 ? "#22c55e"
-                : "#f59e0b",
+                : a.operator?.color || "#f59e0b",
       })),
     [appointments],
   );
@@ -585,6 +609,17 @@ export function PlannerClient({
   }, [visibleRange]);
 
   const allEvents = useMemo(() => [...appointmentEvents, ...holidayEvents], [appointmentEvents, holidayEvents]);
+  const operatorBoard = useMemo(() => {
+    if (!operators.length || !operatorBoardDate) return [];
+    const start = new Date(`${operatorBoardDate}T00:00:00`);
+    const end = new Date(`${operatorBoardDate}T23:59:59`);
+    return operators.map((op) => {
+      const rows = appointments
+        .filter((a) => a.operator?.id === op.id && new Date(a.startAt) >= start && new Date(a.startAt) <= end)
+        .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
+      return { operator: op, rows };
+    });
+  }, [appointments, operatorBoardDate, operators]);
 
   return (
     <Card className="space-y-4">
@@ -604,6 +639,26 @@ export function PlannerClient({
               </Button>
             );
           })}
+        </div>
+      ) : null}
+      {operators.length ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm text-zinc-500">Operatore in agenda</span>
+          <Button
+            variant={agendaOperatorFilter === "ALL" ? "default" : "outline"}
+            onClick={() => setAgendaOperatorFilter("ALL")}
+          >
+            Tutti
+          </Button>
+          {operators.map((op) => (
+            <Button
+              key={op.id}
+              variant={agendaOperatorFilter === op.id ? "default" : "outline"}
+              onClick={() => setAgendaOperatorFilter(op.id)}
+            >
+              {op.nome}
+            </Button>
+          ))}
         </div>
       ) : null}
       <div className="flex flex-wrap items-center gap-2">
@@ -632,6 +687,38 @@ export function PlannerClient({
         </Button>
         <div className="w-full text-sm font-semibold md:ml-auto md:w-auto">{title}</div>
       </div>
+      {operators.length ? (
+        <Card className="space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="font-semibold">Agenda operatori (giorno)</h3>
+            <Input
+              type="date"
+              className="w-[180px]"
+              value={operatorBoardDate}
+              onChange={(e) => setOperatorBoardDate(e.target.value)}
+            />
+          </div>
+          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+            {operatorBoard.map((col) => (
+              <div key={col.operator.id} className="rounded-md border border-zinc-200 p-3">
+                <p className="font-medium">{col.operator.nome}</p>
+                <div className="mt-2 space-y-1 text-sm">
+                  {col.rows.length === 0 ? (
+                    <p className="text-zinc-500">Nessun appuntamento</p>
+                  ) : (
+                    col.rows.map((r) => (
+                      <p key={r.id}>
+                        {format(new Date(r.startAt), "HH:mm")} - {format(new Date(r.endAt), "HH:mm")} |{" "}
+                        {isPersonalNoteAppointment(r) ? `Nota: ${r.noteAppuntamento || ""}` : `${r.cane.nome} / ${r.cliente.nome}`}
+                      </p>
+                    ))
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      ) : null}
 
       <div className="overflow-hidden">
         <div className="min-w-0">
@@ -665,6 +752,7 @@ export function PlannerClient({
           if (showModal || showEdit || info.allDay) return;
           setSlotStart(info.date);
           setModalMode("APPOINTMENT");
+          setSelectedOperatorId(agendaOperatorFilter !== "ALL" ? agendaOperatorFilter : operators[0]?.id || "");
           setListinoQuote(null);
           setNote("");
           setShowModal(true);
@@ -672,6 +760,7 @@ export function PlannerClient({
         select={(info: { start: Date }) => {
           setSlotStart(info.start);
           setModalMode("APPOINTMENT");
+          setSelectedOperatorId(agendaOperatorFilter !== "ALL" ? agendaOperatorFilter : operators[0]?.id || "");
           setListinoQuote(null);
           setNote("");
           setShowModal(true);
@@ -684,6 +773,7 @@ export function PlannerClient({
             setDurata((new Date(appt.endAt).getTime() - new Date(appt.startAt).getTime()) / 60000);
             setNote(appt.noteAppuntamento || "");
             setSelectedTreatments(appt.trattamentiSelezionati.map((t) => t.treatment.id));
+            setSelectedOperatorId(appt.operator?.id || operators[0]?.id || "");
             setIncassoAmount("");
             setIncassoTipAmount("");
             setIncassoNote("");
@@ -714,6 +804,23 @@ export function PlannerClient({
           <Card className="max-h-[88vh] w-full max-w-2xl overflow-y-auto p-3 md:max-h-[96vh] md:p-4">
             <h3 className="mb-3 text-lg font-semibold">Nuovo Appuntamento</h3>
             <p className="text-sm text-zinc-600">Slot: {slotStart ? format(slotStart, "dd/MM/yyyy HH:mm") : "-"}</p>
+            {operators.length ? (
+              <div className="mt-2 space-y-1">
+                <label className="text-sm font-medium">Operatore</label>
+                <select
+                  className="h-10 w-full rounded-md border border-zinc-300 px-3 text-sm"
+                  value={selectedOperatorId}
+                  onChange={(e) => setSelectedOperatorId(e.target.value)}
+                >
+                  <option value="">Seleziona operatore</option>
+                  {operators.map((op) => (
+                    <option key={op.id} value={op.id}>
+                      {op.nome}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
             <div className="my-3 flex flex-wrap gap-2">
               <Button
                 variant={modalMode === "APPOINTMENT" ? "default" : "outline"}
@@ -886,7 +993,13 @@ export function PlannerClient({
               <Button variant="outline" onClick={() => setShowModal(false)}>
                 Chiudi
               </Button>
-              <Button onClick={saveAppointment} disabled={modalMode === "APPOINTMENT" ? !selectedClient || !selectedDog : !note.trim()}>
+              <Button
+                onClick={saveAppointment}
+                disabled={
+                  (operators.length > 0 && !selectedOperatorId) ||
+                  (modalMode === "APPOINTMENT" ? !selectedClient || !selectedDog : !note.trim())
+                }
+              >
                 {modalMode === "NOTE" ? "Salva nota" : "Salva appuntamento"}
               </Button>
             </div>
@@ -908,6 +1021,20 @@ export function PlannerClient({
                 ? "Nota personale"
                 : `${selectedAppointment.cane.nome} - ${selectedAppointment.cliente.nome} ${selectedAppointment.cliente.cognome}`}
             </p>
+            {operators.length ? (
+              <select
+                className="h-10 w-full rounded-md border border-zinc-300 px-3 text-sm"
+                value={selectedOperatorId}
+                onChange={(e) => setSelectedOperatorId(e.target.value)}
+              >
+                <option value="">Senza operatore</option>
+                {operators.map((op) => (
+                  <option key={op.id} value={op.id}>
+                    {op.nome}
+                  </option>
+                ))}
+              </select>
+            ) : null}
             <select className="h-10 w-full rounded-md border border-zinc-300 px-3 text-sm" value={durata} onChange={(e) => setDurata(Number(e.target.value))}>
               {durations.map((d) => (
                 <option key={d} value={d}>
@@ -917,7 +1044,7 @@ export function PlannerClient({
             </select>
             <Textarea value={note} onChange={(e) => setNote(e.target.value)} />
             <div className="flex flex-wrap gap-2">
-              <Button onClick={() => updateAppointment({ durataMinuti: durata, noteAppuntamento: note })}>Salva</Button>
+              <Button onClick={() => updateAppointment({ durataMinuti: durata, noteAppuntamento: note, operatorId: selectedOperatorId || null })}>Salva</Button>
               <Button variant="outline" onClick={sendWhatsappFromEditModal}>
                 Invia WhatsApp
               </Button>

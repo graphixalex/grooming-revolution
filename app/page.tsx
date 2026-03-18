@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import Image from "next/image";
 
 const highlights = [
   "Agenda smart con reminder WhatsApp",
@@ -33,6 +34,14 @@ export default async function HomePage() {
     <main className="min-h-screen px-4 py-8 md:px-8 md:py-12">
       <div className="mx-auto max-w-6xl space-y-6">
         <header className="rounded-3xl border border-amber-200/70 bg-white/85 p-6 shadow-sm backdrop-blur md:p-10">
+          <Image
+            src="/img/logo-grooming-revolution.png"
+            alt="Grooming Revolution"
+            width={320}
+            height={76}
+            className="h-12 w-auto object-contain md:h-14"
+            priority
+          />
           <p className="inline-flex rounded-full bg-zinc-900 px-3 py-1 text-xs font-semibold tracking-wide text-white">
             SaaS per toelettatura professionale
           </p>

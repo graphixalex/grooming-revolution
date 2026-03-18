@@ -63,15 +63,18 @@ export async function GET(req: NextRequest) {
 
   const from = req.nextUrl.searchParams.get("from");
   const to = req.nextUrl.searchParams.get("to");
+  const operatorId = req.nextUrl.searchParams.get("operatorId");
 
   const appointments = await prisma.appointment.findMany({
     where: {
       salonId,
       deletedAt: null,
+      operatorId: operatorId || undefined,
       startAt: from ? { gte: new Date(from) } : undefined,
       endAt: to ? { lte: new Date(to) } : undefined,
     },
     include: {
+      operator: { select: { id: true, nome: true, color: true } },
       cane: true,
       cliente: true,
       trattamentiSelezionati: { include: { treatment: true } },
@@ -89,6 +92,7 @@ export async function POST(req: NextRequest) {
   const salonId = auth.session.user.salonId;
 
   const body = await req.json();
+  const activeOperatorsCount = await prisma.operator.count({ where: { salonId, attivo: true } });
 
   const salon = await prisma.salon.findUnique({ where: { id: salonId }, select: { overlapAllowed: true, workingHoursJson: true } });
   if (!salon) return NextResponse.json({ error: "Salone non trovato" }, { status: 404 });
@@ -111,7 +115,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Orario fuori fascia lavorativa" }, { status: 400 });
     }
 
-    if (!salon.overlapAllowed && (await hasOverlap(salonId, startAt, endAt))) {
+    if (!salon.overlapAllowed && (await hasOverlap(salonId, startAt, endAt, undefined, body.operatorId || null))) {
       return NextResponse.json({ error: "Sovrapposizione con altro appuntamento" }, { status: 400 });
     }
 
@@ -119,6 +123,7 @@ export async function POST(req: NextRequest) {
     const appointment = await prisma.appointment.create({
       data: {
         salonId,
+        operatorId: body.operatorId || null,
         clienteId: entities.clientId,
         caneId: entities.dogId,
         startAt,
@@ -138,6 +143,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
+  const operatorId = typeof body.operatorId === "string" && body.operatorId ? body.operatorId : null;
+  if (!operatorId && activeOperatorsCount > 0) {
+    return NextResponse.json({ error: "Seleziona un operatore" }, { status: 400 });
+  }
+  if (operatorId) {
+    const exists = await prisma.operator.findFirst({ where: { id: operatorId, salonId, attivo: true }, select: { id: true } });
+    if (!exists) return NextResponse.json({ error: "Operatore non valido" }, { status: 400 });
+  }
+
   const startAt = new Date(parsed.data.startAt);
   const endAt = computeEndAt(startAt, parsed.data.durataMinuti);
 
@@ -145,13 +159,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Orario fuori fascia lavorativa" }, { status: 400 });
   }
 
-  if (!salon.overlapAllowed && (await hasOverlap(salonId, startAt, endAt))) {
+  if (!salon.overlapAllowed && (await hasOverlap(salonId, startAt, endAt, undefined, operatorId))) {
     return NextResponse.json({ error: "Sovrapposizione con altro appuntamento" }, { status: 400 });
   }
 
   const appointment = await prisma.appointment.create({
     data: {
       salonId,
+      operatorId,
       clienteId: parsed.data.clienteId,
       caneId: parsed.data.caneId,
       startAt,
@@ -163,7 +178,7 @@ export async function POST(req: NextRequest) {
         create: parsed.data.trattamentiIds.map((treatmentId) => ({ treatmentId })),
       },
     },
-    include: { trattamentiSelezionati: true },
+    include: { operator: true, trattamentiSelezionati: true },
   });
 
   return NextResponse.json(appointment, { status: 201 });
@@ -225,7 +240,16 @@ export async function PATCH(req: NextRequest) {
   const hasDurationUpdate = typeof body.durataMinuti !== "undefined";
   const hasScheduleUpdate = hasStartUpdate || hasDurationUpdate;
   const hasTreatmentsUpdate = Array.isArray(body.trattamentiIds);
+  const hasOperatorUpdate = typeof body.operatorId !== "undefined";
   const nextStatus = (body.stato as AppointmentStatus | undefined) ?? appointment.stato;
+
+  if (hasOperatorUpdate && body.operatorId) {
+    const exists = await prisma.operator.findFirst({
+      where: { id: String(body.operatorId), salonId, attivo: true },
+      select: { id: true },
+    });
+    if (!exists) return NextResponse.json({ error: "Operatore non valido" }, { status: 400 });
+  }
 
   if (nextStatus === "CANCELLATO") {
     const transactionsCount = await prisma.transaction.count({
@@ -248,7 +272,9 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Orario fuori fascia lavorativa" }, { status: 400 });
     }
 
-    if (!salon.overlapAllowed && (await hasOverlap(salonId, startAt, endAt, appointmentId))) {
+    const candidateOperatorId =
+      typeof body.operatorId !== "undefined" ? (body.operatorId || null) : appointment.operatorId;
+    if (!salon.overlapAllowed && (await hasOverlap(salonId, startAt, endAt, appointmentId, candidateOperatorId))) {
       return NextResponse.json({ error: "Sovrapposizione con altro appuntamento" }, { status: 400 });
     }
   }
@@ -263,6 +289,7 @@ export async function PATCH(req: NextRequest) {
       startAt,
       endAt,
       durataMinuti: durata,
+      operatorId: hasOperatorUpdate ? (body.operatorId || null) : appointment.operatorId,
       noteAppuntamento: body.noteAppuntamento ?? appointment.noteAppuntamento,
       stato: nextStatus,
       deletedAt: nextStatus === "CANCELLATO" ? new Date() : appointment.deletedAt,
@@ -273,6 +300,7 @@ export async function PATCH(req: NextRequest) {
         : undefined,
     },
     include: {
+      operator: { select: { id: true, nome: true, color: true } },
       cane: true,
       cliente: true,
       trattamentiSelezionati: { include: { treatment: true } },

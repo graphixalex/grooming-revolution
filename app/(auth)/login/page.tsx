@@ -3,6 +3,7 @@
 import { FormEvent, useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -50,6 +51,9 @@ export default function LoginPage() {
 
   return (
     <Card className="w-full p-6">
+      <div className="mb-3">
+        <Image src="/img/logo-grooming-revolution.png" alt="Grooming Revolution" width={240} height={56} className="h-11 w-auto object-contain" priority />
+      </div>
       <h1 className="text-2xl font-semibold">Accedi</h1>
       <p className="mb-4 text-sm text-zinc-600">Gestisci il tuo salone Grooming Revolution</p>
       <form className="space-y-3" onSubmit={onSubmit}>

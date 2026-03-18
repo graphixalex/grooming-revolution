@@ -5,11 +5,16 @@ import { Prisma } from "@prisma/client";
 
 export default async function PlannerPage() {
   const session = await getRequiredSession();
-  const [treatments, salon] = await Promise.all([
+  const [treatments, salon, operators] = await Promise.all([
     prisma.treatment.findMany({ where: { salonId: session.user.salonId }, orderBy: { ordine: "asc" } }),
     prisma.salon.findUnique({
       where: { id: session.user.salonId },
       select: { workingHoursJson: true, whatsappTemplate: true, nomeAttivita: true, nomeSede: true, indirizzo: true, salonGroupId: true, valuta: true },
+    }),
+    prisma.operator.findMany({
+      where: { salonId: session.user.salonId, attivo: true },
+      orderBy: { ordine: "asc" },
+      select: { id: true, nome: true, color: true, workingHoursJson: true },
     }),
   ]);
   const branches =
@@ -33,6 +38,7 @@ export default async function PlannerPage() {
           indirizzoAttivita: salon?.indirizzo || "",
         }}
         currency={salon?.valuta || "EUR"}
+        operators={operators as any[]}
         branchSwitcher={
           branches.length > 1
             ? {

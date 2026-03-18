@@ -81,6 +81,7 @@ model Salon {
 
   salonGroup            SalonGroup?          @relation(fields: [salonGroupId], references: [id], onDelete: SetNull)
   users                 User[]
+  operators             Operator[]
   clients               Client[]
   dogs                  Dog[]
   quickTags             QuickTag[]
@@ -199,6 +200,7 @@ model Treatment {
 model Appointment {
   id                  String               @id @default(cuid())
   salonId             String
+  operatorId          String?
   clienteId           String
   caneId              String
   startAt             DateTime
@@ -212,6 +214,7 @@ model Appointment {
   deletedAt           DateTime?
 
   salon               Salon                @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  operator            Operator?            @relation(fields: [operatorId], references: [id], onDelete: SetNull)
   cliente             Client               @relation(fields: [clienteId], references: [id], onDelete: Restrict)
   cane                Dog                  @relation(fields: [caneId], references: [id], onDelete: Restrict)
   createdBy           User                 @relation("AppointmentCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
@@ -219,9 +222,30 @@ model Appointment {
   transactions        Transaction[]
 
   @@index([salonId, startAt, endAt])
+  @@index([salonId, operatorId, startAt])
   @@index([salonId, clienteId])
   @@index([salonId, caneId])
   @@index([salonId, stato])
+}
+
+model Operator {
+  id                  String      @id @default(cuid())
+  salonId             String
+  nome                String
+  attivo              Boolean     @default(true)
+  ordine              Int         @default(0)
+  color               String?     @default("#2563eb")
+  workingHoursJson    Json?
+  kpiTargetRevenue    Decimal?    @db.Decimal(10, 2)
+  kpiTargetAppointments Int?
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  salon               Salon       @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  appointments        Appointment[]
+
+  @@index([salonId, ordine])
+  @@unique([salonId, nome])
 }
 
 model AppointmentTreatment {
