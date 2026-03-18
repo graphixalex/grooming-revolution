@@ -663,6 +663,14 @@ export function PlannerClient({
     for (let t = min; t < max; t += 30) out.push(t);
     return out;
   }, [matrixColumns]);
+  const matrixDayMinWidths = useMemo(
+    () => matrixColumns.map((d) => Math.max(190, (d.operators.length || 1) * 145)),
+    [matrixColumns],
+  );
+  const matrixTableMinWidth = useMemo(
+    () => 72 + matrixDayMinWidths.reduce((sum, w) => sum + w, 0),
+    [matrixDayMinWidths],
+  );
   return (
     <Card className="space-y-4">
       {branchSwitcher ? (
@@ -838,24 +846,32 @@ export function PlannerClient({
         )}
       />
       ) : (
-        <div className="overflow-x-auto rounded-md border border-zinc-200 bg-white">
-          <table className="min-w-[980px] w-full border-collapse text-xs">
+        <div className="overflow-x-auto rounded-md border border-zinc-200 bg-white" style={{ touchAction: "pan-x pan-y" }}>
+          <table className="w-full border-collapse text-xs md:text-sm" style={{ minWidth: `${matrixTableMinWidth}px` }}>
             <thead>
               <tr>
-                <th className="w-16 border border-zinc-200 bg-zinc-50 p-2 text-left text-zinc-600">Ora</th>
-                {matrixColumns.map((day) => (
-                  <th key={day.date.toISOString()} className="border border-zinc-200 bg-zinc-50 p-2 text-center">
+                <th className="sticky left-0 z-20 w-[72px] border border-zinc-200 bg-zinc-50 p-2 text-left text-zinc-600">Ora</th>
+                {matrixColumns.map((day, dayIndex) => (
+                  <th
+                    key={day.date.toISOString()}
+                    className="border border-zinc-200 bg-zinc-50 p-2 text-center"
+                    style={{ minWidth: `${matrixDayMinWidths[dayIndex]}px` }}
+                  >
                     {capitalizeFirst(format(day.date, "EEEE dd/MM", { locale: dateFnsIt }))}
                   </th>
                 ))}
               </tr>
               <tr>
-                <th className="border border-zinc-200 bg-zinc-50 p-2" />
-                {matrixColumns.map((day) => (
-                  <th key={`${day.date.toISOString()}-ops`} className="border border-zinc-200 bg-zinc-50 p-2 align-top">
+                <th className="sticky left-0 z-20 border border-zinc-200 bg-zinc-50 p-2" />
+                {matrixColumns.map((day, dayIndex) => (
+                  <th
+                    key={`${day.date.toISOString()}-ops`}
+                    className="border border-zinc-200 bg-zinc-50 p-2 align-top"
+                    style={{ minWidth: `${matrixDayMinWidths[dayIndex]}px` }}
+                  >
                     <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${Math.max(1, day.operators.length)}, minmax(0, 1fr))` }}>
                       {(day.operators.length ? day.operators : [{ id: "none", nome: "Nessuno", start: "--:--", end: "--:--" }]).map((op) => (
-                        <div key={`${day.date.toISOString()}-${op.id}`} className="rounded border border-zinc-200 bg-white px-1 py-1 text-[10px]">
+                        <div key={`${day.date.toISOString()}-${op.id}`} className="rounded border border-zinc-200 bg-white px-1.5 py-1 text-[11px]">
                           <div className="font-semibold">{op.nome}</div>
                           <div className="text-zinc-500">{op.start}-{op.end}</div>
                         </div>
@@ -868,9 +884,13 @@ export function PlannerClient({
             <tbody>
               {matrixSlots.map((slotMin) => (
                 <tr key={slotMin}>
-                  <td className="border border-zinc-200 bg-zinc-50 p-1 align-top font-medium text-zinc-600">{formatHmFromMinutes(slotMin)}</td>
-                  {matrixColumns.map((day) => (
-                    <td key={`${day.date.toISOString()}-${slotMin}`} className="border border-zinc-200 p-1 align-top">
+                  <td className="sticky left-0 z-10 border border-zinc-200 bg-zinc-50 p-1.5 align-top font-medium text-zinc-600">{formatHmFromMinutes(slotMin)}</td>
+                  {matrixColumns.map((day, dayIndex) => (
+                    <td
+                      key={`${day.date.toISOString()}-${slotMin}`}
+                      className="border border-zinc-200 p-1 align-top"
+                      style={{ minWidth: `${matrixDayMinWidths[dayIndex]}px` }}
+                    >
                       <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${Math.max(1, day.operators.length)}, minmax(0, 1fr))` }}>
                         {(day.operators.length ? day.operators : [{ id: "none", nome: "Nessuno", start: "--:--", end: "--:--" }]).map((op) => {
                           const slotStart = new Date(day.date);
@@ -886,7 +906,7 @@ export function PlannerClient({
                             <button
                               type="button"
                               key={`${day.date.toISOString()}-${op.id}-${slotMin}`}
-                              className={`h-8 w-full rounded border px-1 text-left ${inShift ? "border-zinc-200 bg-white hover:bg-amber-50" : "border-zinc-100 bg-zinc-50 text-zinc-300"}`}
+                              className={`h-9 w-full rounded border px-1.5 text-left ${inShift ? "border-zinc-200 bg-white hover:bg-amber-50" : "border-zinc-100 bg-zinc-50 text-zinc-300"}`}
                               onClick={() => {
                                 if (!inShift || op.id === "none") return;
                                 if (appt) {
