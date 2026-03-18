@@ -1,11 +1,6 @@
 ﻿"use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import FullCalendar from "@fullcalendar/react";
-import timeGridPlugin from "@fullcalendar/timegrid";
-import dayGridPlugin from "@fullcalendar/daygrid";
-import interactionPlugin from "@fullcalendar/interaction";
-import itLocale from "@fullcalendar/core/locales/it";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { addMinutes, format } from "date-fns";
 import { it as dateFnsIt } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
@@ -228,12 +223,6 @@ function getOperatorsForDate(operators: Operator[], date: Date) {
     });
 }
 
-function getDefaultOperatorIdForDate(operators: Operator[], date: Date | null) {
-  if (!date) return operators[0]?.id || "";
-  const dayOps = getOperatorsForDate(operators, date);
-  return dayOps[0]?.id || operators[0]?.id || "";
-}
-
 export function PlannerClient({
   treatments,
   workingHoursJson,
@@ -256,7 +245,6 @@ export function PlannerClient({
     branches: Array<{ id: string; label: string }>;
   } | null;
 }) {
-  const calendarRef = useRef<FullCalendar | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
@@ -276,6 +264,11 @@ export function PlannerClient({
   const [title, setTitle] = useState("");
   const [jumpDate, setJumpDate] = useState("");
   const [desktopWeekStart, setDesktopWeekStart] = useState<Date>(startOfWeekMonday(new Date()));
+  const [mobileDay, setMobileDay] = useState<Date>(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  });
   const [switchingSalonId, setSwitchingSalonId] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [incassoAmount, setIncassoAmount] = useState<string>("");
@@ -284,18 +277,10 @@ export function PlannerClient({
   const [incassoNote, setIncassoNote] = useState<string>("");
   const [listinoQuote, setListinoQuote] = useState<ListinoQuote | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
-  const [selectedOperatorId, setSelectedOperatorId] = useState<string>(operators[0]?.id || "");
-
-  useEffect(() => {
-    if (!selectedOperatorId && operators.length) {
-      setSelectedOperatorId(operators[0].id);
-    }
-  }, [operators, selectedOperatorId]);
+  const [selectedOperatorId, setSelectedOperatorId] = useState<string>("");
 
   const [newClientForm, setNewClientForm] = useState({ nome: "", cognome: "", telefono: "", email: "", noteCliente: "", consensoPromemoria: true });
   const [newDogForm, setNewDogForm] = useState({ nome: "", razza: "", taglia: "M", noteCane: "", tagRapidiIds: [] as string[] });
-
-  const hoursConfig = useMemo(() => getWorkingHoursConfig(workingHoursJson), [workingHoursJson]);
 
   function maybeOpenWhatsappReminder(args: {
     clientPhone: string;
@@ -362,9 +347,19 @@ export function PlannerClient({
     if (isMobile) return;
     const start = new Date(desktopWeekStart);
     const end = endOfWeekMonday(start);
-    setTitle(`${format(start, "dd MMM yyyy")} - ${format(end, "dd MMM yyyy")}`);
+    setTitle(`${format(start, "dd MMM yyyy", { locale: dateFnsIt })} - ${format(end, "dd MMM yyyy", { locale: dateFnsIt })}`);
     loadAppointments(start.toISOString(), end.toISOString());
   }, [desktopWeekStart, isMobile, loadAppointments]);
+
+  useEffect(() => {
+    if (!isMobile) return;
+    const start = new Date(mobileDay);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(mobileDay);
+    end.setHours(23, 59, 59, 999);
+    setTitle(format(start, "dd MMM yyyy", { locale: dateFnsIt }));
+    loadAppointments(start.toISOString(), end.toISOString());
+  }, [isMobile, mobileDay, loadAppointments]);
 
   useEffect(() => {
     const update = () => setIsMobile(window.innerWidth < 768);
@@ -372,15 +367,6 @@ export function PlannerClient({
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
   }, []);
-
-  useEffect(() => {
-    const api = calendarRef.current?.getApi();
-    if (!api) return;
-    const targetView = isMobile ? "timeGridDay" : "timeGridWeek";
-    if (api.view.type !== targetView) {
-      api.changeView(targetView);
-    }
-  }, [isMobile]);
 
   useEffect(() => {
     if (!search || isNewClient !== false) return;
@@ -469,7 +455,11 @@ export function PlannerClient({
 
   async function saveAppointment() {
     if (!slotStart) return;
-    const operatorIdForSave = selectedOperatorId || getDefaultOperatorIdForDate(operators, slotStart);
+    const operatorIdForSave = selectedOperatorId;
+    if (operators.length > 0 && !operatorIdForSave) {
+      alert("Seleziona un operatore cliccando una colonna agenda");
+      return;
+    }
 
     if (modalMode === "NOTE") {
       if (!note.trim()) {
@@ -613,48 +603,16 @@ export function PlannerClient({
     setIncassoNote("");
   }
 
-  const appointmentEvents = useMemo(
-    () =>
-      appointments.map((a) => ({
-        id: a.id,
-        start: a.startAt,
-        end: a.endAt,
-        title: isPersonalNoteAppointment(a)
-          ? `Nota: ${a.noteAppuntamento || "Impegno personale"}`
-          : `${a.cane.nome}${a.cane.razza ? ` (${a.cane.razza})` : ""} - ${a.cliente.nome} ${a.cliente.cognome}${a.operator?.nome ? ` · ${a.operator.nome}` : ""}`,
-        extendedProps: {
-          note: a.noteAppuntamento,
-          treatments: isPersonalNoteAppointment(a) ? "" : a.trattamentiSelezionati.map((t) => t.treatment.nome).join(", "),
-          stato: a.stato,
-          paid: (a.transactions?.length ?? 0) > 0,
-        },
-        backgroundColor:
-          a.stato === "CANCELLATO"
-            ? "#9ca3af"
-            : a.stato === "NO_SHOW"
-              ? "#ef4444"
-              : (a.transactions?.length ?? 0) > 0
-                ? "#22c55e"
-                : a.operator?.color || "#f59e0b",
-      })),
-    [appointments],
-  );
-
-  const holidayEvents = useMemo(() => {
-    if (!visibleRange) return [];
-    return getItalianHolidayEvents(visibleRange.from, visibleRange.to);
-  }, [visibleRange]);
-
-  const allEvents = useMemo(() => [...appointmentEvents, ...holidayEvents], [appointmentEvents, holidayEvents]);
   const matrixDays = useMemo(() => {
-    const base = isMobile ? startOfWeekMonday(new Date()) : desktopWeekStart;
-    return Array.from({ length: 5 }, (_, i) => {
+    const base = isMobile ? mobileDay : desktopWeekStart;
+    const count = isMobile ? 1 : 5;
+    return Array.from({ length: count }, (_, i) => {
       const date = new Date(base);
       date.setDate(base.getDate() + i);
       const dayKey = indexToDayKey[date.getDay()];
       return { date, dayKey };
     });
-  }, [desktopWeekStart, isMobile]);
+  }, [desktopWeekStart, isMobile, mobileDay]);
   const matrixColumns = useMemo(() => {
     return matrixDays.map((d) => ({
       ...d,
@@ -703,7 +661,10 @@ export function PlannerClient({
           variant="outline"
           onClick={() => {
             if (isMobile) {
-              calendarRef.current?.getApi().prev();
+              const next = new Date(mobileDay);
+              next.setDate(next.getDate() - 1);
+              next.setHours(0, 0, 0, 0);
+              setMobileDay(next);
               return;
             }
             const next = new Date(desktopWeekStart);
@@ -717,7 +678,9 @@ export function PlannerClient({
           variant="outline"
           onClick={() => {
             if (isMobile) {
-              calendarRef.current?.getApi().today();
+              const today = new Date();
+              today.setHours(0, 0, 0, 0);
+              setMobileDay(today);
               return;
             }
             setDesktopWeekStart(startOfWeekMonday(new Date()));
@@ -729,7 +692,10 @@ export function PlannerClient({
           variant="outline"
           onClick={() => {
             if (isMobile) {
-              calendarRef.current?.getApi().next();
+              const next = new Date(mobileDay);
+              next.setDate(next.getDate() + 1);
+              next.setHours(0, 0, 0, 0);
+              setMobileDay(next);
               return;
             }
             const next = new Date(desktopWeekStart);
@@ -749,7 +715,9 @@ export function PlannerClient({
           onClick={() => {
             if (!jumpDate) return;
             if (isMobile) {
-              calendarRef.current?.getApi().gotoDate(jumpDate);
+              const target = new Date(jumpDate);
+              target.setHours(0, 0, 0, 0);
+              setMobileDay(target);
             } else {
               setDesktopWeekStart(startOfWeekMonday(new Date(jumpDate)));
             }
@@ -761,98 +729,6 @@ export function PlannerClient({
       </div>
       <div className="overflow-hidden">
         <div className="min-w-0">
-      {isMobile ? (
-      <FullCalendar
-        key={isMobile ? "fc-mobile" : "fc-desktop"}
-        ref={calendarRef}
-        plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
-        initialView={isMobile ? "timeGridDay" : "timeGridWeek"}
-        locale={itLocale}
-        firstDay={1}
-        height="auto"
-        weekNumbers={!isMobile}
-        buttonText={{ today: "Oggi", month: "Mese", week: "Settimana", day: "Giorno" }}
-        headerToolbar={
-          isMobile
-            ? false
-            : { left: "timeGridDay,timeGridWeek,dayGridMonth", center: "", right: "" }
-        }
-        slotMinTime={hoursConfig.slotMinTime}
-        slotMaxTime={hoursConfig.slotMaxTime}
-        allDaySlot={false}
-        businessHours={hoursConfig.businessHours}
-        selectable
-        selectLongPressDelay={120}
-        eventLongPressDelay={120}
-        dayHeaderContent={(arg: { date: Date; text: string }) => {
-          const dayOps = getOperatorsForDate(operators, arg.date);
-          const isWeekView = !isMobile;
-          if (!isWeekView) return <span>{arg.text}</span>;
-          return (
-            <div className="space-y-1 py-1">
-              <div className="font-semibold">{arg.text}</div>
-              {dayOps.length ? (
-                <div className="space-y-0.5">
-                  {dayOps.map((op) => (
-                    <div key={`${arg.date.toISOString()}-${op.id}`} className="text-[10px] leading-tight text-zinc-600">
-                      {op.nome} ({op.start}-{op.end})
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-[10px] leading-tight text-zinc-400">Nessun operatore</div>
-              )}
-            </div>
-          );
-        }}
-        datesSet={(info: { start: Date; end: Date; view: { title: string } }) => {
-          setTitle(info.view.title);
-          loadAppointments(info.start.toISOString(), info.end.toISOString());
-        }}
-        dateClick={(info: { date: Date; allDay: boolean }) => {
-          if (showModal || showEdit || info.allDay) return;
-          setSlotStart(info.date);
-          setModalMode("APPOINTMENT");
-          setSelectedOperatorId(getDefaultOperatorIdForDate(operators, info.date));
-          setListinoQuote(null);
-          setNote("");
-          setShowModal(true);
-        }}
-        select={(info: { start: Date }) => {
-          setSlotStart(info.start);
-          setModalMode("APPOINTMENT");
-          setSelectedOperatorId(getDefaultOperatorIdForDate(operators, info.start));
-          setListinoQuote(null);
-          setNote("");
-          setShowModal(true);
-        }}
-        events={allEvents}
-        eventClick={(info: { event: { id: string } }) => {
-          const appt = appointments.find((a) => a.id === info.event.id);
-          if (appt) {
-            setSelectedAppointment(appt);
-            setDurata((new Date(appt.endAt).getTime() - new Date(appt.startAt).getTime()) / 60000);
-            setNote(appt.noteAppuntamento || "");
-            setSelectedTreatments(appt.trattamentiSelezionati.map((t) => t.treatment.id));
-            setSelectedOperatorId(appt.operator?.id || operators[0]?.id || "");
-            setIncassoAmount("");
-            setIncassoTipAmount("");
-            setIncassoNote("");
-            setShowEdit(true);
-            setListinoQuote(null);
-            void prefillIncassoFromListino(appt);
-          }
-        }}
-        eventContent={(arg: { event: { title: string; extendedProps: Record<string, unknown> } }) => (
-          <div className="relative pr-4 text-xs">
-            <div className="font-semibold">{arg.event.title}</div>
-            <div>{String(arg.event.extendedProps.treatments || "")}</div>
-            <div className="truncate">{String(arg.event.extendedProps.note || "")}</div>
-            {Boolean(arg.event.extendedProps.paid) ? <div className="absolute bottom-0 right-0 text-sm font-bold">€</div> : null}
-          </div>
-        )}
-      />
-      ) : (
         <div className="overflow-x-auto rounded-md border border-zinc-200 bg-white" style={{ touchAction: "pan-x pan-y" }}>
           <table className="w-full border-collapse text-xs md:text-sm" style={{ minWidth: `${matrixTableMinWidth}px` }}>
             <thead>
@@ -949,7 +825,6 @@ export function PlannerClient({
             </tbody>
           </table>
         </div>
-      )}
         </div>
       </div>
 
@@ -967,7 +842,7 @@ export function PlannerClient({
               <p className="mt-2 text-sm text-zinc-600">
                 Operatore assegnato:{" "}
                 <span className="font-medium text-zinc-900">
-                  {operators.find((op) => op.id === (selectedOperatorId || getDefaultOperatorIdForDate(operators, slotStart)))?.nome || "-"}
+                  {operators.find((op) => op.id === selectedOperatorId)?.nome || "-"}
                 </span>
               </p>
             ) : null}
