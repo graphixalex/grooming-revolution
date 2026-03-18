@@ -145,6 +145,22 @@ function capitalizeFirst(value: string) {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
+function parseJumpDateInput(raw: string) {
+  const value = raw.trim();
+  if (!value) return null;
+  const isoMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (isoMatch) {
+    const d = new Date(`${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}T00:00:00`);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  const itMatch = /^(\d{2})[./-](\d{2})[./-](\d{4})$/.exec(value);
+  if (itMatch) {
+    const d = new Date(`${itMatch[3]}-${itMatch[2]}-${itMatch[1]}T00:00:00`);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  return null;
+}
+
 function ymdUTC(d: Date) {
   const y = d.getUTCFullYear();
   const m = String(d.getUTCMonth() + 1).padStart(2, "0");
@@ -706,7 +722,9 @@ export function PlannerClient({
           {isMobile ? "Successiva" : "Settimana successiva"}
         </Button>
         <Input
-          type="date"
+          type="text"
+          inputMode="numeric"
+          placeholder="gg.mm.aaaa"
           className={isMobile ? "w-full" : "w-[180px]"}
           value={jumpDate}
           onChange={(e) => setJumpDate(e.target.value)}
@@ -714,12 +732,17 @@ export function PlannerClient({
         <Button
           onClick={() => {
             if (!jumpDate) return;
+            const parsed = parseJumpDateInput(jumpDate);
+            if (!parsed) {
+              alert("Data non valida. Usa formato gg.mm.aaaa");
+              return;
+            }
             if (isMobile) {
-              const target = new Date(jumpDate);
+              const target = new Date(parsed);
               target.setHours(0, 0, 0, 0);
               setMobileDay(target);
             } else {
-              setDesktopWeekStart(startOfWeekMonday(new Date(jumpDate)));
+              setDesktopWeekStart(startOfWeekMonday(parsed));
             }
           }}
         >

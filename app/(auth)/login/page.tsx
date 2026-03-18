@@ -67,6 +67,11 @@ export default function LoginPage() {
       <p className="mt-4 text-sm text-zinc-600">
         Non hai un account? <Link href="/register" className="text-zinc-900 underline">Registrati</Link>
       </p>
+      <div className="mt-3">
+        <Link href="/" className="text-sm text-zinc-700 underline">
+          Torna alla homepage
+        </Link>
+      </div>
     </Card>
   );
 }
