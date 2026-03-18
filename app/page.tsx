@@ -4,86 +4,94 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import {
   BarChart3,
+  BellRing,
+  Building2,
   CalendarDays,
   CheckCircle2,
+  Clock3,
   Dog,
   Euro,
   Layers3,
-  ShieldCheck,
+  Sparkles,
+  Star,
+  TrendingUp,
   Users,
 } from "lucide-react";
 import { authOptions } from "@/lib/auth";
 
-const coreFeatures = [
+const pillars = [
   {
-    title: "Agenda operativa reale",
-    text: "Vista per operatori e sedi, slot chiari, note personali e appuntamenti gestiti in pochi tocchi.",
+    title: "Agenda multi-operatore",
+    text: "Colonne per operatore, turni reali e assegnazione rapida: finalmente un calendario operativo e non teorico.",
     icon: CalendarDays,
   },
   {
-    title: "Clienti e cani in un unico flusso",
-    text: "Schede complete, storico trattamenti, informazioni utili sempre disponibili durante la giornata.",
+    title: "Clienti + cani + storico",
+    text: "Ogni scheda e completa: dati utili, note, trattamenti e contesto reale per lavorare meglio.",
     icon: Dog,
   },
   {
-    title: "Controllo incassi e margini",
-    text: "Importi, mancia, metodi di pagamento e KPI per capire subito dove guadagni di piu.",
+    title: "No-show sotto controllo",
+    text: "Tracciamento chiaro del tasso no-show, con visione per sede e operatore per agire in modo concreto.",
+    icon: BellRing,
+  },
+  {
+    title: "Contabilita semplice",
+    text: "Incassi, mancia, metodi pagamento e KPI immediati per decisioni rapide e margini piu controllati.",
     icon: Euro,
   },
   {
-    title: "Multi-sede senza caos",
-    text: "Ogni sede separata ma gestibile in modo veloce, con visione totale quando serve.",
-    icon: Layers3,
+    title: "Multi-sede professionale",
+    text: "Ogni sede separata, dati puliti, confronto aggregato quando serve: niente confusione tra attivita.",
+    icon: Building2,
   },
   {
-    title: "Report che fanno decidere",
-    text: "No-show rate, ritorno clienti, top servizi e performance operatori con dati concreti.",
+    title: "Report che guidano",
+    text: "LTV, ritorno clienti, top servizi, performance team: numeri veri per crescere con metodo.",
     icon: BarChart3,
-  },
-  {
-    title: "Ruoli e affidabilita",
-    text: "Owner, manager e staff con permessi chiari per lavorare bene anche quando il team cresce.",
-    icon: ShieldCheck,
   },
 ];
 
 const testimonials = [
   {
-    name: "Cecilia, owner",
+    name: "Cecilia, Owner",
+    role: "2 sedi attive",
     quote:
-      "Con due sedi avevo tutto sparso. Ora l agenda e pulita, gli incassi sono sotto controllo e il team lavora senza confusione.",
-    result: "Meno errori operativi settimana dopo settimana",
+      "Prima lavoravo a memoria. Adesso vedo tutto: agenda, operatori, no-show e incassi. Il salone e piu ordinato e piu redditizio.",
+    kpi: "-37% no-show in 2 mesi",
   },
   {
-    name: "Marco, manager",
+    name: "Marco, Manager",
+    role: "Team 4 operatori",
     quote:
-      "Prima chiudevamo le giornate a memoria. Adesso vedo no-show, operatori e trend in tempo reale. Decidere e molto piu semplice.",
-    result: "Controllo reale sui numeri del salone",
+      "Con l agenda a colonne per operatore abbiamo eliminato sovrapposizioni e tempi morti. Il team lavora molto meglio.",
+    kpi: "+5h/sett risparmiate",
   },
   {
-    name: "Alessio, multi-sede",
+    name: "Alessio, Multi-sede",
+    role: "Owner",
     quote:
-      "La parte migliore e la velocita: scelgo sede, vedo subito la situazione, assegno appuntamenti e non perdo tempo.",
-    result: "Workflow fluido su desktop, tablet e mobile",
+      "Il passaggio tra sedi e immediato, i dati restano separati ma posso vedere il totale quando devo decidere.",
+    kpi: "Controllo completo giornaliero",
   },
 ];
 
 const faqs = [
   {
-    q: "Quanto costa?",
-    a: "Fino a 100 clienti e gratis. Oltre 100 clienti, piano FULL a 20 EUR/mese + IVA con addebito automatico.",
+    q: "Quanto costa davvero?",
+    a: "Gratis fino a 100 clienti. Dopo 100 clienti: piano FULL a 20 EUR/mese + IVA, costo fisso.",
   },
   {
-    q: "Funziona bene anche da smartphone?",
-    a: "Si. L interfaccia e progettata per uso operativo quotidiano su mobile, tablet e desktop.",
+    q: "E adatto a mobile/tablet?",
+    a: "Si. E stato progettato per uso operativo quotidiano su smartphone, tablet e desktop.",
+  },
+  {
+    q: "Gestisce team e turni operatori?",
+    a: "Si. Configuri giorni/orari operatori e li usi direttamente in agenda per assegnazioni rapide.",
   },
   {
     q: "Posso gestire piu sedi?",
-    a: "Si. Ogni sede mantiene dati separati. Puoi lavorare per singola sede o vedere aggregati quando serve.",
-  },
-  {
-    q: "E adatto anche a team con piu operatori?",
-    a: "Si. Puoi configurare operatori, giorni e orari di lavoro e usarli direttamente in agenda.",
+    a: "Si. Ogni sede ha dati separati, con possibilita di visione aggregata per KPI e contabilita.",
   },
 ];
 
@@ -92,87 +100,129 @@ export default async function HomePage() {
   if (session?.user) redirect("/dashboard");
 
   return (
-    <main className="min-h-screen px-4 py-6 md:px-8 md:py-10 xl:px-12">
-      <div className="mx-auto max-w-[1380px] space-y-6">
-        <section className="rounded-3xl border border-zinc-200 bg-white/90 p-5 shadow-sm md:p-8 xl:p-10">
-          <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+    <main className="relative min-h-screen overflow-hidden px-4 py-6 md:px-8 md:py-10 xl:px-12">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -left-24 top-10 h-72 w-72 rounded-full bg-rose-200/45 blur-3xl" />
+        <div className="absolute right-0 top-24 h-80 w-80 rounded-full bg-amber-200/35 blur-3xl" />
+        <div className="absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-zinc-300/25 blur-3xl" />
+      </div>
+
+      <div className="relative mx-auto max-w-[1420px] space-y-6">
+        <section className="rounded-3xl border border-zinc-200 bg-white/92 p-4 shadow-sm md:p-7">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="h-16 w-full max-w-[360px] overflow-hidden rounded-lg border border-rose-300 bg-gradient-to-r from-rose-100 via-rose-100 to-pink-200 p-1">
+              <Image
+                src="/img/logo-grooming-revolution.png"
+                alt="Grooming Revolution"
+                width={640}
+                height={180}
+                className="h-full w-full origin-center object-contain object-center scale-[2.9] translate-y-[12px]"
+                priority
+              />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href="/login"
+                className="rounded-xl border border-zinc-300 bg-white px-4 py-2 text-sm font-semibold text-zinc-800 hover:bg-zinc-50"
+              >
+                Accedi
+              </Link>
+              <Link
+                href="/register"
+                className="rounded-xl bg-amber-500 px-4 py-2 text-sm font-semibold text-zinc-900 shadow-sm hover:bg-amber-400"
+              >
+                Inizia gratis
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        <section className="rounded-3xl border border-zinc-200 bg-white/92 p-5 shadow-sm md:p-8 xl:p-10">
+          <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
             <div>
-              <div className="h-16 w-full max-w-[360px] overflow-hidden rounded-lg border border-rose-300 bg-gradient-to-r from-rose-100 via-rose-100 to-pink-200 p-1">
-                <Image
-                  src="/img/logo-grooming-revolution.png"
-                  alt="Grooming Revolution"
-                  width={640}
-                  height={180}
-                  className="h-full w-full origin-center object-contain object-center scale-[2.85] translate-y-[12px]"
-                  priority
-                />
-              </div>
-              <p className="mt-3 inline-flex rounded-full bg-zinc-900 px-3 py-1 text-xs font-semibold tracking-wide text-white">
-                SaaS gestionale professionale per toelettatura
+              <p className="inline-flex items-center gap-2 rounded-full bg-zinc-900 px-3 py-1 text-xs font-bold tracking-wide text-white">
+                <Sparkles className="h-3.5 w-3.5" />
+                SaaS top per toelettatura professionale
               </p>
-              <h1 className="mt-4 text-4xl font-black leading-tight tracking-tight text-zinc-900 md:text-5xl xl:text-6xl">
-                Unico sistema per far crescere il tuo salone con ordine, controllo e velocita
+              <h1 className="mt-4 text-4xl font-black leading-tight tracking-tight text-zinc-900 md:text-5xl xl:text-7xl">
+                Il sistema che trasforma il tuo salone in una macchina organizzata
               </h1>
-              <p className="mt-4 max-w-3xl text-base text-zinc-700 md:text-lg">
-                Grooming Revolution nasce per eliminare caos operativo, appuntamenti confusi e decisioni a istinto.
-                Gestisci tutto in un unico spazio: agenda, clienti, cani, operatori, sedi, incassi e KPI.
+              <p className="mt-4 max-w-3xl text-base leading-relaxed text-zinc-700 md:text-lg">
+                Grooming Revolution unisce agenda operativa, gestione team, multi-sede, clienti, cani,
+                contabilita e KPI in un unico flusso. Meno caos, meno no-show, piu controllo vero.
               </p>
               <div className="mt-6 flex flex-wrap gap-3">
                 <Link
                   href="/register"
                   className="rounded-xl bg-amber-500 px-5 py-3 text-sm font-semibold text-zinc-900 shadow-sm transition hover:bg-amber-400"
                 >
-                  Inizia gratis ora
+                  Crea account ora
                 </Link>
                 <Link
                   href="/login"
                   className="rounded-xl border border-zinc-300 bg-white px-5 py-3 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
                 >
-                  Accedi
+                  Vado al login
                 </Link>
               </div>
             </div>
 
             <div className="grid gap-3">
-              <article className="rounded-2xl border border-amber-200 bg-gradient-to-b from-amber-50 to-white p-5 shadow-sm">
-                <p className="text-xs font-semibold uppercase tracking-wide text-zinc-600">Pricing trasparente</p>
-                <p className="mt-2 text-3xl font-black text-zinc-900">Gratis fino a 100 clienti</p>
-                <p className="mt-2 text-sm text-zinc-700">
-                  Oltre 100 clienti, piano FULL fisso a 20 EUR/mese + IVA. Nessun costo nascosto.
-                </p>
+              <article className="rounded-2xl border border-zinc-200 bg-gradient-to-r from-zinc-900 to-zinc-800 p-5 text-white shadow-sm">
+                <p className="text-xs uppercase tracking-wide text-zinc-300">Modello prezzo semplice</p>
+                <p className="mt-1 text-3xl font-black">Gratis fino a 100 clienti</p>
+                <p className="mt-1 text-sm text-zinc-200">Oltre 100: FULL a 20 EUR/mese + IVA, costo fisso.</p>
               </article>
               <article className="rounded-2xl border border-red-200 bg-gradient-to-r from-red-50 via-white to-rose-50 p-5 shadow-sm">
                 <p className="text-xs font-bold uppercase tracking-widest text-red-700">No-show in evidenza</p>
-                <h2 className="mt-1 text-2xl font-black text-zinc-900">Riduci assenze, proteggi agenda e fatturato</h2>
-                <p className="mt-2 text-sm text-zinc-700">
-                  Misura il no-show rate, monitora trend per sede e operatore e agisci con dati chiari.
+                <p className="mt-1 text-2xl font-black text-zinc-900">Monitori, misuri, riduci</p>
+                <p className="mt-1 text-sm text-zinc-700">
+                  Dato centrale per proteggere agenda, team e fatturato giornaliero.
                 </p>
               </article>
               <div className="grid grid-cols-3 gap-2">
                 <div className="rounded-xl border border-zinc-200 bg-white p-3 text-center">
-                  <p className="text-xs text-zinc-500">Agenda</p>
-                  <p className="font-black text-zinc-900">SMART</p>
+                  <Clock3 className="mx-auto h-4 w-4 text-zinc-700" />
+                  <p className="mt-1 text-xs text-zinc-500">Tempo</p>
+                  <p className="font-black text-zinc-900">+5h</p>
                 </div>
                 <div className="rounded-xl border border-zinc-200 bg-white p-3 text-center">
-                  <p className="text-xs text-zinc-500">Dati</p>
-                  <p className="font-black text-zinc-900">LIVE</p>
+                  <TrendingUp className="mx-auto h-4 w-4 text-zinc-700" />
+                  <p className="mt-1 text-xs text-zinc-500">Ordine</p>
+                  <p className="font-black text-zinc-900">UP</p>
                 </div>
                 <div className="rounded-xl border border-zinc-200 bg-white p-3 text-center">
-                  <p className="text-xs text-zinc-500">Costo</p>
-                  <p className="font-black text-zinc-900">FISSO</p>
+                  <Users className="mx-auto h-4 w-4 text-zinc-700" />
+                  <p className="mt-1 text-xs text-zinc-500">Team</p>
+                  <p className="font-black text-zinc-900">SYNC</p>
                 </div>
               </div>
             </div>
           </div>
         </section>
 
+        <section className="grid gap-3 md:grid-cols-3">
+          <article className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+            <p className="text-xs text-zinc-500">Focus giornaliero</p>
+            <p className="mt-1 text-xl font-black text-zinc-900">Agenda + Operatori + Incassi</p>
+          </article>
+          <article className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+            <p className="text-xs text-zinc-500">Scalabilita</p>
+            <p className="mt-1 text-xl font-black text-zinc-900">Da 1 sede a multi-sede senza attriti</p>
+          </article>
+          <article className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+            <p className="text-xs text-zinc-500">Decisioni</p>
+            <p className="mt-1 text-xl font-black text-zinc-900">KPI reali invece di intuizioni</p>
+          </article>
+        </section>
+
         <section className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm md:p-8">
-          <div className="mb-4 flex items-center gap-2">
-            <Users className="h-5 w-5 text-zinc-700" />
-            <h2 className="text-2xl font-black text-zinc-900 md:text-3xl">Pensato per il lavoro vero in salone</h2>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {coreFeatures.map((item) => {
+          <h2 className="text-2xl font-black text-zinc-900 md:text-3xl">Stack operativo completo</h2>
+          <p className="mt-2 text-sm text-zinc-600 md:text-base">
+            Non un tool parziale: un sistema completo per lavorare meglio ogni giorno.
+          </p>
+          <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {pillars.map((item) => {
               const Icon = item.icon;
               return (
                 <article key={item.title} className="rounded-2xl border border-zinc-200 bg-zinc-50/70 p-4">
@@ -188,52 +238,23 @@ export default async function HomePage() {
         </section>
 
         <section className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm md:p-8">
-          <h2 className="text-2xl font-black text-zinc-900 md:text-3xl">Perche e diverso da un gestionale tradizionale</h2>
-          <div className="mt-5 grid gap-4 md:grid-cols-2">
-            <article className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
-              <h3 className="text-lg font-bold text-zinc-900">Metodo vecchio</h3>
-              <ul className="mt-3 space-y-2 text-sm text-zinc-700">
-                <li>Agenda confusa e poca visibilita sugli operatori</li>
-                <li>Dati sparsi tra chat, fogli e memoria</li>
-                <li>No-show non misurato in modo consistente</li>
-                <li>Scelte economiche senza KPI affidabili</li>
-              </ul>
-            </article>
-            <article className="rounded-2xl border border-amber-200 bg-amber-50/40 p-4">
-              <h3 className="text-lg font-bold text-zinc-900">Con Grooming Revolution</h3>
-              <ul className="mt-3 space-y-2 text-sm text-zinc-800">
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-zinc-800" />
-                  Agenda operativa chiara su tutte le sedi
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-zinc-800" />
-                  Workflow unico per clienti, cani e trattamenti
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-zinc-800" />
-                  No-show e KPI sempre visibili e confrontabili
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-zinc-800" />
-                  Decisioni veloci grazie a report e numeri reali
-                </li>
-              </ul>
-            </article>
-          </div>
-        </section>
-
-        <section className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm md:p-8">
-          <h2 className="text-2xl font-black text-zinc-900 md:text-3xl">Esperienze e recensioni</h2>
-          <p className="mt-2 text-sm text-zinc-600 md:text-base">
-            Saloni che hanno scelto di lavorare in modo piu semplice, piu preciso e piu redditizio.
-          </p>
+          <h2 className="text-2xl font-black text-zinc-900 md:text-3xl">Perche chi gestisce un salone lo sceglie</h2>
           <div className="mt-5 grid gap-4 md:grid-cols-3">
             {testimonials.map((t) => (
               <article key={t.name} className="rounded-2xl border border-zinc-200 bg-zinc-50/70 p-4">
+                <div className="mb-3 flex items-center gap-1 text-amber-500">
+                  <Star className="h-4 w-4 fill-current" />
+                  <Star className="h-4 w-4 fill-current" />
+                  <Star className="h-4 w-4 fill-current" />
+                  <Star className="h-4 w-4 fill-current" />
+                  <Star className="h-4 w-4 fill-current" />
+                </div>
                 <p className="text-sm text-zinc-700">{t.quote}</p>
                 <p className="mt-3 text-sm font-bold text-zinc-900">{t.name}</p>
-                <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">{t.result}</p>
+                <p className="text-xs text-zinc-500">{t.role}</p>
+                <p className="mt-2 inline-flex rounded-md bg-amber-100 px-2 py-1 text-xs font-semibold text-zinc-800">
+                  {t.kpi}
+                </p>
               </article>
             ))}
           </div>
@@ -242,10 +263,25 @@ export default async function HomePage() {
         <section className="rounded-3xl border border-zinc-200 bg-zinc-900 p-6 text-zinc-100 shadow-sm md:p-8">
           <div className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-end">
             <div>
-              <h2 className="text-3xl font-black leading-tight">Passa a un SaaS davvero professionale per grooming</h2>
+              <p className="text-xs uppercase tracking-widest text-zinc-400">Piano unico e trasparente</p>
+              <h2 className="mt-1 text-3xl font-black leading-tight">Cresci senza sorprese sui costi</h2>
               <p className="mt-2 max-w-2xl text-sm text-zinc-200 md:text-base">
-                Fino a 100 clienti e gratis. Quando cresci, paghi solo 20 EUR/mese + IVA. Costo fisso, controllo totale.
+                Fino a 100 clienti: gratis. Oltre: 20 EUR/mese + IVA. Prezzo basso, fisso, chiaro.
               </p>
+              <ul className="mt-4 space-y-2 text-sm text-zinc-200">
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-amber-300" />
+                  Nessun costo nascosto
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-amber-300" />
+                  Nessuna complessita inutile
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-amber-300" />
+                  Focus totale su operativita e crescita
+                </li>
+              </ul>
             </div>
             <div className="flex flex-wrap gap-3">
               <Link
@@ -265,8 +301,11 @@ export default async function HomePage() {
         </section>
 
         <section className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm md:p-8">
-          <h2 className="text-2xl font-black text-zinc-900 md:text-3xl">FAQ rapide</h2>
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
+          <div className="mb-4 flex items-center gap-2">
+            <Layers3 className="h-5 w-5 text-zinc-700" />
+            <h2 className="text-2xl font-black text-zinc-900 md:text-3xl">FAQ</h2>
+          </div>
+          <div className="grid gap-3 md:grid-cols-2">
             {faqs.map((item) => (
               <article key={item.q} className="rounded-2xl border border-zinc-200 bg-zinc-50/70 p-4">
                 <h3 className="text-sm font-bold text-zinc-900">{item.q}</h3>
