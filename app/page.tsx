@@ -12,6 +12,8 @@ import {
   Dog,
   Euro,
   Layers3,
+  Mail,
+  MessageCircle,
   Sparkles,
   Star,
   TrendingUp,
@@ -201,6 +203,68 @@ export default async function HomePage() {
           </div>
         </section>
 
+        <section className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm md:p-8">
+          <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+            <div>
+              <p className="inline-flex items-center gap-2 rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold tracking-wide text-emerald-800">
+                <MessageCircle className="h-3.5 w-3.5" />
+                Comunicazioni clienti
+              </p>
+              <h2 className="mt-3 text-3xl font-black leading-tight text-zinc-900 md:text-4xl">
+                Messaggi WhatsApp ed Email pronti, inviati in un click
+              </h2>
+              <p className="mt-3 text-sm leading-relaxed text-zinc-700 md:text-base">
+                Durante la gestione appuntamenti puoi aprire subito WhatsApp con testo preimpostato personalizzato.
+                Hai template configurabili per WhatsApp ed Email in impostazioni, cosi il team comunica in modo
+                professionale e coerente senza perdere tempo.
+              </p>
+              <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">
+                  <p className="text-xs text-zinc-500">WhatsApp</p>
+                  <p className="text-sm font-bold text-zinc-900">Messaggio precompilato in 1 click</p>
+                </div>
+                <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">
+                  <p className="text-xs text-zinc-500">Email</p>
+                  <p className="text-sm font-bold text-zinc-900">Template personalizzabile per il salone</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-zinc-200 bg-gradient-to-br from-zinc-50 via-white to-emerald-50 p-4">
+              <div className="rounded-xl border border-zinc-200 bg-white p-3 shadow-sm">
+                <p className="text-xs text-zinc-500">Anteprima messaggio</p>
+                <div className="mt-2 rounded-lg bg-emerald-100/80 p-3 text-sm text-zinc-800">
+                  Ciao Cecilia, ti confermiamo l appuntamento di Luna il 22/03 alle 14:30 presso Paradiso.
+                </div>
+                <div className="mt-2 flex items-center justify-end gap-2">
+                  <span className="inline-flex items-center gap-1 rounded-md border border-zinc-200 bg-white px-2 py-1 text-xs text-zinc-600">
+                    <Mail className="h-3.5 w-3.5" />
+                    Email template
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-2 py-1 text-xs font-semibold text-white">
+                    <MessageCircle className="h-3.5 w-3.5" />
+                    WhatsApp
+                  </span>
+                </div>
+              </div>
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                <div className="rounded-lg border border-zinc-200 bg-white p-3 text-center">
+                  <p className="text-[11px] text-zinc-500">Template</p>
+                  <p className="text-sm font-black text-zinc-900">ON</p>
+                </div>
+                <div className="rounded-lg border border-zinc-200 bg-white p-3 text-center">
+                  <p className="text-[11px] text-zinc-500">Invio</p>
+                  <p className="text-sm font-black text-zinc-900">1 CLICK</p>
+                </div>
+                <div className="rounded-lg border border-zinc-200 bg-white p-3 text-center">
+                  <p className="text-[11px] text-zinc-500">No-show</p>
+                  <p className="text-sm font-black text-zinc-900">TRACK</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <section className="grid gap-3 md:grid-cols-3">
           <article className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
             <p className="text-xs text-zinc-500">Focus giornaliero</p>
@@ -295,6 +359,35 @@ export default async function HomePage() {
                 className="rounded-xl border border-zinc-600 px-5 py-3 text-sm font-semibold text-zinc-100 transition hover:bg-zinc-800"
               >
                 Accedi subito
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        <section className="rounded-3xl border border-amber-200 bg-gradient-to-r from-amber-50 via-white to-amber-100/50 p-5 shadow-sm md:p-8">
+          <div className="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-center">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-zinc-600">Offerta chiara per decidere ora</p>
+              <h2 className="mt-1 text-3xl font-black text-zinc-900 md:text-4xl">
+                Parti gratis oggi. Paghi solo quando superi 100 clienti.
+              </h2>
+              <p className="mt-2 text-sm text-zinc-700 md:text-base">
+                Niente rischio iniziale: testi il sistema, organizzi il salone e cresci. Quando superi 100 clienti,
+                il piano FULL resta fisso a 20 EUR/mese + IVA.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <Link
+                href="/register"
+                className="rounded-xl bg-amber-500 px-5 py-3 text-sm font-semibold text-zinc-900 shadow-sm transition hover:bg-amber-400"
+              >
+                Attiva account gratuito
+              </Link>
+              <Link
+                href="/login"
+                className="rounded-xl border border-zinc-300 bg-white px-5 py-3 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
+              >
+                Accedi al tuo account
               </Link>
             </div>
           </div>
