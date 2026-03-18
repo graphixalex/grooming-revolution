@@ -59,15 +59,6 @@ function isPersonalNoteAppointment(a: Appointment) {
 const durations = Array.from({ length: 20 }, (_, i) => (i + 1) * 15);
 const dayKeyToIndex: Record<DayKey, number> = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6 };
 const indexToDayKey: Record<number, DayKey> = { 0: "sun", 1: "mon", 2: "tue", 3: "wed", 4: "thu", 5: "fri", 6: "sat" };
-const dayLabel: Record<DayKey, string> = {
-  mon: "Lunedi",
-  tue: "Martedi",
-  wed: "Mercoledi",
-  thu: "Giovedi",
-  fri: "Venerdi",
-  sat: "Sabato",
-  sun: "Domenica",
-};
 
 function toMinutes(value: string) {
   const [h, m] = value.split(":").map(Number);
@@ -195,6 +186,17 @@ function getItalianHolidayEvents(fromIso: string, toIso: string) {
   }
 
   return events;
+}
+
+function getOperatorsForDate(operators: Operator[], date: Date, filterId: string) {
+  const dayKey = indexToDayKey[date.getDay()];
+  return operators
+    .filter((op) => (filterId === "ALL" ? true : op.id === filterId))
+    .flatMap((op) => {
+      const row = (op.workingHoursJson as WorkingHoursJson | null | undefined)?.[dayKey];
+      if (!row?.enabled) return [];
+      return [{ id: op.id, nome: op.nome, start: row.start, end: row.end }];
+    });
 }
 
 export function PlannerClient({
@@ -618,46 +620,6 @@ export function PlannerClient({
   }, [visibleRange]);
 
   const allEvents = useMemo(() => [...appointmentEvents, ...holidayEvents], [appointmentEvents, holidayEvents]);
-  const operatorWeekBoard = useMemo(() => {
-    if (!operators.length || !visibleRange) return [];
-    const weekStart = new Date(visibleRange.from);
-    const weekEnd = new Date(visibleRange.to);
-    const days: Date[] = [];
-    for (let d = new Date(weekStart); d < weekEnd; d = addDays(d, 1)) {
-      days.push(new Date(d));
-    }
-
-    return days.map((dayDate) => {
-      const dayKey = indexToDayKey[dayDate.getDay()];
-      const start = new Date(dayDate);
-      start.setHours(0, 0, 0, 0);
-      const end = new Date(dayDate);
-      end.setHours(23, 59, 59, 999);
-
-      const rows = operators
-        .map((op) => {
-          const working = (op.workingHoursJson as WorkingHoursJson | null | undefined)?.[dayKey];
-          if (!working?.enabled) return null;
-          const items = appointments
-            .filter((a) => a.operator?.id === op.id && new Date(a.startAt) >= start && new Date(a.startAt) <= end)
-            .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
-          return {
-            operator: op,
-            start: working.start,
-            end: working.end,
-            items,
-          };
-        })
-        .filter(Boolean) as Array<{ operator: Operator; start: string; end: string; items: Appointment[] }>;
-
-      return {
-        date: dayDate,
-        dayKey,
-        rows,
-      };
-    });
-  }, [appointments, operators, visibleRange]);
-
   return (
     <Card className="space-y-4">
       {branchSwitcher ? (
@@ -724,46 +686,6 @@ export function PlannerClient({
         </Button>
         <div className="w-full text-sm font-semibold md:ml-auto md:w-auto">{title}</div>
       </div>
-      {operators.length ? (
-        <Card className="space-y-2">
-          <h3 className="font-semibold">Agenda operatori (settimana)</h3>
-          <div className="space-y-3">
-            {operatorWeekBoard.map((day) => (
-              <div key={day.date.toISOString()} className="rounded-md border border-zinc-200 p-3">
-                <p className="font-medium">
-                  {dayLabel[day.dayKey]} {format(day.date, "dd/MM")}
-                </p>
-                {day.rows.length === 0 ? (
-                  <p className="mt-2 text-sm text-zinc-500">Nessun operatore in turno.</p>
-                ) : (
-                  <div className="mt-2 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-                    {day.rows.map((row) => (
-                      <div key={`${day.date.toISOString()}-${row.operator.id}`} className="rounded border border-zinc-100 p-2">
-                        <p className="text-sm font-semibold">
-                          {row.operator.nome} ({row.start} - {row.end})
-                        </p>
-                        <div className="mt-1 space-y-1 text-xs">
-                          {row.items.length === 0 ? (
-                            <p className="text-zinc-500">Nessun appuntamento</p>
-                          ) : (
-                            row.items.map((r) => (
-                              <p key={r.id}>
-                                {format(new Date(r.startAt), "HH:mm")} - {format(new Date(r.endAt), "HH:mm")} |{" "}
-                                {isPersonalNoteAppointment(r) ? `Nota: ${r.noteAppuntamento || ""}` : `${r.cane.nome} / ${r.cliente.nome}`}
-                              </p>
-                            ))
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </Card>
-      ) : null}
-
       <div className="overflow-hidden">
         <div className="min-w-0">
       <FullCalendar
@@ -788,6 +710,27 @@ export function PlannerClient({
         selectable
         selectLongPressDelay={120}
         eventLongPressDelay={120}
+        dayHeaderContent={(arg: { date: Date; text: string }) => {
+          const dayOps = getOperatorsForDate(operators, arg.date, agendaOperatorFilter);
+          const isWeekView = !isMobile;
+          if (!isWeekView) return <span>{arg.text}</span>;
+          return (
+            <div className="space-y-1 py-1">
+              <div className="font-semibold">{arg.text}</div>
+              {dayOps.length ? (
+                <div className="space-y-0.5">
+                  {dayOps.map((op) => (
+                    <div key={`${arg.date.toISOString()}-${op.id}`} className="text-[10px] leading-tight text-zinc-600">
+                      {op.nome} ({op.start}-{op.end})
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-[10px] leading-tight text-zinc-400">Nessun operatore</div>
+              )}
+            </div>
+          );
+        }}
         datesSet={(info: { start: Date; end: Date; view: { title: string } }) => {
           setTitle(info.view.title);
           loadAppointments(info.start.toISOString(), info.end.toISOString());
@@ -1161,4 +1104,3 @@ export function PlannerClient({
     </Card>
   );
 }
-
