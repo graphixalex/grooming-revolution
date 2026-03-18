@@ -7,6 +7,7 @@ import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import itLocale from "@fullcalendar/core/locales/it";
 import { addMinutes, format } from "date-fns";
+import { it as dateFnsIt } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -18,6 +19,7 @@ type Treatment = { id: string; nome: string; attivo: boolean };
 type Operator = {
   id: string;
   nome: string;
+  attivo?: boolean;
   color?: string | null;
   workingHoursJson?: WorkingHoursJson | null;
 };
@@ -143,6 +145,11 @@ function formatHmFromMinutes(minutes: number) {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
+function capitalizeFirst(value: string) {
+  if (!value) return value;
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
 function ymdUTC(d: Date) {
   const y = d.getUTCFullYear();
   const m = String(d.getUTCMonth() + 1).padStart(2, "0");
@@ -210,10 +217,10 @@ function getItalianHolidayEvents(fromIso: string, toIso: string) {
   return events;
 }
 
-function getOperatorsForDate(operators: Operator[], date: Date, filterId: string) {
+function getOperatorsForDate(operators: Operator[], date: Date) {
   const dayKey = indexToDayKey[date.getDay()];
   return operators
-    .filter((op) => (filterId === "ALL" ? true : op.id === filterId))
+    .filter((op) => Boolean(op.attivo ?? true))
     .flatMap((op) => {
       const row = (op.workingHoursJson as WorkingHoursJson | null | undefined)?.[dayKey];
       if (!row?.enabled) return [];
@@ -272,7 +279,6 @@ export function PlannerClient({
   const [listinoQuote, setListinoQuote] = useState<ListinoQuote | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [selectedOperatorId, setSelectedOperatorId] = useState<string>(operators[0]?.id || "");
-  const [agendaOperatorFilter, setAgendaOperatorFilter] = useState<string>("ALL");
 
   useEffect(() => {
     if (!selectedOperatorId && operators.length) {
@@ -283,10 +289,7 @@ export function PlannerClient({
   const [newClientForm, setNewClientForm] = useState({ nome: "", cognome: "", telefono: "", email: "", noteCliente: "", consensoPromemoria: true });
   const [newDogForm, setNewDogForm] = useState({ nome: "", razza: "", taglia: "M", noteCane: "", tagRapidiIds: [] as string[] });
 
-  const hoursConfig = useMemo(() => {
-    const selected = operators.find((o) => o.id === agendaOperatorFilter);
-    return getWorkingHoursConfig((selected?.workingHoursJson as WorkingHoursJson | null | undefined) ?? workingHoursJson);
-  }, [agendaOperatorFilter, operators, workingHoursJson]);
+  const hoursConfig = useMemo(() => getWorkingHoursConfig(workingHoursJson), [workingHoursJson]);
 
   function maybeOpenWhatsappReminder(args: {
     clientPhone: string;
@@ -344,11 +347,10 @@ export function PlannerClient({
     const fromDate = from ?? new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
     const toDate = to ?? new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString();
     setVisibleRange({ from: fromDate, to: toDate });
-    const operatorQuery = agendaOperatorFilter !== "ALL" ? `&operatorId=${encodeURIComponent(agendaOperatorFilter)}` : "";
-    const res = await fetch(`/api/appointments?from=${encodeURIComponent(fromDate)}&to=${encodeURIComponent(toDate)}${operatorQuery}`);
+    const res = await fetch(`/api/appointments?from=${encodeURIComponent(fromDate)}&to=${encodeURIComponent(toDate)}`);
     const data = await res.json();
     setAppointments(data);
-  }, [agendaOperatorFilter]);
+  }, []);
 
   useEffect(() => {
     if (isMobile) return;
@@ -373,16 +375,6 @@ export function PlannerClient({
       api.changeView(targetView);
     }
   }, [isMobile]);
-
-  useEffect(() => {
-    const shouldLockBodyScroll = showModal || showEdit;
-    if (!shouldLockBodyScroll) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [showModal, showEdit]);
 
   useEffect(() => {
     if (!search || isNewClient !== false) return;
@@ -659,7 +651,7 @@ export function PlannerClient({
   const matrixColumns = useMemo(() => {
     return matrixDays.map((d) => ({
       ...d,
-      operators: getOperatorsForDate(operators, d.date, "ALL"),
+      operators: getOperatorsForDate(operators, d.date),
     }));
   }, [matrixDays, operators]);
   const matrixSlots = useMemo(() => {
@@ -668,7 +660,7 @@ export function PlannerClient({
     const min = Math.min(...times);
     const max = Math.max(...times);
     const out: number[] = [];
-    for (let t = min; t < max; t += 15) out.push(t);
+    for (let t = min; t < max; t += 30) out.push(t);
     return out;
   }, [matrixColumns]);
   return (
@@ -689,26 +681,6 @@ export function PlannerClient({
               </Button>
             );
           })}
-        </div>
-      ) : null}
-      {operators.length ? (
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm text-zinc-500">Operatore in agenda</span>
-          <Button
-            variant={agendaOperatorFilter === "ALL" ? "default" : "outline"}
-            onClick={() => setAgendaOperatorFilter("ALL")}
-          >
-            Tutti
-          </Button>
-          {operators.map((op) => (
-            <Button
-              key={op.id}
-              variant={agendaOperatorFilter === op.id ? "default" : "outline"}
-              onClick={() => setAgendaOperatorFilter(op.id)}
-            >
-              {op.nome}
-            </Button>
-          ))}
         </div>
       ) : null}
       <div className="flex flex-wrap items-center gap-2">
@@ -798,7 +770,7 @@ export function PlannerClient({
         selectLongPressDelay={120}
         eventLongPressDelay={120}
         dayHeaderContent={(arg: { date: Date; text: string }) => {
-          const dayOps = getOperatorsForDate(operators, arg.date, agendaOperatorFilter);
+          const dayOps = getOperatorsForDate(operators, arg.date);
           const isWeekView = !isMobile;
           if (!isWeekView) return <span>{arg.text}</span>;
           return (
@@ -826,7 +798,7 @@ export function PlannerClient({
           if (showModal || showEdit || info.allDay) return;
           setSlotStart(info.date);
           setModalMode("APPOINTMENT");
-          setSelectedOperatorId(agendaOperatorFilter !== "ALL" ? agendaOperatorFilter : operators[0]?.id || "");
+          setSelectedOperatorId(operators[0]?.id || "");
           setListinoQuote(null);
           setNote("");
           setShowModal(true);
@@ -834,7 +806,7 @@ export function PlannerClient({
         select={(info: { start: Date }) => {
           setSlotStart(info.start);
           setModalMode("APPOINTMENT");
-          setSelectedOperatorId(agendaOperatorFilter !== "ALL" ? agendaOperatorFilter : operators[0]?.id || "");
+          setSelectedOperatorId(operators[0]?.id || "");
           setListinoQuote(null);
           setNote("");
           setShowModal(true);
@@ -873,7 +845,7 @@ export function PlannerClient({
                 <th className="w-16 border border-zinc-200 bg-zinc-50 p-2 text-left text-zinc-600">Ora</th>
                 {matrixColumns.map((day) => (
                   <th key={day.date.toISOString()} className="border border-zinc-200 bg-zinc-50 p-2 text-center">
-                    {format(day.date, "EEEE dd/MM")}
+                    {capitalizeFirst(format(day.date, "EEEE dd/MM", { locale: dateFnsIt }))}
                   </th>
                 ))}
               </tr>
@@ -903,8 +875,6 @@ export function PlannerClient({
                         {(day.operators.length ? day.operators : [{ id: "none", nome: "Nessuno", start: "--:--", end: "--:--" }]).map((op) => {
                           const slotStart = new Date(day.date);
                           slotStart.setHours(Math.floor(slotMin / 60), slotMin % 60, 0, 0);
-                          const slotEnd = new Date(slotStart);
-                          slotEnd.setMinutes(slotEnd.getMinutes() + 15);
                           const appt = appointments.find((a) => {
                             if (a.operator?.id !== op.id) return false;
                             const aStart = new Date(a.startAt);
@@ -963,7 +933,7 @@ export function PlannerClient({
             if (e.target === e.currentTarget) setShowModal(false);
           }}
         >
-          <Card className="max-h-[88vh] w-full max-w-2xl overflow-y-auto p-3 md:max-h-[96vh] md:p-4">
+          <Card className="max-h-[calc(100dvh-1.5rem)] w-full max-w-2xl overflow-y-auto p-3 md:max-h-[calc(100dvh-3rem)] md:p-4">
             <h3 className="mb-3 text-lg font-semibold">Nuovo Appuntamento</h3>
             <p className="text-sm text-zinc-600">Slot: {slotStart ? format(slotStart, "dd/MM/yyyy HH:mm") : "-"}</p>
             {operators.length ? (
@@ -1176,7 +1146,7 @@ export function PlannerClient({
             if (e.target === e.currentTarget) setShowEdit(false);
           }}
         >
-          <Card className="max-h-[88vh] w-full max-w-xl space-y-3 overflow-y-auto p-3 md:max-h-[96vh] md:p-4">
+          <Card className="max-h-[calc(100dvh-1.5rem)] w-full max-w-xl space-y-3 overflow-y-auto p-3 md:max-h-[calc(100dvh-3rem)] md:p-4">
             <h3 className="text-lg font-semibold">Modifica Appuntamento</h3>
             <p className="text-sm">
               {isPersonalNoteAppointment(selectedAppointment)

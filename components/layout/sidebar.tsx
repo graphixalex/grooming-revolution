@@ -24,7 +24,7 @@ export function Sidebar() {
     <>
       <div className="border-b border-zinc-200 bg-white p-3 md:hidden">
         <div className="mb-2 flex items-center rounded-xl bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500 px-3 py-2 text-sm font-bold text-zinc-900 shadow-sm">
-          <Image src="/img/logo-grooming-revolution.png" alt="Grooming Revolution" width={220} height={52} className="h-10 w-auto object-contain" priority />
+          <Image src="/img/logo-grooming-revolution.png" alt="Grooming Revolution" width={300} height={72} className="h-12 w-auto object-contain" priority />
         </div>
         <nav className="flex gap-2 overflow-x-auto pb-1">
           {links.map((link) => {
@@ -49,7 +49,7 @@ export function Sidebar() {
 
       <aside className="hidden w-64 border-r border-zinc-200 bg-white/95 p-4 backdrop-blur-sm md:block">
         <div className="mb-6 flex items-center rounded-xl bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500 p-3 font-bold tracking-wide text-zinc-900 shadow-sm">
-          <Image src="/img/logo-grooming-revolution.png" alt="Grooming Revolution" width={220} height={52} className="h-10 w-auto object-contain" />
+          <Image src="/img/logo-grooming-revolution.png" alt="Grooming Revolution" width={300} height={72} className="h-12 w-auto object-contain" />
         </div>
         <nav className="space-y-1">
           {links.map((link) => {

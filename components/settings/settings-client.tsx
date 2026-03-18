@@ -235,13 +235,18 @@ export function SettingsClient({ initial }: { initial: any }) {
                   setOperators((prev: any[]) => prev.map((x, i) => (i === opIndex ? { ...x, nome: e.target.value } : x)))
                 }
               />
-              <Input
-                placeholder="Colore #hex"
-                value={op.color}
-                onChange={(e) =>
-                  setOperators((prev: any[]) => prev.map((x, i) => (i === opIndex ? { ...x, color: e.target.value } : x)))
-                }
-              />
+              <div className="flex h-10 items-center gap-2 rounded-md border border-zinc-300 bg-white px-3">
+                <input
+                  type="color"
+                  aria-label="Colore operatore"
+                  className="h-6 w-8 cursor-pointer rounded border border-zinc-300"
+                  value={op.color || "#2563eb"}
+                  onChange={(e) =>
+                    setOperators((prev: any[]) => prev.map((x, i) => (i === opIndex ? { ...x, color: e.target.value } : x)))
+                  }
+                />
+                <span className="text-xs text-zinc-500">Colore agenda</span>
+              </div>
               <Input
                 type="number"
                 min="0"
