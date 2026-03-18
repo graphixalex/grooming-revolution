@@ -34,13 +34,13 @@ export default async function HomePage() {
     <main className="min-h-screen px-4 py-8 md:px-8 md:py-12">
       <div className="mx-auto max-w-6xl space-y-6">
         <header className="rounded-3xl border border-[#d4af37]/40 bg-white/85 p-6 shadow-sm backdrop-blur md:p-10">
-          <div className="mx-auto h-16 w-full max-w-[340px] overflow-hidden rounded-lg border border-[#d4af37]/70 bg-gradient-to-r from-[#fbf6e7] via-[#f4ebcf] to-[#efe2bd] p-1 md:mx-0">
+          <div className="mx-auto h-16 w-full max-w-[340px] overflow-hidden rounded-lg border border-rose-200 bg-gradient-to-r from-rose-50 via-pink-50 to-rose-100 p-1 md:mx-0">
             <Image
               src="/img/logo-grooming-revolution.png"
               alt="Grooming Revolution"
               width={640}
               height={180}
-              className="h-full w-full origin-center object-contain object-center scale-[2.8]"
+              className="h-full w-full origin-center object-contain object-center scale-[2.8] translate-y-[3px]"
               priority
             />
           </div>

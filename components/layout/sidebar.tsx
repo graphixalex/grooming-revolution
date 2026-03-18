@@ -23,13 +23,13 @@ export function Sidebar() {
   return (
     <>
       <div className="border-b border-zinc-200 bg-white p-3 md:hidden">
-        <div className="mb-2 flex h-24 items-center justify-center overflow-hidden rounded-xl border border-[#d4af37]/70 bg-gradient-to-r from-[#fbf6e7] via-[#f4ebcf] to-[#efe2bd] px-2 py-2 text-sm font-bold text-[#0f1f3d] shadow-sm">
+        <div className="mb-2 flex h-24 items-center justify-center overflow-hidden rounded-xl border border-rose-200 bg-gradient-to-r from-rose-50 via-pink-50 to-rose-100 px-2 py-2 text-sm font-bold text-[#0f1f3d] shadow-sm">
           <Image
             src="/img/logo-grooming-revolution.png"
             alt="Grooming Revolution"
             width={640}
             height={180}
-            className="h-full w-full origin-center object-contain object-center scale-[3]"
+            className="h-full w-full origin-center object-contain object-center scale-[3] translate-y-[4px]"
             priority
           />
         </div>
@@ -55,13 +55,13 @@ export function Sidebar() {
       </div>
 
       <aside className="hidden w-64 border-r border-zinc-200 bg-white/95 p-4 backdrop-blur-sm md:block">
-        <div className="mb-6 flex h-24 items-center justify-center overflow-hidden rounded-xl border border-[#d4af37]/70 bg-gradient-to-r from-[#fbf6e7] via-[#f4ebcf] to-[#efe2bd] p-2 font-bold tracking-wide text-[#0f1f3d] shadow-sm">
+        <div className="mb-6 flex h-24 items-center justify-center overflow-hidden rounded-xl border border-rose-200 bg-gradient-to-r from-rose-50 via-pink-50 to-rose-100 p-2 font-bold tracking-wide text-[#0f1f3d] shadow-sm">
           <Image
             src="/img/logo-grooming-revolution.png"
             alt="Grooming Revolution"
             width={640}
             height={180}
-            className="h-full w-full origin-center object-contain object-center scale-[3]"
+            className="h-full w-full origin-center object-contain object-center scale-[3] translate-y-[4px]"
           />
         </div>
         <nav className="space-y-1">
