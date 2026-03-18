@@ -7,8 +7,8 @@
 
 body {
   background:
-    radial-gradient(circle at top right, rgba(31, 53, 95, 0.2) 0%, rgba(247, 248, 251, 0) 35%),
-    radial-gradient(circle at 15% 10%, rgba(212, 175, 55, 0.14) 0%, rgba(247, 248, 251, 0) 45%),
+    radial-gradient(circle at top right, rgba(251, 191, 36, 0.22) 0%, rgba(247, 248, 251, 0) 35%),
+    radial-gradient(circle at 15% 10%, rgba(244, 114, 182, 0.08) 0%, rgba(247, 248, 251, 0) 45%),
     linear-gradient(180deg, #f8fafc 0%, #f5f7fb 100%);
   color: var(--foreground);
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;

@@ -6,13 +6,13 @@ import Image from "next/image";
 export default function RegisterPage() {
   return (
     <Card className="w-full p-6">
-      <div className="mb-3 h-14 w-full max-w-[280px] overflow-hidden rounded-lg border border-rose-200 bg-gradient-to-r from-rose-50 via-pink-50 to-rose-100 p-1">
+      <div className="mb-3 h-14 w-full max-w-[280px] overflow-hidden rounded-lg border border-rose-300 bg-gradient-to-r from-rose-100 via-rose-100 to-pink-200 p-1">
         <Image
           src="/img/logo-grooming-revolution.png"
           alt="Grooming Revolution"
           width={640}
           height={180}
-          className="h-full w-full origin-center object-contain object-center scale-[2.8] translate-y-[3px]"
+          className="h-full w-full origin-center object-contain object-center scale-[2.8] translate-y-[6px]"
           priority
         />
       </div>

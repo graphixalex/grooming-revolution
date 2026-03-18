@@ -17,7 +17,7 @@ export default function OpenGraphImage() {
           display: "flex",
           flexDirection: "column",
           justifyContent: "space-between",
-          background: "linear-gradient(135deg, #0f172a 0%, #1f355f 52%, #d4af37 100%)",
+          background: "linear-gradient(135deg, #0f172a 0%, #1f2937 48%, #f59e0b 100%)",
           color: "white",
           padding: 56,
           fontFamily: "Arial, sans-serif",
@@ -37,7 +37,7 @@ export default function OpenGraphImage() {
               width: 16,
               height: 16,
               borderRadius: 999,
-              background: "#d4af37",
+              background: "#f59e0b",
             }}
           />
           Grooming Revolution
