@@ -51,8 +51,15 @@ export default function LoginPage() {
 
   return (
     <Card className="w-full p-6">
-      <div className="mb-3">
-        <Image src="/img/logo-grooming-revolution.png" alt="Grooming Revolution" width={240} height={56} className="h-11 w-auto object-contain" priority />
+      <div className="mb-3 h-14 w-full max-w-[280px] overflow-hidden rounded-lg bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500 p-1">
+        <Image
+          src="/img/logo-grooming-revolution.png"
+          alt="Grooming Revolution"
+          width={640}
+          height={180}
+          className="h-full w-full origin-left object-contain object-left scale-[3]"
+          priority
+        />
       </div>
       <h1 className="text-2xl font-semibold">Accedi</h1>
       <p className="mb-4 text-sm text-zinc-600">Gestisci il tuo salone Grooming Revolution</p>

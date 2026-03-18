@@ -34,14 +34,16 @@ export default async function HomePage() {
     <main className="min-h-screen px-4 py-8 md:px-8 md:py-12">
       <div className="mx-auto max-w-6xl space-y-6">
         <header className="rounded-3xl border border-amber-200/70 bg-white/85 p-6 shadow-sm backdrop-blur md:p-10">
-          <Image
-            src="/img/logo-grooming-revolution.png"
-            alt="Grooming Revolution"
-            width={320}
-            height={76}
-            className="h-12 w-auto object-contain md:h-14"
-            priority
-          />
+          <div className="h-16 w-full max-w-[340px] overflow-hidden rounded-lg bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500 p-1">
+            <Image
+              src="/img/logo-grooming-revolution.png"
+              alt="Grooming Revolution"
+              width={640}
+              height={180}
+              className="h-full w-full origin-left object-contain object-left scale-[3]"
+              priority
+            />
+          </div>
           <p className="inline-flex rounded-full bg-zinc-900 px-3 py-1 text-xs font-semibold tracking-wide text-white">
             SaaS per toelettatura professionale
           </p>

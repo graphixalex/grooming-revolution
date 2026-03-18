@@ -23,8 +23,15 @@ export function Sidebar() {
   return (
     <>
       <div className="border-b border-zinc-200 bg-white p-3 md:hidden">
-        <div className="mb-2 flex h-24 items-center justify-center rounded-xl bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500 px-2 py-2 text-sm font-bold text-zinc-900 shadow-sm">
-          <Image src="/img/logo-grooming-revolution.png" alt="Grooming Revolution" width={640} height={180} className="h-full w-full object-contain" priority />
+        <div className="mb-2 flex h-24 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500 px-2 py-2 text-sm font-bold text-zinc-900 shadow-sm">
+          <Image
+            src="/img/logo-grooming-revolution.png"
+            alt="Grooming Revolution"
+            width={640}
+            height={180}
+            className="h-full w-full origin-left object-contain object-left scale-[3.2]"
+            priority
+          />
         </div>
         <nav className="flex gap-2 overflow-x-auto pb-1">
           {links.map((link) => {
@@ -48,8 +55,14 @@ export function Sidebar() {
       </div>
 
       <aside className="hidden w-64 border-r border-zinc-200 bg-white/95 p-4 backdrop-blur-sm md:block">
-        <div className="mb-6 flex h-24 items-center justify-center rounded-xl bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500 p-2 font-bold tracking-wide text-zinc-900 shadow-sm">
-          <Image src="/img/logo-grooming-revolution.png" alt="Grooming Revolution" width={640} height={180} className="h-full w-full object-contain" />
+        <div className="mb-6 flex h-24 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500 p-2 font-bold tracking-wide text-zinc-900 shadow-sm">
+          <Image
+            src="/img/logo-grooming-revolution.png"
+            alt="Grooming Revolution"
+            width={640}
+            height={180}
+            className="h-full w-full origin-left object-contain object-left scale-[3]"
+          />
         </div>
         <nav className="space-y-1">
           {links.map((link) => {
