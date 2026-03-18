@@ -11,6 +11,9 @@ function q(v: string | null | undefined) {
 export async function GET(req: Request) {
   const auth = await requireApiSession();
   if ("error" in auth) return auth.error;
+  if (auth.session.user.role === "STAFF") {
+    return NextResponse.json({ error: "Non autorizzato" }, { status: 403 });
+  }
   const { searchParams } = new URL(req.url);
   const scope = searchParams.get("scope") || undefined;
   const accountingScope = await getAccountingScope(auth.session.user, scope);

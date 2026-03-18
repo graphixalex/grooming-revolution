@@ -21,7 +21,7 @@ export default async function ProtectedLayout({ children }: { children: React.Re
 
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
-      <Sidebar />
+      <Sidebar role={session.user.role} />
       <main className="flex-1 p-3 md:p-6">
         <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-zinc-200/80 bg-white/95 p-3 shadow-[0_6px_18px_rgba(0,0,0,0.04)] md:mb-6 md:flex-row md:items-center md:justify-between md:p-4">
           <div>

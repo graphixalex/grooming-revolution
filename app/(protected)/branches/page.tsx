@@ -1,9 +1,13 @@
 import { prisma } from "@/lib/prisma";
 import { getRequiredSession } from "@/lib/session";
 import { BranchesClient } from "@/components/branches/branches-client";
+import { redirect } from "next/navigation";
 
 export default async function BranchesPage() {
   const session = await getRequiredSession();
+  if (session.user.role === "STAFF") {
+    redirect("/planner");
+  }
   const salon = await prisma.salon.findUnique({
     where: { id: session.user.salonId },
     select: { id: true, nomeAttivita: true, nomeSede: true, indirizzo: true, paese: true, valuta: true, timezone: true, salonGroupId: true },

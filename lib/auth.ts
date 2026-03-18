@@ -20,8 +20,9 @@ export const authOptions: NextAuthOptions = {
         if (!email || !password) return null;
         if (!checkLoginRateLimit(email)) throw new Error("Troppi tentativi di login");
 
-        const user = await prisma.user.findFirst({ where: { email } });
-        if (!user) return null;
+        const users = await prisma.user.findMany({ where: { email }, take: 2 });
+        if (users.length !== 1) return null;
+        const user = users[0];
 
         const valid = await bcrypt.compare(password, user.passwordHash);
         if (!valid) return null;

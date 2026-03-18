@@ -1,21 +1,46 @@
 import { getRequiredSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { SettingsClient } from "@/components/settings/settings-client";
+import { redirect } from "next/navigation";
 
 export default async function SettingsPage() {
   const session = await getRequiredSession();
-  const [salon, tags, treatments, staff, operators] = await Promise.all([
+  if (session.user.role === "STAFF") {
+    redirect("/planner");
+  }
+
+  const ownerGroup = session.user.role === "OWNER"
+    ? await prisma.salon.findUnique({
+        where: { id: session.user.salonId },
+        select: { salonGroupId: true },
+      })
+    : null;
+
+  const [salon, tags, treatments, staff, operators, assignableSalons] = await Promise.all([
     prisma.salon.findUnique({ where: { id: session.user.salonId } }),
     prisma.quickTag.findMany({ where: { salonId: session.user.salonId }, orderBy: { ordine: "asc" } }),
     prisma.treatment.findMany({ where: { salonId: session.user.salonId }, orderBy: { ordine: "asc" } }),
-    prisma.user.findMany({ where: { salonId: session.user.salonId }, select: { id: true, email: true, ruolo: true } }),
+    prisma.user.findMany({
+      where: { salonId: session.user.salonId },
+      select: { id: true, email: true, ruolo: true, salon: { select: { id: true, nomeSede: true } } },
+    }),
     prisma.operator.findMany({ where: { salonId: session.user.salonId }, orderBy: { ordine: "asc" } }),
+    session.user.role === "OWNER" && ownerGroup?.salonGroupId
+      ? prisma.salon.findMany({
+          where: { salonGroupId: ownerGroup.salonGroupId },
+          select: { id: true, nomeSede: true },
+          orderBy: { createdAt: "asc" },
+        })
+      : prisma.salon.findMany({
+          where: { id: session.user.salonId },
+          select: { id: true, nomeSede: true },
+        }),
   ]);
 
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-semibold">Impostazioni</h1>
-      <SettingsClient initial={{ salon, tags, treatments, staff, operators }} />
+      <SettingsClient initial={{ salon, tags, treatments, staff, operators, assignableSalons, role: session.user.role }} />
     </div>
   );
 }

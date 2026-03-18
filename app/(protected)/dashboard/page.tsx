@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { getAccountingScope } from "@/lib/accounting-scope";
 import { AccountingScopeSwitcher } from "@/components/accounting/scope-switcher";
 import { aggregateByCurrency, formatCurrencyTotals } from "@/lib/money";
+import { redirect } from "next/navigation";
 
 export default async function DashboardPage({
   searchParams,
@@ -12,6 +13,9 @@ export default async function DashboardPage({
   searchParams: Promise<{ scope?: string }>;
 }) {
   const session = await getRequiredSession();
+  if (session.user.role === "STAFF") {
+    redirect("/planner");
+  }
   const { scope } = await searchParams;
   const accountingScope = await getAccountingScope(session.user, scope);
 

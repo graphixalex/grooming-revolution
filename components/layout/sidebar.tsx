@@ -6,20 +6,23 @@ import Image from "next/image";
 import { BarChart3, CalendarDays, CreditCard, Dog, Home, Settings, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+type Role = "OWNER" | "MANAGER" | "STAFF";
+
 const links = [
-  { href: "/dashboard", label: "Dashboard", icon: Home },
-  { href: "/planner", label: "Agenda", icon: CalendarDays },
-  { href: "/clients", label: "Clienti", icon: Users },
-  { href: "/pricing", label: "Listino", icon: CreditCard },
-  { href: "/reports", label: "Report", icon: BarChart3 },
-  { href: "/branches", label: "Multi-sede", icon: Users },
-  { href: "/payments", label: "Movimenti", icon: CreditCard },
-  { href: "/settings", label: "Impostazioni", icon: Settings },
-  { href: "/billing", label: "Billing", icon: Dog },
+  { href: "/dashboard", label: "Dashboard", icon: Home, roles: ["OWNER", "MANAGER"] as Role[] },
+  { href: "/planner", label: "Agenda", icon: CalendarDays, roles: ["OWNER", "MANAGER", "STAFF"] as Role[] },
+  { href: "/clients", label: "Clienti", icon: Users, roles: ["OWNER", "MANAGER", "STAFF"] as Role[] },
+  { href: "/pricing", label: "Listino", icon: CreditCard, roles: ["OWNER", "MANAGER"] as Role[] },
+  { href: "/reports", label: "Report", icon: BarChart3, roles: ["OWNER", "MANAGER"] as Role[] },
+  { href: "/branches", label: "Multi-sede", icon: Users, roles: ["OWNER", "MANAGER"] as Role[] },
+  { href: "/payments", label: "Movimenti", icon: CreditCard, roles: ["OWNER", "MANAGER"] as Role[] },
+  { href: "/settings", label: "Impostazioni", icon: Settings, roles: ["OWNER", "MANAGER"] as Role[] },
+  { href: "/billing", label: "Billing", icon: Dog, roles: ["OWNER", "MANAGER"] as Role[] },
 ];
 
-export function Sidebar() {
+export function Sidebar({ role }: { role: Role }) {
   const pathname = usePathname();
+  const visibleLinks = links.filter((link) => link.roles.includes(role));
   return (
     <>
       <div className="border-b border-zinc-200 bg-white p-3 md:hidden">
@@ -34,7 +37,7 @@ export function Sidebar() {
           />
         </div>
         <nav className="flex gap-2 overflow-x-auto pb-1">
-          {links.map((link) => {
+          {visibleLinks.map((link) => {
             const Icon = link.icon;
             const active = pathname.startsWith(link.href);
             return (
@@ -65,7 +68,7 @@ export function Sidebar() {
           />
         </div>
         <nav className="space-y-1">
-          {links.map((link) => {
+          {visibleLinks.map((link) => {
             const Icon = link.icon;
             const active = pathname.startsWith(link.href);
             return (

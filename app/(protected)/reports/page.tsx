@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { getAccountingScope } from "@/lib/accounting-scope";
 import { AccountingScopeSwitcher } from "@/components/accounting/scope-switcher";
 import { aggregateByCurrency, formatCurrencyTotals } from "@/lib/money";
+import { redirect } from "next/navigation";
 
 type RevenueBySalon = { salonId: string; name: string; total: number; currency: string; appointments: number; noShowRate: number };
 
@@ -14,6 +15,9 @@ export default async function ReportsPage({
   searchParams: Promise<{ scope?: string }>;
 }) {
   const session = await getRequiredSession();
+  if (session.user.role === "STAFF") {
+    redirect("/planner");
+  }
   const { scope } = await searchParams;
   const accountingScope = await getAccountingScope(session.user, scope);
   const from = startOfMonth(subMonths(new Date(), 2));

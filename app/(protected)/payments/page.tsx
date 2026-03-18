@@ -3,6 +3,7 @@ import { getRequiredSession } from "@/lib/session";
 import { PaymentsClient } from "@/components/settings/payments-client";
 import { getAccountingScope } from "@/lib/accounting-scope";
 import { AccountingScopeSwitcher } from "@/components/accounting/scope-switcher";
+import { redirect } from "next/navigation";
 
 export default async function PaymentsPage({
   searchParams,
@@ -10,6 +11,9 @@ export default async function PaymentsPage({
   searchParams: Promise<{ scope?: string }>;
 }) {
   const session = await getRequiredSession();
+  if (session.user.role === "STAFF") {
+    redirect("/planner");
+  }
   const { scope } = await searchParams;
   const accountingScope = await getAccountingScope(session.user, scope);
   const rows = await prisma.transaction.findMany({

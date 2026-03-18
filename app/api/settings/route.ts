@@ -4,17 +4,25 @@ import { requireApiSession } from "@/lib/api-auth";
 import bcrypt from "bcryptjs";
 import { getCountryMeta } from "@/lib/geo";
 import { Prisma } from "@prisma/client";
+import { canManageSettings } from "@/lib/rbac";
 
 export async function GET() {
   const auth = await requireApiSession();
   if ("error" in auth) return auth.error;
+  if (!canManageSettings(auth.session.user.role as any)) {
+    return NextResponse.json({ error: "Non autorizzato" }, { status: 403 });
+  }
   const salonId = auth.session.user.salonId;
 
   const [salon, tags, treatments, staff, operators] = await Promise.all([
     prisma.salon.findUnique({ where: { id: salonId } }),
     prisma.quickTag.findMany({ where: { salonId }, orderBy: { ordine: "asc" } }),
     prisma.treatment.findMany({ where: { salonId }, orderBy: { ordine: "asc" } }),
-    prisma.user.findMany({ where: { salonId }, orderBy: { createdAt: "asc" }, select: { id: true, email: true, ruolo: true } }),
+    prisma.user.findMany({
+      where: { salonId },
+      orderBy: { createdAt: "asc" },
+      select: { id: true, email: true, ruolo: true, salon: { select: { id: true, nomeSede: true } } },
+    }),
     prisma.operator.findMany({ where: { salonId }, orderBy: { ordine: "asc" } }),
   ]);
 
@@ -27,6 +35,12 @@ export async function PATCH(req: NextRequest) {
   const salonId = auth.session.user.salonId;
 
   const body = await req.json();
+  const role = auth.session.user.role;
+
+  const managerSections = new Set(["salon", "templates", "workingHours", "tags", "treatments", "operators"]);
+  if (managerSections.has(String(body.section)) && !canManageSettings(role as any)) {
+    return NextResponse.json({ error: "Non autorizzato" }, { status: 403 });
+  }
 
   if (body.section === "salon") {
     const countryMeta = getCountryMeta(body.paese);
@@ -105,16 +119,34 @@ export async function PATCH(req: NextRequest) {
   }
 
   if (body.section === "staff" && auth.session.user.role === "OWNER") {
+    const requestedSalonId = typeof body.salonId === "string" && body.salonId.length > 0 ? body.salonId : salonId;
+    const [currentSalon, targetSalon] = await Promise.all([
+      prisma.salon.findUnique({ where: { id: salonId }, select: { salonGroupId: true } }),
+      prisma.salon.findUnique({ where: { id: requestedSalonId }, select: { id: true, salonGroupId: true } }),
+    ]);
+    if (!targetSalon) {
+      return NextResponse.json({ error: "Sede staff non valida" }, { status: 400 });
+    }
+    if (!currentSalon?.salonGroupId || !targetSalon.salonGroupId || currentSalon.salonGroupId !== targetSalon.salonGroupId) {
+      return NextResponse.json({ error: "Puoi associare staff solo alle sedi del tuo gruppo" }, { status: 400 });
+    }
+
+    const email = String(body.email || "").toLowerCase().trim();
+    const existsEmail = await prisma.user.findFirst({ where: { email }, select: { id: true } });
+    if (existsEmail) {
+      return NextResponse.json({ error: "Email gia in uso. Usa una email diversa per questo dipendente." }, { status: 400 });
+    }
+
     const role = body.role === "MANAGER" ? "MANAGER" : "STAFF";
     const passwordHash = await bcrypt.hash(String(body.password || ""), 12);
     const created = await prisma.user.create({
       data: {
-        salonId,
-        email: body.email,
+        salonId: requestedSalonId,
+        email,
         passwordHash,
         ruolo: role,
       },
-      select: { id: true, email: true, ruolo: true },
+      select: { id: true, email: true, ruolo: true, salon: { select: { id: true, nomeSede: true } } },
     });
     return NextResponse.json(created);
   }

@@ -70,6 +70,7 @@ export function SettingsClient({ initial }: { initial: any }) {
   const [staffEmail, setStaffEmail] = useState("");
   const [staffPassword, setStaffPassword] = useState("Password123!");
   const [staffRole, setStaffRole] = useState<"MANAGER" | "STAFF">("MANAGER");
+  const [staffSalonId, setStaffSalonId] = useState<string>(initial.assignableSalons?.[0]?.id || initial.salon?.id || "");
   const [workingHours, setWorkingHours] = useState<WorkingHoursState>(normalizeWorkingHours(initial.salon?.workingHoursJson));
   const [operators, setOperators] = useState(
     (initial.operators || []).map((o: any, idx: number) => ({
@@ -498,19 +499,26 @@ export function SettingsClient({ initial }: { initial: any }) {
 
       <Card className="space-y-2">
         <h2 className="font-semibold">Team e ruoli</h2>
-        <div className="grid gap-2 md:grid-cols-3">
+        <div className="grid gap-2 md:grid-cols-4">
           <Input value={staffEmail} onChange={(e) => setStaffEmail(e.target.value)} placeholder="Email staff" />
           <Input value={staffPassword} onChange={(e) => setStaffPassword(e.target.value)} placeholder="Password staff" />
           <select className="h-10 rounded-md border border-zinc-300 px-3 text-sm" value={staffRole} onChange={(e) => setStaffRole(e.target.value as "MANAGER" | "STAFF")}>
             <option value="MANAGER">Manager</option>
             <option value="STAFF">Staff</option>
           </select>
+          <select className="h-10 rounded-md border border-zinc-300 px-3 text-sm" value={staffSalonId} onChange={(e) => setStaffSalonId(e.target.value)}>
+            {(initial.assignableSalons || []).map((s: any) => (
+              <option key={s.id} value={s.id}>
+                {s.nomeSede || "Sede principale"}
+              </option>
+            ))}
+          </select>
         </div>
-        <Button onClick={() => saveSection("staff", { email: staffEmail, password: staffPassword, role: staffRole })}>Crea utente team</Button>
+        <Button onClick={() => saveSection("staff", { email: staffEmail, password: staffPassword, role: staffRole, salonId: staffSalonId })}>Crea utente team</Button>
         <div className="text-sm text-zinc-600">
           {initial.staff.map((s: any) => (
             <p key={s.id}>
-              {s.email} - {s.ruolo}
+              {s.email} - {s.ruolo} - {s.salon?.nomeSede || "Sede principale"}
             </p>
           ))}
         </div>

@@ -1,9 +1,13 @@
 import { prisma } from "@/lib/prisma";
 import { getRequiredSession } from "@/lib/session";
 import { CashClient } from "@/components/cash/cash-client";
+import { redirect } from "next/navigation";
 
 export default async function CashPage() {
   const session = await getRequiredSession();
+  if (session.user.role === "STAFF") {
+    redirect("/planner");
+  }
   const rows = await prisma.cashSession.findMany({
     where: { salonId: session.user.salonId },
     include: {
@@ -18,7 +22,7 @@ export default async function CashPage() {
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-semibold">Cassa giornaliera</h1>
-      <CashClient initial={rows as any[]} canManage={session.user.role !== "STAFF"} />
+      <CashClient initial={rows as any[]} canManage />
     </div>
   );
 }

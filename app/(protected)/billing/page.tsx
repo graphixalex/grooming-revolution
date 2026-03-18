@@ -2,9 +2,13 @@ import { getRequiredSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { redirect } from "next/navigation";
 
 export default async function BillingPage() {
   const session = await getRequiredSession();
+  if (session.user.role === "STAFF") {
+    redirect("/planner");
+  }
   const salon = await prisma.salon.findUnique({ where: { id: session.user.salonId } });
   const monthlyNet = 20;
   const vatPercent = Number(salon?.vatRate ?? 22);
