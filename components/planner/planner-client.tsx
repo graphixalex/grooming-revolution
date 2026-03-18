@@ -808,11 +808,29 @@ export function PlannerClient({
                           });
                           const row = day.operators.find((o) => o.id === op.id);
                           const inShift = row ? slotMin >= toMinutes(row.start) && slotMin < toMinutes(row.end) : false;
+                          const apptBgColor = !appt
+                            ? undefined
+                            : isPersonalNoteAppointment(appt)
+                              ? "#334155"
+                              : appt.stato === "CANCELLATO"
+                                ? "#6b7280"
+                                : appt.stato === "NO_SHOW"
+                                  ? "#dc2626"
+                                  : (appt.transactions?.length ?? 0) > 0
+                                    ? "#16a34a"
+                                    : appt.operator?.color || "#f59e0b";
                           return (
                             <button
                               type="button"
                               key={`${day.date.toISOString()}-${op.id}-${slotMin}`}
-                              className={`h-9 w-full rounded border px-1.5 text-left ${inShift ? "border-zinc-200 bg-white hover:bg-[#f2f5fb]" : "border-zinc-100 bg-zinc-50 text-zinc-300"}`}
+                              className={`h-9 w-full rounded px-1.5 text-left transition ${
+                                appt
+                                  ? "border border-transparent font-semibold text-white shadow-sm ring-1 ring-black/5"
+                                  : inShift
+                                    ? "border border-zinc-200 bg-white hover:bg-[#f2f5fb]"
+                                    : "border border-zinc-100 bg-zinc-50 text-zinc-300"
+                              }`}
+                              style={appt ? { backgroundColor: apptBgColor, color: "#ffffff" } : undefined}
                               onClick={() => {
                                 if (!inShift || op.id === "none") return;
                                 if (appt) {
@@ -833,7 +851,7 @@ export function PlannerClient({
                               }}
                             >
                               {appt ? (
-                                <span className="block truncate text-[10px] font-semibold text-zinc-800">
+                                <span className="block truncate text-[11px] font-bold">
                                   {isPersonalNoteAppointment(appt) ? `Nota: ${appt.noteAppuntamento || ""}` : `${appt.cane.nome} / ${appt.cliente.nome}`}
                                 </span>
                               ) : null}
