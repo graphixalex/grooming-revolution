@@ -23,13 +23,13 @@ export function Sidebar() {
   return (
     <>
       <div className="border-b border-zinc-200 bg-white p-3 md:hidden">
-        <div className="mb-2 flex h-24 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500 px-2 py-2 text-sm font-bold text-zinc-900 shadow-sm">
+        <div className="mb-2 flex h-24 items-center justify-center overflow-hidden rounded-xl border border-[#d4af37]/70 bg-gradient-to-r from-[#fbf6e7] via-[#f4ebcf] to-[#efe2bd] px-2 py-2 text-sm font-bold text-[#0f1f3d] shadow-sm">
           <Image
             src="/img/logo-grooming-revolution.png"
             alt="Grooming Revolution"
             width={640}
             height={180}
-            className="h-full w-full origin-center object-contain object-center scale-[3.2]"
+            className="h-full w-full origin-center object-contain object-center scale-[3]"
             priority
           />
         </div>
@@ -43,7 +43,7 @@ export function Sidebar() {
                 href={link.href}
                 className={cn(
                   "inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-3 py-2 text-sm",
-                  active ? "bg-zinc-900 text-white shadow-sm" : "border border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50",
+                  active ? "bg-[#1f355f] text-white shadow-sm" : "border border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50",
                 )}
               >
                 <Icon className="h-4 w-4" />
@@ -55,7 +55,7 @@ export function Sidebar() {
       </div>
 
       <aside className="hidden w-64 border-r border-zinc-200 bg-white/95 p-4 backdrop-blur-sm md:block">
-        <div className="mb-6 flex h-24 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500 p-2 font-bold tracking-wide text-zinc-900 shadow-sm">
+        <div className="mb-6 flex h-24 items-center justify-center overflow-hidden rounded-xl border border-[#d4af37]/70 bg-gradient-to-r from-[#fbf6e7] via-[#f4ebcf] to-[#efe2bd] p-2 font-bold tracking-wide text-[#0f1f3d] shadow-sm">
           <Image
             src="/img/logo-grooming-revolution.png"
             alt="Grooming Revolution"
@@ -74,7 +74,7 @@ export function Sidebar() {
                 href={link.href}
                 className={cn(
                   "flex items-center gap-2 rounded-xl px-3 py-2 text-sm transition-all",
-                  active ? "bg-zinc-900 text-white shadow-sm" : "text-zinc-700 hover:bg-zinc-100",
+                  active ? "bg-[#1f355f] text-white shadow-sm" : "text-zinc-700 hover:bg-zinc-100",
                 )}
               >
                 <Icon className="h-4 w-4" />

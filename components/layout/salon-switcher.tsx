@@ -33,7 +33,7 @@ export function SalonSwitcher({
     <div className="flex items-center gap-2">
       <span className="text-sm font-medium text-zinc-500">Sede attiva</span>
       <select
-        className="h-9 rounded-xl border border-zinc-200 bg-white px-3 text-sm shadow-sm focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300"
+        className="h-9 rounded-xl border border-zinc-200 bg-white px-3 text-sm shadow-sm focus:border-[#1f355f] focus:outline-none focus:ring-2 focus:ring-[#1f355f]"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={loading}

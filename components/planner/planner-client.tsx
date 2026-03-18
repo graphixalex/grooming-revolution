@@ -812,7 +812,7 @@ export function PlannerClient({
                             <button
                               type="button"
                               key={`${day.date.toISOString()}-${op.id}-${slotMin}`}
-                              className={`h-9 w-full rounded border px-1.5 text-left ${inShift ? "border-zinc-200 bg-white hover:bg-amber-50" : "border-zinc-100 bg-zinc-50 text-zinc-300"}`}
+                              className={`h-9 w-full rounded border px-1.5 text-left ${inShift ? "border-zinc-200 bg-white hover:bg-[#f2f5fb]" : "border-zinc-100 bg-zinc-50 text-zinc-300"}`}
                               onClick={() => {
                                 if (!inShift || op.id === "none") return;
                                 if (appt) {
@@ -1009,7 +1009,7 @@ export function PlannerClient({
                   </p>
                 ) : null}
                 {listinoQuote?.missingTreatmentIds.length ? (
-                  <p className="text-xs text-amber-700">
+                  <p className="text-xs text-[#7a5a14]">
                     Alcuni trattamenti non hanno ancora una regola nel listino.
                   </p>
                 ) : null}

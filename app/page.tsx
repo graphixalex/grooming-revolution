@@ -33,14 +33,14 @@ export default async function HomePage() {
   return (
     <main className="min-h-screen px-4 py-8 md:px-8 md:py-12">
       <div className="mx-auto max-w-6xl space-y-6">
-        <header className="rounded-3xl border border-amber-200/70 bg-white/85 p-6 shadow-sm backdrop-blur md:p-10">
-          <div className="h-16 w-full max-w-[340px] overflow-hidden rounded-lg bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500 p-1">
+        <header className="rounded-3xl border border-[#d4af37]/40 bg-white/85 p-6 shadow-sm backdrop-blur md:p-10">
+          <div className="mx-auto h-16 w-full max-w-[340px] overflow-hidden rounded-lg border border-[#d4af37]/70 bg-gradient-to-r from-[#fbf6e7] via-[#f4ebcf] to-[#efe2bd] p-1 md:mx-0">
             <Image
               src="/img/logo-grooming-revolution.png"
               alt="Grooming Revolution"
               width={640}
               height={180}
-              className="h-full w-full origin-left object-contain object-left scale-[3]"
+              className="h-full w-full origin-center object-contain object-center scale-[2.8]"
               priority
             />
           </div>
@@ -56,7 +56,7 @@ export default async function HomePage() {
           <div className="mt-6 flex flex-wrap gap-3">
             <Link
               href="/register"
-              className="rounded-xl bg-amber-500 px-5 py-3 text-sm font-semibold text-zinc-900 shadow-sm transition hover:bg-amber-400"
+              className="rounded-xl bg-[#1f355f] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#294a84]"
             >
               Inizia gratis
             </Link>
@@ -97,7 +97,7 @@ export default async function HomePage() {
           <div className="mt-5 flex flex-wrap gap-3">
             <Link
               href="/register"
-              className="rounded-xl bg-amber-400 px-5 py-3 text-sm font-semibold text-zinc-900 transition hover:bg-amber-300"
+              className="rounded-xl bg-[#d4af37] px-5 py-3 text-sm font-semibold text-zinc-900 transition hover:bg-[#c49f2f]"
             >
               Crea account
             </Link>

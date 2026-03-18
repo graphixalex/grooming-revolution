@@ -1,10 +1,21 @@
 import { Card } from "@/components/ui/card";
 import { RegisterForm } from "@/components/auth/register-form";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function RegisterPage() {
   return (
     <Card className="w-full p-6">
+      <div className="mb-3 h-14 w-full max-w-[280px] overflow-hidden rounded-lg border border-[#d4af37]/70 bg-gradient-to-r from-[#fbf6e7] via-[#f4ebcf] to-[#efe2bd] p-1">
+        <Image
+          src="/img/logo-grooming-revolution.png"
+          alt="Grooming Revolution"
+          width={640}
+          height={180}
+          className="h-full w-full origin-center object-contain object-center scale-[2.8]"
+          priority
+        />
+      </div>
       <h1 className="text-2xl font-semibold">Crea account</h1>
       <p className="mb-4 text-sm text-zinc-600">Configura subito attivita, sede, paese e valuta.</p>
       <RegisterForm />

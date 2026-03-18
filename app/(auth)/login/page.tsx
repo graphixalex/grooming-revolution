@@ -51,13 +51,13 @@ export default function LoginPage() {
 
   return (
     <Card className="w-full p-6">
-      <div className="mb-3 h-14 w-full max-w-[280px] overflow-hidden rounded-lg bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500 p-1">
+      <div className="mb-3 h-14 w-full max-w-[280px] overflow-hidden rounded-lg border border-[#d4af37]/70 bg-gradient-to-r from-[#fbf6e7] via-[#f4ebcf] to-[#efe2bd] p-1">
         <Image
           src="/img/logo-grooming-revolution.png"
           alt="Grooming Revolution"
           width={640}
           height={180}
-          className="h-full w-full origin-left object-contain object-left scale-[3]"
+          className="h-full w-full origin-center object-contain object-center scale-[2.8]"
           priority
         />
       </div>
