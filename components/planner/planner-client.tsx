@@ -121,6 +121,28 @@ function addDays(date: Date, days: number) {
   return out;
 }
 
+function startOfWeekMonday(date: Date) {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function endOfWeekMonday(start: Date) {
+  const d = new Date(start);
+  d.setDate(d.getDate() + 6);
+  d.setHours(23, 59, 59, 999);
+  return d;
+}
+
+function formatHmFromMinutes(minutes: number) {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
 function ymdUTC(d: Date) {
   const y = d.getUTCFullYear();
   const m = String(d.getUTCMonth() + 1).padStart(2, "0");
@@ -240,6 +262,7 @@ export function PlannerClient({
   const [visibleRange, setVisibleRange] = useState<{ from: string; to: string } | null>(null);
   const [title, setTitle] = useState("");
   const [jumpDate, setJumpDate] = useState("");
+  const [desktopWeekStart, setDesktopWeekStart] = useState<Date>(startOfWeekMonday(new Date()));
   const [switchingSalonId, setSwitchingSalonId] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [incassoAmount, setIncassoAmount] = useState<string>("");
@@ -328,8 +351,12 @@ export function PlannerClient({
   }, [agendaOperatorFilter]);
 
   useEffect(() => {
-    loadAppointments();
-  }, [loadAppointments]);
+    if (isMobile) return;
+    const start = new Date(desktopWeekStart);
+    const end = endOfWeekMonday(start);
+    setTitle(`${format(start, "dd MMM yyyy")} - ${format(end, "dd MMM yyyy")}`);
+    loadAppointments(start.toISOString(), end.toISOString());
+  }, [desktopWeekStart, isMobile, loadAppointments]);
 
   useEffect(() => {
     const update = () => setIsMobile(window.innerWidth < 768);
@@ -620,6 +647,30 @@ export function PlannerClient({
   }, [visibleRange]);
 
   const allEvents = useMemo(() => [...appointmentEvents, ...holidayEvents], [appointmentEvents, holidayEvents]);
+  const matrixDays = useMemo(() => {
+    const base = isMobile ? startOfWeekMonday(new Date()) : desktopWeekStart;
+    return Array.from({ length: 5 }, (_, i) => {
+      const date = new Date(base);
+      date.setDate(base.getDate() + i);
+      const dayKey = indexToDayKey[date.getDay()];
+      return { date, dayKey };
+    });
+  }, [desktopWeekStart, isMobile]);
+  const matrixColumns = useMemo(() => {
+    return matrixDays.map((d) => ({
+      ...d,
+      operators: getOperatorsForDate(operators, d.date, "ALL"),
+    }));
+  }, [matrixDays, operators]);
+  const matrixSlots = useMemo(() => {
+    const times = matrixColumns.flatMap((d) => d.operators.flatMap((op) => [toMinutes(op.start), toMinutes(op.end)]));
+    if (!times.length) return [];
+    const min = Math.min(...times);
+    const max = Math.max(...times);
+    const out: number[] = [];
+    for (let t = min; t < max; t += 15) out.push(t);
+    return out;
+  }, [matrixColumns]);
   return (
     <Card className="space-y-4">
       {branchSwitcher ? (
@@ -661,13 +712,44 @@ export function PlannerClient({
         </div>
       ) : null}
       <div className="flex flex-wrap items-center gap-2">
-        <Button variant="outline" onClick={() => calendarRef.current?.getApi().prev()}>
+        <Button
+          variant="outline"
+          onClick={() => {
+            if (isMobile) {
+              calendarRef.current?.getApi().prev();
+              return;
+            }
+            const next = new Date(desktopWeekStart);
+            next.setDate(next.getDate() - 7);
+            setDesktopWeekStart(next);
+          }}
+        >
           {isMobile ? "Precedente" : "Settimana precedente"}
         </Button>
-        <Button variant="outline" onClick={() => calendarRef.current?.getApi().today()}>
+        <Button
+          variant="outline"
+          onClick={() => {
+            if (isMobile) {
+              calendarRef.current?.getApi().today();
+              return;
+            }
+            setDesktopWeekStart(startOfWeekMonday(new Date()));
+          }}
+        >
           Oggi
         </Button>
-        <Button variant="outline" onClick={() => calendarRef.current?.getApi().next()}>
+        <Button
+          variant="outline"
+          onClick={() => {
+            if (isMobile) {
+              calendarRef.current?.getApi().next();
+              return;
+            }
+            const next = new Date(desktopWeekStart);
+            next.setDate(next.getDate() + 7);
+            setDesktopWeekStart(next);
+          }}
+        >
           {isMobile ? "Successiva" : "Settimana successiva"}
         </Button>
         <Input
@@ -679,7 +761,11 @@ export function PlannerClient({
         <Button
           onClick={() => {
             if (!jumpDate) return;
-            calendarRef.current?.getApi().gotoDate(jumpDate);
+            if (isMobile) {
+              calendarRef.current?.getApi().gotoDate(jumpDate);
+            } else {
+              setDesktopWeekStart(startOfWeekMonday(new Date(jumpDate)));
+            }
           }}
         >
           Cerca giorno
@@ -688,6 +774,7 @@ export function PlannerClient({
       </div>
       <div className="overflow-hidden">
         <div className="min-w-0">
+      {isMobile ? (
       <FullCalendar
         key={isMobile ? "fc-mobile" : "fc-desktop"}
         ref={calendarRef}
@@ -778,6 +865,94 @@ export function PlannerClient({
           </div>
         )}
       />
+      ) : (
+        <div className="overflow-x-auto rounded-md border border-zinc-200 bg-white">
+          <table className="min-w-[980px] w-full border-collapse text-xs">
+            <thead>
+              <tr>
+                <th className="w-16 border border-zinc-200 bg-zinc-50 p-2 text-left text-zinc-600">Ora</th>
+                {matrixColumns.map((day) => (
+                  <th key={day.date.toISOString()} className="border border-zinc-200 bg-zinc-50 p-2 text-center">
+                    {format(day.date, "EEEE dd/MM")}
+                  </th>
+                ))}
+              </tr>
+              <tr>
+                <th className="border border-zinc-200 bg-zinc-50 p-2" />
+                {matrixColumns.map((day) => (
+                  <th key={`${day.date.toISOString()}-ops`} className="border border-zinc-200 bg-zinc-50 p-2 align-top">
+                    <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${Math.max(1, day.operators.length)}, minmax(0, 1fr))` }}>
+                      {(day.operators.length ? day.operators : [{ id: "none", nome: "Nessuno", start: "--:--", end: "--:--" }]).map((op) => (
+                        <div key={`${day.date.toISOString()}-${op.id}`} className="rounded border border-zinc-200 bg-white px-1 py-1 text-[10px]">
+                          <div className="font-semibold">{op.nome}</div>
+                          <div className="text-zinc-500">{op.start}-{op.end}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {matrixSlots.map((slotMin) => (
+                <tr key={slotMin}>
+                  <td className="border border-zinc-200 bg-zinc-50 p-1 align-top font-medium text-zinc-600">{formatHmFromMinutes(slotMin)}</td>
+                  {matrixColumns.map((day) => (
+                    <td key={`${day.date.toISOString()}-${slotMin}`} className="border border-zinc-200 p-1 align-top">
+                      <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${Math.max(1, day.operators.length)}, minmax(0, 1fr))` }}>
+                        {(day.operators.length ? day.operators : [{ id: "none", nome: "Nessuno", start: "--:--", end: "--:--" }]).map((op) => {
+                          const slotStart = new Date(day.date);
+                          slotStart.setHours(Math.floor(slotMin / 60), slotMin % 60, 0, 0);
+                          const slotEnd = new Date(slotStart);
+                          slotEnd.setMinutes(slotEnd.getMinutes() + 15);
+                          const appt = appointments.find((a) => {
+                            if (a.operator?.id !== op.id) return false;
+                            const aStart = new Date(a.startAt);
+                            return aStart.getTime() === slotStart.getTime();
+                          });
+                          const row = day.operators.find((o) => o.id === op.id);
+                          const inShift = row ? slotMin >= toMinutes(row.start) && slotMin < toMinutes(row.end) : false;
+                          return (
+                            <button
+                              type="button"
+                              key={`${day.date.toISOString()}-${op.id}-${slotMin}`}
+                              className={`h-8 w-full rounded border px-1 text-left ${inShift ? "border-zinc-200 bg-white hover:bg-amber-50" : "border-zinc-100 bg-zinc-50 text-zinc-300"}`}
+                              onClick={() => {
+                                if (!inShift || op.id === "none") return;
+                                if (appt) {
+                                  setSelectedAppointment(appt);
+                                  setDurata((new Date(appt.endAt).getTime() - new Date(appt.startAt).getTime()) / 60000);
+                                  setNote(appt.noteAppuntamento || "");
+                                  setSelectedTreatments(appt.trattamentiSelezionati.map((t) => t.treatment.id));
+                                  setSelectedOperatorId(appt.operator?.id || op.id);
+                                  setShowEdit(true);
+                                  return;
+                                }
+                                setSlotStart(slotStart);
+                                setSelectedOperatorId(op.id);
+                                setModalMode("APPOINTMENT");
+                                setListinoQuote(null);
+                                setNote("");
+                                setShowModal(true);
+                              }}
+                            >
+                              {appt ? (
+                                <span className="block truncate text-[10px] font-semibold text-zinc-800">
+                                  {isPersonalNoteAppointment(appt) ? `Nota: ${appt.noteAppuntamento || ""}` : `${appt.cane.nome} / ${appt.cliente.nome}`}
+                                </span>
+                              ) : null}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
         </div>
       </div>
 
