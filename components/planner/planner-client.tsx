@@ -228,6 +228,12 @@ function getOperatorsForDate(operators: Operator[], date: Date) {
     });
 }
 
+function getDefaultOperatorIdForDate(operators: Operator[], date: Date | null) {
+  if (!date) return operators[0]?.id || "";
+  const dayOps = getOperatorsForDate(operators, date);
+  return dayOps[0]?.id || operators[0]?.id || "";
+}
+
 export function PlannerClient({
   treatments,
   workingHoursJson,
@@ -463,6 +469,7 @@ export function PlannerClient({
 
   async function saveAppointment() {
     if (!slotStart) return;
+    const operatorIdForSave = selectedOperatorId || getDefaultOperatorIdForDate(operators, slotStart);
 
     if (modalMode === "NOTE") {
       if (!note.trim()) {
@@ -474,7 +481,7 @@ export function PlannerClient({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           modalita: "NOTE",
-          operatorId: selectedOperatorId || null,
+          operatorId: operatorIdForSave || null,
           startAt: slotStart.toISOString(),
           durataMinuti: durata,
           noteAppuntamento: note.trim(),
@@ -511,7 +518,7 @@ export function PlannerClient({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        operatorId: selectedOperatorId || null,
+        operatorId: operatorIdForSave || null,
         clienteId: selectedClient.id,
         caneId: selectedDog.id,
         startAt: slotStart.toISOString(),
@@ -806,7 +813,7 @@ export function PlannerClient({
           if (showModal || showEdit || info.allDay) return;
           setSlotStart(info.date);
           setModalMode("APPOINTMENT");
-          setSelectedOperatorId(operators[0]?.id || "");
+          setSelectedOperatorId(getDefaultOperatorIdForDate(operators, info.date));
           setListinoQuote(null);
           setNote("");
           setShowModal(true);
@@ -814,7 +821,7 @@ export function PlannerClient({
         select={(info: { start: Date }) => {
           setSlotStart(info.start);
           setModalMode("APPOINTMENT");
-          setSelectedOperatorId(operators[0]?.id || "");
+          setSelectedOperatorId(getDefaultOperatorIdForDate(operators, info.start));
           setListinoQuote(null);
           setNote("");
           setShowModal(true);
@@ -957,21 +964,12 @@ export function PlannerClient({
             <h3 className="mb-3 text-lg font-semibold">Nuovo Appuntamento</h3>
             <p className="text-sm text-zinc-600">Slot: {slotStart ? format(slotStart, "dd/MM/yyyy HH:mm") : "-"}</p>
             {operators.length ? (
-              <div className="mt-2 space-y-1">
-                <label className="text-sm font-medium">Operatore</label>
-                <select
-                  className="h-10 w-full rounded-md border border-zinc-300 px-3 text-sm"
-                  value={selectedOperatorId}
-                  onChange={(e) => setSelectedOperatorId(e.target.value)}
-                >
-                  <option value="">Seleziona operatore</option>
-                  {operators.map((op) => (
-                    <option key={op.id} value={op.id}>
-                      {op.nome}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <p className="mt-2 text-sm text-zinc-600">
+                Operatore assegnato:{" "}
+                <span className="font-medium text-zinc-900">
+                  {operators.find((op) => op.id === (selectedOperatorId || getDefaultOperatorIdForDate(operators, slotStart)))?.nome || "-"}
+                </span>
+              </p>
             ) : null}
             <div className="my-3 flex flex-wrap gap-2">
               <Button
@@ -1148,7 +1146,6 @@ export function PlannerClient({
               <Button
                 onClick={saveAppointment}
                 disabled={
-                  (operators.length > 0 && !selectedOperatorId) ||
                   (modalMode === "APPOINTMENT" ? !selectedClient || !selectedDog : !note.trim())
                 }
               >
