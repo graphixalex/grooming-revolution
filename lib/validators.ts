@@ -76,3 +76,17 @@ export const createStaffSchema = z.object({
   salonId: z.string().min(1).optional(),
 });
 
+export const signClientConsentsSchema = z.object({
+  signerFullName: z.string().min(2),
+  signerDocumentId: z.string().max(100).optional().or(z.literal("")),
+  signatureDataUrl: z.string().startsWith("data:image/png;base64,"),
+  dataProcessingGranted: z.literal(true),
+  photoInternalGranted: z.boolean(),
+  photoSocialGranted: z.boolean(),
+});
+
+export const revokeClientConsentSchema = z.object({
+  kind: z.enum(["DATA_PROCESSING", "PHOTO_INTERNAL", "PHOTO_SOCIAL"]),
+  reason: z.string().min(3).max(500).optional().or(z.literal("")),
+});
+

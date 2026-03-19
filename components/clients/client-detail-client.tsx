@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { ClientConsentsCard } from "@/components/clients/client-consents-card";
 
 export function ClientDetailClient({
   client,
@@ -80,6 +81,8 @@ export function ClientDetailClient({
           ))}
         </div>
       </Card>
+
+      <ClientConsentsCard clientId={client.id} />
     </div>
   );
 }

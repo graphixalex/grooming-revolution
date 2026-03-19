@@ -44,6 +44,12 @@ enum CashSessionStatus {
   CLOSED
 }
 
+enum ConsentKind {
+  DATA_PROCESSING
+  PHOTO_INTERNAL
+  PHOTO_SOCIAL
+}
+
 model SalonGroup {
   id                    String               @id @default(cuid())
   nome                  String
@@ -91,6 +97,8 @@ model Salon {
   cashSessions          CashSession[]
   priceRules            ServicePriceRule[]
   auditLogs             AuditLog[]
+  consentTemplates      ConsentTemplate[]
+  clientConsents        ClientConsent[]
 
   @@index([salonGroupId])
 }
@@ -111,6 +119,8 @@ model User {
   closedCashSessions CashSession[] @relation("CashSessionClosedBy")
   createdPriceRules ServicePriceRule[] @relation("ServicePriceRuleCreatedBy")
   auditLogs     AuditLog[]
+  createdClientConsents ClientConsent[] @relation("ClientConsentCreatedBy")
+  revokedClientConsents ClientConsent[] @relation("ClientConsentRevokedBy")
 
   @@unique([salonId, email])
   @@index([salonId])
@@ -133,10 +143,62 @@ model Client {
   salon               Salon       @relation(fields: [salonId], references: [id], onDelete: Cascade)
   dogs                Dog[]
   appointments        Appointment[]
+  consents            ClientConsent[]
 
   @@index([salonId, deletedAt])
   @@index([salonId, telefono])
   @@index([salonId, nome, cognome])
+}
+
+model ConsentTemplate {
+  id                  String      @id @default(cuid())
+  salonId             String
+  kind                ConsentKind
+  title               String
+  legalText           String      @db.Text
+  version             Int         @default(1)
+  isActive            Boolean     @default(true)
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  salon               Salon       @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  consents            ClientConsent[]
+
+  @@unique([salonId, kind, version])
+  @@index([salonId, kind, isActive])
+}
+
+model ClientConsent {
+  id                  String      @id @default(cuid())
+  salonId             String
+  clientId            String
+  templateId          String
+  kind                ConsentKind
+  granted             Boolean
+  signerFullName      String
+  signerDocumentId    String?
+  legalTextSnapshot   String      @db.Text
+  templateVersion     Int
+  signatureDataUrl    String      @db.Text
+  evidenceHash        String
+  ipAddress           String?
+  userAgent           String?
+  signedAt            DateTime
+  revokedAt           DateTime?
+  revokedReason       String?     @db.Text
+  createdById         String
+  revokedById         String?
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  salon               Salon       @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  client              Client      @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  template            ConsentTemplate @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  createdBy           User        @relation("ClientConsentCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  revokedBy           User?       @relation("ClientConsentRevokedBy", fields: [revokedById], references: [id], onDelete: SetNull)
+
+  @@index([salonId, clientId, kind, signedAt])
+  @@index([clientId, signedAt])
 }
 
 model Dog {
