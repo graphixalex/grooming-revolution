@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import { getCountryMeta } from "@/lib/geo";
 import { Prisma } from "@prisma/client";
 import { canManageSettings } from "@/lib/rbac";
+import { createStaffSchema } from "@/lib/validators";
 
 export async function GET() {
   const auth = await requireApiSession();
@@ -119,7 +120,13 @@ export async function PATCH(req: NextRequest) {
   }
 
   if (body.section === "staff" && auth.session.user.role === "OWNER") {
-    const requestedSalonId = typeof body.salonId === "string" && body.salonId.length > 0 ? body.salonId : salonId;
+    const parsed = createStaffSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Dati staff non validi" }, { status: 400 });
+    }
+
+    const { email, password, role, salonId: requestedSalonIdRaw } = parsed.data;
+    const requestedSalonId = requestedSalonIdRaw && requestedSalonIdRaw.length > 0 ? requestedSalonIdRaw : salonId;
     const [currentSalon, targetSalon] = await Promise.all([
       prisma.salon.findUnique({ where: { id: salonId }, select: { salonGroupId: true } }),
       prisma.salon.findUnique({ where: { id: requestedSalonId }, select: { id: true, salonGroupId: true } }),
@@ -131,18 +138,17 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Puoi associare staff solo alle sedi del tuo gruppo" }, { status: 400 });
     }
 
-    const email = String(body.email || "").toLowerCase().trim();
-    const existsEmail = await prisma.user.findFirst({ where: { email }, select: { id: true } });
+    const normalizedEmail = email.toLowerCase().trim();
+    const existsEmail = await prisma.user.findFirst({ where: { email: normalizedEmail }, select: { id: true } });
     if (existsEmail) {
       return NextResponse.json({ error: "Email gia in uso. Usa una email diversa per questo dipendente." }, { status: 400 });
     }
 
-    const role = body.role === "MANAGER" ? "MANAGER" : "STAFF";
-    const passwordHash = await bcrypt.hash(String(body.password || ""), 12);
+    const passwordHash = await bcrypt.hash(password, 12);
     const created = await prisma.user.create({
       data: {
         salonId: requestedSalonId,
-        email,
+        email: normalizedEmail,
         passwordHash,
         ruolo: role,
       },

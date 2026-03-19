@@ -53,6 +53,58 @@ function isPersonalNoteAppointment(a: Appointment) {
   return a.cliente.telefono === "__NOTE__";
 }
 
+function normalizeHexColor(input?: string | null) {
+  if (!input) return null;
+  const value = input.trim();
+  const short = /^#([0-9a-fA-F]{3})$/.exec(value);
+  if (short) {
+    return `#${short[1][0]}${short[1][0]}${short[1][1]}${short[1][1]}${short[1][2]}${short[1][2]}`.toLowerCase();
+  }
+  const full = /^#([0-9a-fA-F]{6})$/.exec(value);
+  return full ? `#${full[1].toLowerCase()}` : null;
+}
+
+function hexToRgb(hex: string) {
+  const value = normalizeHexColor(hex);
+  if (!value) return null;
+  return {
+    r: parseInt(value.slice(1, 3), 16),
+    g: parseInt(value.slice(3, 5), 16),
+    b: parseInt(value.slice(5, 7), 16),
+  };
+}
+
+function rgbToHex(rgb: { r: number; g: number; b: number }) {
+  const toHex = (v: number) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, "0");
+  return `#${toHex(rgb.r)}${toHex(rgb.g)}${toHex(rgb.b)}`;
+}
+
+function mixHex(base: string, target: string, targetWeight: number) {
+  const a = hexToRgb(base);
+  const b = hexToRgb(target);
+  if (!a || !b) return base;
+  const w = Math.max(0, Math.min(1, targetWeight));
+  return rgbToHex({
+    r: a.r * (1 - w) + b.r * w,
+    g: a.g * (1 - w) + b.g * w,
+    b: a.b * (1 - w) + b.b * w,
+  });
+}
+
+function getProfessionalOperatorColor(raw?: string | null) {
+  const safe = normalizeHexColor(raw) || "#2563eb";
+  const tonedDown = mixHex(safe, "#1f2937", 0.45);
+  return mixHex(tonedDown, "#f8fafc", 0.1);
+}
+
+function getAppointmentBgColor(appt: Appointment) {
+  if (isPersonalNoteAppointment(appt)) return "#475569";
+  if (appt.stato === "CANCELLATO") return "#64748b";
+  if (appt.stato === "NO_SHOW") return "#a16207";
+  if ((appt.transactions?.length ?? 0) > 0) return "#0f766e";
+  return getProfessionalOperatorColor(appt.operator?.color);
+}
+
 const durations = Array.from({ length: 20 }, (_, i) => (i + 1) * 15);
 const dayKeyToIndex: Record<DayKey, number> = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6 };
 const indexToDayKey: Record<number, DayKey> = { 0: "sun", 1: "mon", 2: "tue", 3: "wed", 4: "thu", 5: "fri", 6: "sat" };
@@ -808,17 +860,7 @@ export function PlannerClient({
                           });
                           const row = day.operators.find((o) => o.id === op.id);
                           const inShift = row ? slotMin >= toMinutes(row.start) && slotMin < toMinutes(row.end) : false;
-                          const apptBgColor = !appt
-                            ? undefined
-                            : isPersonalNoteAppointment(appt)
-                              ? "#334155"
-                              : appt.stato === "CANCELLATO"
-                                ? "#6b7280"
-                                : appt.stato === "NO_SHOW"
-                                  ? "#dc2626"
-                                  : (appt.transactions?.length ?? 0) > 0
-                                    ? "#16a34a"
-                                    : appt.operator?.color || "#f59e0b";
+                          const apptBgColor = appt ? getAppointmentBgColor(appt) : undefined;
                           return (
                             <button
                               type="button"

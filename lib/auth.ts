@@ -2,7 +2,7 @@ import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { checkLoginRateLimit } from "@/lib/rate-limit";
+import { clearLoginRateLimit, isLoginRateLimited, recordFailedLoginAttempt } from "@/lib/rate-limit";
 
 export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt" },
@@ -18,14 +18,22 @@ export const authOptions: NextAuthOptions = {
         const email = credentials?.email?.toLowerCase().trim();
         const password = credentials?.password;
         if (!email || !password) return null;
-        if (!checkLoginRateLimit(email)) throw new Error("Troppi tentativi di login");
+        if (isLoginRateLimited(email)) throw new Error("Troppi tentativi di login");
 
         const users = await prisma.user.findMany({ where: { email }, take: 2 });
-        if (users.length !== 1) return null;
+        if (users.length !== 1) {
+          recordFailedLoginAttempt(email);
+          return null;
+        }
         const user = users[0];
 
         const valid = await bcrypt.compare(password, user.passwordHash);
-        if (!valid) return null;
+        if (!valid) {
+          recordFailedLoginAttempt(email);
+          return null;
+        }
+
+        clearLoginRateLimit(email);
 
         return { id: user.id, email: user.email, role: user.ruolo, salonId: user.salonId };
       },

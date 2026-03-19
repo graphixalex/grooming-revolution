@@ -212,7 +212,17 @@ export async function PATCH(req: NextRequest) {
   const appointmentId = body.appointmentId as string | undefined;
   if (!appointmentId) return NextResponse.json({ error: "appointmentId obbligatorio" }, { status: 400 });
 
-  const appointment = await prisma.appointment.findFirst({ where: { id: appointmentId, salonId, deletedAt: null } });
+  const appointment = await prisma.appointment.findFirst({
+    where: { id: appointmentId, salonId, deletedAt: null },
+    include: {
+      salon: {
+        select: {
+          vatRate: true,
+          vatIncluded: true,
+        },
+      },
+    },
+  });
   if (!appointment) return NextResponse.json({ error: "Appuntamento non trovato" }, { status: 404 });
 
   if (body.transaction) {
@@ -221,10 +231,12 @@ export async function PATCH(req: NextRequest) {
 
     const amount = new Prisma.Decimal(parsedTx.data.amount);
     const tipAmount = new Prisma.Decimal(parsedTx.data.tipAmount ?? 0);
-    const vatRate = new Prisma.Decimal(appointment ? 22 : 22);
-    const vatAmount = amount.mul(vatRate).div(new Prisma.Decimal(100).plus(vatRate));
-    const netAmount = amount.sub(vatAmount);
-    const grossAmount = amount.plus(tipAmount);
+    const vatRate = new Prisma.Decimal(appointment.salon.vatRate);
+    const vatAmount = appointment.salon.vatIncluded
+      ? amount.mul(vatRate).div(new Prisma.Decimal(100).plus(vatRate))
+      : amount.mul(vatRate).div(new Prisma.Decimal(100));
+    const netAmount = appointment.salon.vatIncluded ? amount.sub(vatAmount) : amount;
+    const grossAmount = appointment.salon.vatIncluded ? amount.plus(tipAmount) : amount.plus(vatAmount).plus(tipAmount);
     const openCashSession =
       parsedTx.data.method === "CASH"
         ? await prisma.cashSession.findFirst({
@@ -260,6 +272,7 @@ export async function PATCH(req: NextRequest) {
   const hasScheduleUpdate = hasStartUpdate || hasDurationUpdate;
   const hasTreatmentsUpdate = Array.isArray(body.trattamentiIds);
   const hasOperatorUpdate = typeof body.operatorId !== "undefined";
+  const needsAvailabilityChecks = hasScheduleUpdate || hasOperatorUpdate;
   const nextStatus = (body.stato as AppointmentStatus | undefined) ?? appointment.stato;
 
   if (hasOperatorUpdate && body.operatorId) {
@@ -283,7 +296,7 @@ export async function PATCH(req: NextRequest) {
   const startAt = hasStartUpdate ? new Date(body.startAt as string) : appointment.startAt;
   const endAt = computeEndAt(startAt, durata);
 
-  if (hasScheduleUpdate) {
+  if (needsAvailabilityChecks) {
     const salon = await prisma.salon.findUnique({ where: { id: salonId }, select: { overlapAllowed: true, workingHoursJson: true } });
     if (!salon) return NextResponse.json({ error: "Salone non trovato" }, { status: 404 });
 

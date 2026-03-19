@@ -69,3 +69,10 @@ export const closeCashSessionSchema = z.object({
   noteChiusura: z.string().optional(),
 });
 
+export const createStaffSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(8),
+  role: z.enum(["MANAGER", "STAFF"]).optional().default("STAFF"),
+  salonId: z.string().min(1).optional(),
+});
+
