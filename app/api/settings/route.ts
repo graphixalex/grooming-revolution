@@ -27,7 +27,19 @@ export async function GET() {
     prisma.operator.findMany({ where: { salonId }, orderBy: { ordine: "asc" } }),
   ]);
 
-  return NextResponse.json({ salon, tags, treatments, staff, operators });
+  return NextResponse.json({
+    salon: salon
+      ? {
+          ...salon,
+          // Never expose stored token in clear text to the client.
+          whatsappApiAccessToken: "",
+        }
+      : salon,
+    tags,
+    treatments,
+    staff,
+    operators,
+  });
 }
 
 export async function PATCH(req: NextRequest) {
@@ -65,9 +77,24 @@ export async function PATCH(req: NextRequest) {
   if (body.section === "templates") {
     const salon = await prisma.salon.update({
       where: { id: salonId },
-      data: { whatsappTemplate: body.whatsappTemplate, emailTemplate: body.emailTemplate },
+      data: {
+        whatsappTemplate: body.whatsappTemplate,
+        emailTemplate: body.emailTemplate,
+        whatsappApiEnabled: Boolean(body.whatsappApiEnabled),
+        whatsappApiPhoneNumberId:
+          typeof body.whatsappApiPhoneNumberId === "string" && body.whatsappApiPhoneNumberId.trim().length > 0
+            ? body.whatsappApiPhoneNumberId.trim()
+            : null,
+        whatsappApiVersion:
+          typeof body.whatsappApiVersion === "string" && body.whatsappApiVersion.trim().length > 0
+            ? body.whatsappApiVersion.trim()
+            : "v23.0",
+        ...(typeof body.whatsappApiAccessToken === "string" && body.whatsappApiAccessToken.trim().length > 0
+          ? { whatsappApiAccessToken: body.whatsappApiAccessToken.trim() }
+          : {}),
+      },
     });
-    return NextResponse.json(salon);
+    return NextResponse.json({ ...salon, whatsappApiAccessToken: "" });
   }
 
   if (body.section === "workingHours") {

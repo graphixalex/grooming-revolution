@@ -22,8 +22,8 @@ export function DogDetailClient({ payload, salon }: { payload: any; salon: any }
 
   const latestAppointment = useMemo(() => data.history[0], [data.history]);
 
-  const waLink = useMemo(() => {
-    if (!latestAppointment) return "#";
+  const waPayload = useMemo(() => {
+    if (!latestAppointment) return { phone: "", text: "", manualUrl: "#" };
     const vars = reminderVariables({
       nomeCliente: data.dog.cliente.nome,
       nomePet: data.dog.nome,
@@ -33,11 +33,35 @@ export function DogDetailClient({ payload, salon }: { payload: any; salon: any }
     });
     const text = renderTemplate(salon.whatsappTemplate || "Promemoria appuntamento", vars);
     const normalized = normalizePhone(data.dog.cliente.telefono);
-    if (!normalized) {
-      return `https://web.whatsapp.com/send?text=${encodeURIComponent(text)}`;
-    }
-    return `https://wa.me/${normalized}?text=${encodeURIComponent(text)}`;
+    const manualUrl = normalized
+      ? `https://wa.me/${normalized}?text=${encodeURIComponent(text)}`
+      : `https://web.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+    return { phone: data.dog.cliente.telefono, text, manualUrl };
   }, [latestAppointment, data, salon]);
+
+  async function sendWhatsapp() {
+    if (!latestAppointment) return;
+    const res = await fetch("/api/whatsapp/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone: waPayload.phone, text: waPayload.text }),
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      alert(json.error || "Errore invio WhatsApp");
+      return;
+    }
+    if (json.mode === "api") {
+      alert("Messaggio inviato via WhatsApp API");
+      return;
+    }
+    if (json.warning) alert(json.warning);
+    if (json.url) {
+      window.open(json.url, "_blank");
+      return;
+    }
+    window.open(waPayload.manualUrl, "_blank");
+  }
 
   const mailtoLink = useMemo(() => {
     if (!latestAppointment || !data.dog.cliente.email) return "#";
@@ -65,9 +89,9 @@ export function DogDetailClient({ payload, salon }: { payload: any; salon: any }
       </Card>
 
       <Card>
-        <h2 className="mb-2 font-semibold">Promemoria manuale</h2>
+        <h2 className="mb-2 font-semibold">Promemoria WhatsApp</h2>
         <div className="flex gap-2">
-          <a href={waLink} target="_blank" rel="noreferrer"><Button>Invia promemoria WhatsApp</Button></a>
+          <Button onClick={sendWhatsapp}>Invia promemoria WhatsApp</Button>
           {data.dog.cliente.email ? <a href={mailtoLink}><Button variant="outline">Invia promemoria Email</Button></a> : null}
         </div>
       </Card>

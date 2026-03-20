@@ -369,20 +369,46 @@ export function PlannerClient({
       .replaceAll("%nome_attivita%", whatsappConfig.nomeAttivita || "")
       .replaceAll("%indirizzo_attivita%", whatsappConfig.indirizzoAttivita || "");
 
-    if (confirm("Appuntamento salvato. Vuoi aprire WhatsApp con il messaggio preimpostato?")) {
-      const url = `https://wa.me/${cleanedPhone.replace("+", "")}?text=${encodeURIComponent(base)}`;
-      window.open(url, "_blank");
+    if (!confirm("Appuntamento salvato. Vuoi inviare WhatsApp adesso?")) return;
+    void sendWhatsappMessage(args.clientPhone, base);
+  }
+
+  async function sendWhatsappMessage(phone: string, text: string) {
+    const res = await fetch("/api/whatsapp/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone, text }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data.error || "Errore invio WhatsApp");
+      return;
+    }
+    if (data.mode === "api") {
+      alert("Messaggio inviato via WhatsApp API");
+      return;
+    }
+    if (data.warning) {
+      alert(data.warning);
+    }
+    if (data.url) {
+      window.open(data.url, "_blank");
     }
   }
 
-  function sendWhatsappFromEditModal() {
+  async function sendWhatsappFromEditModal() {
     if (!selectedAppointment) return;
-    maybeOpenWhatsappReminder({
-      clientPhone: selectedAppointment.cliente.telefono,
-      clientName: `${selectedAppointment.cliente.nome} ${selectedAppointment.cliente.cognome}`,
-      dogName: selectedAppointment.cane.nome,
-      startAt: new Date(selectedAppointment.startAt),
-    });
+    const fallbackTemplate =
+      "Ciao %nome_cliente%, ti confermiamo l'appuntamento per %nome_pet% il %data_appuntamento% alle %orario_appuntamento% presso %nome_attivita% (%indirizzo_attivita%).";
+    const startAt = new Date(selectedAppointment.startAt);
+    const text = (whatsappConfig.template || fallbackTemplate)
+      .replaceAll("%nome_cliente%", `${selectedAppointment.cliente.nome} ${selectedAppointment.cliente.cognome}`)
+      .replaceAll("%nome_pet%", selectedAppointment.cane.nome)
+      .replaceAll("%data_appuntamento%", format(startAt, "dd/MM/yyyy"))
+      .replaceAll("%orario_appuntamento%", format(startAt, "HH:mm"))
+      .replaceAll("%nome_attivita%", whatsappConfig.nomeAttivita || "")
+      .replaceAll("%indirizzo_attivita%", whatsappConfig.indirizzoAttivita || "");
+    await sendWhatsappMessage(selectedAppointment.cliente.telefono, text);
   }
 
   async function switchSalon(nextSalonId: string) {

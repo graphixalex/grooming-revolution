@@ -453,7 +453,66 @@ export function SettingsClient({ initial }: { initial: any }) {
         <p className="text-xs text-zinc-500">Placeholder: %nome_cliente% %nome_pet% %data_appuntamento% %orario_appuntamento% %nome_attivita% %indirizzo_attivita%</p>
         <Textarea value={salon.whatsappTemplate || ""} onChange={(e) => setSalon({ ...salon, whatsappTemplate: e.target.value })} />
         <Textarea value={salon.emailTemplate || ""} onChange={(e) => setSalon({ ...salon, emailTemplate: e.target.value })} />
-        <Button onClick={() => saveSection("templates", { whatsappTemplate: salon.whatsappTemplate, emailTemplate: salon.emailTemplate })}>Salva messaggio</Button>
+        <div className="rounded-md border border-zinc-200 p-3 space-y-2">
+          <h3 className="text-sm font-semibold">WhatsApp API (opzionale)</h3>
+          <div className="rounded-md border border-sky-200 bg-sky-50 p-3 text-xs text-sky-900 space-y-2">
+            <p className="font-semibold">Guida rapida collegamento (elementare)</p>
+            <ol className="list-decimal space-y-1 pl-4">
+              <li>Apri Meta for Developers e crea/configura una app con WhatsApp Business Platform.</li>
+              <li>Recupera il Phone Number ID del numero WhatsApp Business da collegare.</li>
+              <li>Genera un Access Token con permessi per invio messaggi.</li>
+              <li>Incolla Phone Number ID e Access Token qui sotto, lascia versione API su v23.0.</li>
+              <li>Attiva la checkbox e clicca Salva messaggio.</li>
+            </ol>
+            <p>
+              Se manca qualcosa o il token non e valido, il sistema torna automaticamente al metodo manuale
+              (apertura WhatsApp con link), quindi non si blocca nulla.
+            </p>
+          </div>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={Boolean(salon.whatsappApiEnabled)}
+              onChange={(e) => setSalon({ ...salon, whatsappApiEnabled: e.target.checked })}
+            />
+            Abilita invio automatico via API Meta
+          </label>
+          <div className="grid gap-2 md:grid-cols-2">
+            <Input
+              value={salon.whatsappApiPhoneNumberId || ""}
+              onChange={(e) => setSalon({ ...salon, whatsappApiPhoneNumberId: e.target.value })}
+              placeholder="Phone Number ID"
+            />
+            <Input
+              value={salon.whatsappApiVersion || "v23.0"}
+              onChange={(e) => setSalon({ ...salon, whatsappApiVersion: e.target.value })}
+              placeholder="Versione API (es. v23.0)"
+            />
+          </div>
+          <Input
+            type="password"
+            value={salon.whatsappApiAccessToken || ""}
+            onChange={(e) => setSalon({ ...salon, whatsappApiAccessToken: e.target.value })}
+            placeholder="Access Token (lascia vuoto per mantenere quello attuale)"
+          />
+          <p className="text-xs text-zinc-500">
+            Se la configurazione API non e attiva o non valida, il sistema usa automaticamente il metodo manuale (wa.me).
+          </p>
+        </div>
+        <Button
+          onClick={() =>
+            saveSection("templates", {
+              whatsappTemplate: salon.whatsappTemplate,
+              emailTemplate: salon.emailTemplate,
+              whatsappApiEnabled: Boolean(salon.whatsappApiEnabled),
+              whatsappApiPhoneNumberId: salon.whatsappApiPhoneNumberId || "",
+              whatsappApiVersion: salon.whatsappApiVersion || "v23.0",
+              whatsappApiAccessToken: salon.whatsappApiAccessToken || "",
+            })
+          }
+        >
+          Salva messaggio
+        </Button>
       </Card>
 
       <Card className="space-y-2">

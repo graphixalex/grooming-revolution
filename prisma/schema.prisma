@@ -73,6 +73,10 @@ model Salon {
   telefono              String?
   email                 String?
   whatsappTemplate      String?              @db.Text
+  whatsappApiEnabled    Boolean              @default(false)
+  whatsappApiPhoneNumberId String?
+  whatsappApiAccessToken String?             @db.Text
+  whatsappApiVersion    String?              @default("v23.0")
   emailTemplate         String?              @db.Text
   overlapAllowed        Boolean              @default(false)
   workingHoursJson      Json?
