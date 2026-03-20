@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,9 +12,11 @@ import { ClientConsentsCard } from "@/components/clients/client-consents-card";
 export function ClientDetailClient({
   client,
   quickTags,
+  paymentHistory,
 }: {
   client: any;
   quickTags: Array<{ id: string; nome: string }>;
+  paymentHistory: any[];
 }) {
   const [dogForm, setDogForm] = useState({
     nome: "",
@@ -95,6 +98,29 @@ export function ClientDetailClient({
             </div>
           ))}
         </div>
+      </Card>
+
+      <Card>
+        <h2 className="mb-2 font-semibold">Storico pagamenti cliente</h2>
+        {paymentHistory.length ? (
+          <div className="space-y-2">
+            {paymentHistory.map((row: any) => {
+              const totaleIncassato = row.transactions.reduce((sum: number, tx: any) => sum + Number(tx.grossAmount || 0), 0);
+              const metodi = Array.from(new Set(row.transactions.map((tx: any) => tx.method))).join(", ");
+              return (
+                <div key={row.id} className="rounded border border-zinc-200 p-3 text-sm">
+                  <p className="font-medium">
+                    {format(new Date(row.startAt), "dd/MM/yyyy HH:mm")} - {row.cane?.nome || "Cane"}
+                  </p>
+                  <p>Totale pagato: EUR {totaleIncassato.toFixed(2)}{metodi ? ` (${metodi})` : ""}</p>
+                  <p>Servizi: {row.trattamentiSelezionati.map((t: any) => t.treatment.nome).join(", ") || "-"}</p>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="text-sm text-zinc-600">Nessun pagamento registrato.</p>
+        )}
       </Card>
 
       <ClientConsentsCard clientId={client.id} />

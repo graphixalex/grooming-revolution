@@ -133,6 +133,12 @@ export function DogDetailClient({ payload, salon }: { payload: any; salon: any }
           {data.history.map((h: any) => (
             <div key={h.id} className="rounded border border-zinc-200 p-3 text-sm">
               <p className="font-medium">{format(new Date(h.startAt), "dd/MM/yyyy HH:mm")} - {h.stato}</p>
+              <p>
+                Incasso: {h.transactions?.length ? "Incassato" : "Non incassato"}
+                {h.transactions?.length
+                  ? ` - EUR ${h.transactions.reduce((sum: number, tx: any) => sum + Number(tx.grossAmount || 0), 0).toFixed(2)} (${Array.from(new Set(h.transactions.map((tx: any) => tx.method))).join(", ")})`
+                  : ""}
+              </p>
               <p>Durata: {h.durataMinuti} min</p>
               <p>Trattamenti: {h.trattamentiSelezionati.map((t: any) => t.treatment.nome).join(", ") || "-"}</p>
               <p>Note: {h.noteAppuntamento || "-"}</p>

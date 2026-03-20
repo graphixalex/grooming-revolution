@@ -246,22 +246,31 @@ export async function PATCH(req: NextRequest) {
           })
         : null;
 
-    const tx = await prisma.transaction.create({
-      data: {
-        salonId,
-        appointmentId,
-        cashSessionId: openCashSession?.id ?? null,
-        amount,
-        tipAmount,
-        method: parsedTx.data.method,
-        vatRate,
-        vatAmount,
-        netAmount,
-        grossAmount,
-        dateTime: new Date(),
-        note: parsedTx.data.note || null,
-        createdById: auth.session.user.id,
-      },
+    const tx = await prisma.$transaction(async (trx) => {
+      const created = await trx.transaction.create({
+        data: {
+          salonId,
+          appointmentId,
+          cashSessionId: openCashSession?.id ?? null,
+          amount,
+          tipAmount,
+          method: parsedTx.data.method,
+          vatRate,
+          vatAmount,
+          netAmount,
+          grossAmount,
+          dateTime: new Date(),
+          note: parsedTx.data.note || null,
+          createdById: auth.session.user.id,
+        },
+      });
+
+      await trx.appointment.update({
+        where: { id: appointmentId },
+        data: { stato: "COMPLETATO" },
+      });
+
+      return created;
     });
 
     return NextResponse.json(tx);
