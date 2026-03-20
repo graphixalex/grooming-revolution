@@ -15,7 +15,14 @@ export function ClientDetailClient({
   client: any;
   quickTags: Array<{ id: string; nome: string }>;
 }) {
-  const [dogForm, setDogForm] = useState({ nome: "", razza: "", taglia: "M", noteCane: "", tagRapidiIds: [] as string[] });
+  const [dogForm, setDogForm] = useState({
+    nome: "",
+    razza: "",
+    taglia: "M",
+    noteCane: "",
+    preferenzeCura: "",
+    tagRapidiIds: [] as string[],
+  });
 
   async function addDog() {
     const res = await fetch("/api/dogs", {
@@ -49,6 +56,11 @@ export function ClientDetailClient({
           </select>
         </div>
         <Textarea placeholder="Note cane" value={dogForm.noteCane} onChange={(e) => setDogForm({ ...dogForm, noteCane: e.target.value })} />
+        <Textarea
+          placeholder="Preferenze cane (es. taglio preferito, profumo, comportamento, sensibilita...)"
+          value={dogForm.preferenzeCura}
+          onChange={(e) => setDogForm({ ...dogForm, preferenzeCura: e.target.value })}
+        />
         <div className="flex flex-wrap gap-2">
           {quickTags.map((tag) => (
             <label key={tag.id} className="rounded-full border border-zinc-300 px-3 py-1 text-xs">
@@ -76,6 +88,9 @@ export function ClientDetailClient({
             <div key={dog.id} className="rounded border border-zinc-200 p-3">
               <p className="font-medium">{dog.nome} {dog.razza ? `(${dog.razza})` : ""}</p>
               <p className="text-sm text-zinc-600">{dog.noteCane || "Nessuna nota"}</p>
+              <p className="mt-1 text-sm text-zinc-700">
+                <span className="font-medium">Preferenze:</span> {dog.preferenzeCura || "Nessuna preferenza salvata"}
+              </p>
               <Link href={`/dogs/${dog.id}`} className="text-sm underline">Apri profilo cane</Link>
             </div>
           ))}

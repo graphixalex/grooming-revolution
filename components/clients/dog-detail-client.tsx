@@ -5,11 +5,14 @@ import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
 import { renderTemplate, normalizePhone, reminderVariables } from "@/lib/reminders";
 
 export function DogDetailClient({ payload, salon }: { payload: any; salon: any }) {
   const [page, setPage] = useState(payload.page);
   const [data, setData] = useState(payload);
+  const [preferenzeCura, setPreferenzeCura] = useState(payload.dog.preferenzeCura || "");
+  const [savingPreferenze, setSavingPreferenze] = useState(false);
 
   async function goTo(nextPage: number) {
     const res = await fetch(`/api/dogs/${payload.dog.id}?page=${nextPage}&pageSize=${payload.pageSize}`);
@@ -76,6 +79,23 @@ export function DogDetailClient({ payload, salon }: { payload: any; salon: any }
     return `mailto:${data.dog.cliente.email}?subject=${encodeURIComponent("Promemoria appuntamento toelettatura")}&body=${encodeURIComponent(body)}`;
   }, [latestAppointment, data, salon]);
 
+  async function savePreferenze() {
+    setSavingPreferenze(true);
+    const res = await fetch(`/api/dogs/${data.dog.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ preferenzeCura }),
+    });
+    const json = await res.json();
+    setSavingPreferenze(false);
+    if (!res.ok) {
+      alert(json.error || "Errore salvataggio preferenze");
+      return;
+    }
+    setData((prev: any) => ({ ...prev, dog: { ...prev.dog, preferenzeCura } }));
+    alert("Preferenze salvate");
+  }
+
   return (
     <div className="space-y-4">
       <Card>
@@ -83,6 +103,17 @@ export function DogDetailClient({ payload, salon }: { payload: any; salon: any }
         <p className="text-sm text-zinc-600">Razza: {data.dog.razza || "-"} - Taglia: {data.dog.taglia}</p>
         <p className="text-sm">Cliente: {data.dog.cliente.nome} {data.dog.cliente.cognome}</p>
         <p className="mt-2 whitespace-pre-wrap text-sm">{data.dog.noteCane || "Nessuna nota cane"}</p>
+        <div className="mt-3 space-y-2">
+          <p className="text-sm font-medium">Preferenze cane</p>
+          <Textarea
+            placeholder="Es. taglio preferito, profumo, sensibilita, comportamento in asciugatura..."
+            value={preferenzeCura}
+            onChange={(e) => setPreferenzeCura(e.target.value)}
+          />
+          <Button onClick={savePreferenze} disabled={savingPreferenze}>
+            {savingPreferenze ? "Salvataggio..." : "Salva preferenze"}
+          </Button>
+        </div>
         <div className="mt-2 flex flex-wrap gap-2">
           {data.dog.tagRapidi.map((t: any) => <Badge key={t.quickTagId}>{t.quickTag.nome}</Badge>)}
         </div>

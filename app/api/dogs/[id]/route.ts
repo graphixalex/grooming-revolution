@@ -44,22 +44,25 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { id } = await params;
   const body = await req.json();
 
-  await prisma.dogQuickTag.deleteMany({ where: { dogId: id } });
+  const data: Record<string, unknown> = {};
+  if (typeof body.nome === "string") data.nome = body.nome;
+  if (typeof body.razza === "string") data.razza = body.razza;
+  if (typeof body.taglia === "string") data.taglia = body.taglia;
+  if (typeof body.noteCane === "string") data.noteCane = body.noteCane;
+  if (typeof body.preferenzeCura === "string") data.preferenzeCura = body.preferenzeCura;
 
   const updated = await prisma.dog.updateMany({
     where: { id, salonId: auth.session.user.salonId, deletedAt: null },
-    data: {
-      nome: body.nome,
-      razza: body.razza,
-      taglia: body.taglia,
-      noteCane: body.noteCane,
-    },
+    data,
   });
 
-  if (body.tagRapidiIds?.length) {
-    await prisma.dogQuickTag.createMany({
-      data: body.tagRapidiIds.map((quickTagId: string) => ({ dogId: id, quickTagId })),
-    });
+  if (Array.isArray(body.tagRapidiIds)) {
+    await prisma.dogQuickTag.deleteMany({ where: { dogId: id } });
+    if (body.tagRapidiIds.length) {
+      await prisma.dogQuickTag.createMany({
+        data: body.tagRapidiIds.map((quickTagId: string) => ({ dogId: id, quickTagId })),
+      });
+    }
   }
 
   return NextResponse.json(updated);

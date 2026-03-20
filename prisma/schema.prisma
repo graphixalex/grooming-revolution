@@ -239,6 +239,7 @@ model Dog {
   razza               String?
   taglia              DogSize
   noteCane            String?     @db.Text
+  preferenzeCura      String?     @db.Text
   createdAt           DateTime    @default(now())
   updatedAt           DateTime    @updatedAt
   deletedAt           DateTime?

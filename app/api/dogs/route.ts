@@ -39,6 +39,7 @@ export async function POST(req: NextRequest) {
       razza: parsed.data.razza || null,
       taglia: parsed.data.taglia,
       noteCane: parsed.data.noteCane || null,
+      preferenzeCura: parsed.data.preferenzeCura || null,
       tagRapidi: {
         create: parsed.data.tagRapidiIds.map((quickTagId) => ({ quickTagId })),
       },

@@ -26,6 +26,7 @@ export const dogSchema = z.object({
   razza: z.string().optional(),
   taglia: z.enum(["XS", "S", "M", "L", "XL", "XXL"]),
   noteCane: z.string().optional(),
+  preferenzeCura: z.string().optional(),
   tagRapidiIds: z.array(z.string()).default([]),
 });
 
