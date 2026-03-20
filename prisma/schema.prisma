@@ -50,6 +50,25 @@ enum ConsentKind {
   PHOTO_SOCIAL
 }
 
+enum WhatsAppCampaignType {
+  MARKETING
+  SERVICE
+}
+
+enum WhatsAppCampaignStatus {
+  DRAFT
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum WhatsAppRecipientStatus {
+  PENDING
+  SENT
+  FAILED
+  SKIPPED
+}
+
 model SalonGroup {
   id                    String               @id @default(cuid())
   nome                  String
@@ -103,6 +122,7 @@ model Salon {
   auditLogs             AuditLog[]
   consentTemplates      ConsentTemplate[]
   clientConsents        ClientConsent[]
+  whatsappCampaigns     WhatsAppCampaign[]
 
   @@index([salonGroupId])
 }
@@ -125,6 +145,7 @@ model User {
   auditLogs     AuditLog[]
   createdClientConsents ClientConsent[] @relation("ClientConsentCreatedBy")
   revokedClientConsents ClientConsent[] @relation("ClientConsentRevokedBy")
+  whatsappCampaignsCreated WhatsAppCampaign[]
 
   @@unique([salonId, email])
   @@index([salonId])
@@ -148,6 +169,7 @@ model Client {
   dogs                Dog[]
   appointments        Appointment[]
   consents            ClientConsent[]
+  whatsappCampaignRecipients WhatsAppCampaignRecipient[]
 
   @@index([salonId, deletedAt])
   @@index([salonId, telefono])
@@ -414,5 +436,50 @@ model AuditLog {
   user                User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([salonId, createdAt])
+}
+
+model WhatsAppCampaign {
+  id                  String                 @id @default(cuid())
+  salonId             String
+  createdById         String
+  type                WhatsAppCampaignType
+  title               String
+  messageTemplate     String                 @db.Text
+  status              WhatsAppCampaignStatus @default(DRAFT)
+  totalRecipients     Int                    @default(0)
+  sentCount           Int                    @default(0)
+  failedCount         Int                    @default(0)
+  skippedCount        Int                    @default(0)
+  createdAt           DateTime               @default(now())
+  startedAt           DateTime?
+  completedAt         DateTime?
+
+  salon               Salon                  @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  createdBy           User                   @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  recipients          WhatsAppCampaignRecipient[]
+
+  @@index([salonId, createdAt])
+  @@index([salonId, status])
+}
+
+model WhatsAppCampaignRecipient {
+  id                  String                 @id @default(cuid())
+  campaignId          String
+  clientId            String
+  phone               String
+  renderedMessage     String                 @db.Text
+  status              WhatsAppRecipientStatus @default(PENDING)
+  errorMessage        String?
+  messageId           String?
+  attemptCount        Int                    @default(0)
+  lastAttemptAt       DateTime?
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+
+  campaign            WhatsAppCampaign       @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  client              Client                 @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, clientId])
+  @@index([campaignId, status])
 }
 

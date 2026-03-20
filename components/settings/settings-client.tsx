@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { COUNTRY_OPTIONS, getCountryMeta } from "@/lib/geo";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -19,6 +19,21 @@ type DayHours = {
 };
 
 type WorkingHoursState = Record<DayKey, DayHours>;
+type CampaignType = "MARKETING" | "SERVICE";
+
+type CampaignRow = {
+  id: string;
+  type: CampaignType;
+  title: string;
+  status: "DRAFT" | "RUNNING" | "COMPLETED" | "FAILED";
+  totalRecipients: number;
+  sentCount: number;
+  failedCount: number;
+  skippedCount: number;
+  createdAt: string;
+  startedAt?: string | null;
+  completedAt?: string | null;
+};
 
 const dayOrder: DayKey[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 const dayLabel: Record<DayKey, string> = {
@@ -90,6 +105,26 @@ export function SettingsClient({ initial }: { initial: any }) {
       workingHours: normalizeWorkingHours(o.workingHoursJson),
     })),
   );
+  const [campaignType, setCampaignType] = useState<CampaignType>("SERVICE");
+  const [campaignTitle, setCampaignTitle] = useState("");
+  const [campaignMessage, setCampaignMessage] = useState("");
+  const [campaignMonthsBack, setCampaignMonthsBack] = useState("12");
+  const [campaignLoading, setCampaignLoading] = useState(false);
+  const [campaigns, setCampaigns] = useState<CampaignRow[]>([]);
+
+  const loadCampaigns = async () => {
+    const res = await fetch("/api/whatsapp/campaigns");
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data.error || "Errore caricamento campagne");
+      return;
+    }
+    setCampaigns(data);
+  };
+
+  useEffect(() => {
+    void loadCampaigns();
+  }, []);
 
   async function saveSection(section: string, payload: Record<string, unknown>) {
     const res = await fetch("/api/settings", {
@@ -136,6 +171,59 @@ export function SettingsClient({ initial }: { initial: any }) {
     const result = await saveSection("staffDelete", { userId: row.id });
     if (!result) return;
     setStaff((prev: any[]) => prev.filter((x) => x.id !== row.id));
+  }
+
+  async function dispatchCampaign(campaignId: string) {
+    setCampaignLoading(true);
+    try {
+      for (let i = 0; i < 20; i += 1) {
+        const res = await fetch(`/api/whatsapp/campaigns/${campaignId}/dispatch`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ batchSize: 100 }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          alert(data.error || "Errore invio campagna");
+          break;
+        }
+        if (data.status === "COMPLETED" || data.processed === 0) break;
+      }
+      await loadCampaigns();
+    } finally {
+      setCampaignLoading(false);
+    }
+  }
+
+  async function createCampaign() {
+    if (!campaignTitle.trim() || !campaignMessage.trim()) {
+      alert("Inserisci titolo e messaggio");
+      return;
+    }
+    setCampaignLoading(true);
+    try {
+      const res = await fetch("/api/whatsapp/campaigns", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: campaignType,
+          title: campaignTitle.trim(),
+          messageTemplate: campaignMessage.trim(),
+          monthsBack: Number(campaignMonthsBack) || 12,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Errore creazione campagna");
+        return;
+      }
+      await dispatchCampaign(data.campaignId);
+      setCampaignTitle("");
+      setCampaignMessage("");
+      alert("Campagna avviata");
+    } finally {
+      setCampaignLoading(false);
+    }
   }
 
   return (
@@ -552,6 +640,86 @@ export function SettingsClient({ initial }: { initial: any }) {
         >
           Salva messaggio
         </Button>
+      </Card>
+
+      <Card className="space-y-3">
+        <h2 className="font-semibold">Campagne WhatsApp (invio massivo)</h2>
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className={`rounded-md border p-3 ${campaignType === "SERVICE" ? "border-emerald-300 bg-emerald-50" : "border-zinc-200 bg-white"}`}>
+            <p className="text-sm font-semibold">Invio di servizio</p>
+            <p className="text-xs text-zinc-600">
+              Per chiusure, ferie, malattia e comunicazioni operative. Invia a tutti i clienti nel periodo scelto.
+            </p>
+            <Button variant={campaignType === "SERVICE" ? "default" : "outline"} className="mt-2" onClick={() => setCampaignType("SERVICE")}>
+              Usa questa sezione
+            </Button>
+          </div>
+          <div className={`rounded-md border p-3 ${campaignType === "MARKETING" ? "border-amber-300 bg-amber-50" : "border-zinc-200 bg-white"}`}>
+            <p className="text-sm font-semibold">Invio marketing</p>
+            <p className="text-xs text-zinc-600">
+              Promozioni e offerte. Invia solo ai clienti con consenso promemoria attivo.
+            </p>
+            <Button variant={campaignType === "MARKETING" ? "default" : "outline"} className="mt-2" onClick={() => setCampaignType("MARKETING")}>
+              Usa questa sezione
+            </Button>
+          </div>
+        </div>
+
+        <div className="grid gap-2 md:grid-cols-3">
+          <Input value={campaignTitle} onChange={(e) => setCampaignTitle(e.target.value)} placeholder="Titolo campagna" />
+          <Input
+            type="number"
+            min="1"
+            max="36"
+            value={campaignMonthsBack}
+            onChange={(e) => setCampaignMonthsBack(e.target.value)}
+            placeholder="Clienti ultimi mesi"
+          />
+          <Input value={campaignType} readOnly />
+        </div>
+        <Textarea
+          value={campaignMessage}
+          onChange={(e) => setCampaignMessage(e.target.value)}
+          placeholder="Messaggio campagna. Variabili supportate: %nome_cliente% %nome_attivita%"
+        />
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={createCampaign} disabled={campaignLoading}>
+            {campaignLoading ? "Invio in corso..." : "Crea e invia campagna"}
+          </Button>
+          <Button variant="outline" onClick={loadCampaigns} disabled={campaignLoading}>
+            Aggiorna storico
+          </Button>
+        </div>
+        <div className="space-y-2">
+          {campaigns.length === 0 ? (
+            <p className="text-sm text-zinc-500">Nessuna campagna presente.</p>
+          ) : (
+            campaigns.map((row) => (
+              <div key={row.id} className="rounded-md border border-zinc-200 p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm font-semibold">
+                    {row.title} - {row.type}
+                  </p>
+                  <span className="rounded-md bg-zinc-100 px-2 py-1 text-xs font-semibold text-zinc-700">{row.status}</span>
+                </div>
+                <p className="mt-1 text-xs text-zinc-600">
+                  Totale: {row.totalRecipients} | Inviati: {row.sentCount} | Falliti: {row.failedCount} | Saltati: {row.skippedCount}
+                </p>
+                <p className="text-xs text-zinc-500">Creata: {new Date(row.createdAt).toLocaleString("it-IT")}</p>
+                {row.status !== "COMPLETED" ? (
+                  <Button
+                    variant="outline"
+                    className="mt-2"
+                    onClick={() => dispatchCampaign(row.id)}
+                    disabled={campaignLoading}
+                  >
+                    Continua invio
+                  </Button>
+                ) : null}
+              </div>
+            ))
+          )}
+        </div>
       </Card>
 
       <Card className="space-y-2">

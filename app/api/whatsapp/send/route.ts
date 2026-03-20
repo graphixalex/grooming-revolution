@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/api-auth";
 import { normalizePhone } from "@/lib/reminders";
+import { sendWhatsAppTextViaApi } from "@/lib/whatsapp";
 
 type SendBody = {
   phone?: string;
@@ -30,81 +30,23 @@ export async function POST(req: NextRequest) {
 
   const manualUrl = buildManualUrl(body.phone, text);
 
-  let salon:
-    | {
-        whatsappApiEnabled: boolean;
-        whatsappApiPhoneNumberId: string | null;
-        whatsappApiAccessToken: string | null;
-        whatsappApiVersion: string | null;
-      }
-    | null = null;
   try {
-    salon = await prisma.salon.findUnique({
-      where: { id: salonId },
-      select: {
-        whatsappApiEnabled: true,
-        whatsappApiPhoneNumberId: true,
-        whatsappApiAccessToken: true,
-        whatsappApiVersion: true,
-      },
-    });
+    const sent = await sendWhatsAppTextViaApi({ salonId, phone: body.phone || "", text });
+    if (sent.ok) {
+      return NextResponse.json({
+        mode: "api",
+        messageId: sent.messageId,
+      });
+    }
   } catch (error: unknown) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && (error.code === "P2021" || error.code === "P2022")) {
       return NextResponse.json({ mode: "manual", url: manualUrl });
     }
-    throw error;
-  }
-
-  if (!salon?.whatsappApiEnabled) {
-    return NextResponse.json({ mode: "manual", url: manualUrl });
-  }
-
-  const to = normalizePhone(body.phone || "");
-  if (!to || !salon.whatsappApiPhoneNumberId || !salon.whatsappApiAccessToken) {
-    return NextResponse.json({
-      mode: "manual",
-      url: manualUrl,
-      warning: "Configurazione API incompleta o numero non valido, uso invio manuale.",
-    });
-  }
-
-  const apiVersion = salon.whatsappApiVersion || "v23.0";
-  const endpoint = `https://graph.facebook.com/${apiVersion}/${salon.whatsappApiPhoneNumberId}/messages`;
-
-  try {
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${salon.whatsappApiAccessToken}`,
-      },
-      body: JSON.stringify({
-        messaging_product: "whatsapp",
-        to,
-        type: "text",
-        text: { body: text, preview_url: false },
-      }),
-    });
-    const json = await response.json();
-
-    if (!response.ok) {
-      return NextResponse.json({
-        mode: "manual",
-        url: manualUrl,
-        warning: "Errore WhatsApp API, fallback manuale.",
-        apiError: json?.error?.message || "unknown_error",
-      });
-    }
-
-    return NextResponse.json({
-      mode: "api",
-      messageId: json?.messages?.[0]?.id || null,
-    });
-  } catch {
     return NextResponse.json({
       mode: "manual",
       url: manualUrl,
       warning: "Connessione API non riuscita, fallback manuale.",
     });
   }
+  return NextResponse.json({ mode: "manual", url: manualUrl });
 }
