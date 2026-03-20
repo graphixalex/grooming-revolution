@@ -111,6 +111,8 @@ export function SettingsClient({ initial }: { initial: any }) {
   const [campaignMonthsBack, setCampaignMonthsBack] = useState("12");
   const [campaignLoading, setCampaignLoading] = useState(false);
   const [campaigns, setCampaigns] = useState<CampaignRow[]>([]);
+  const [campaignPreviewCount, setCampaignPreviewCount] = useState<number | null>(null);
+  const [campaignPreviewLoading, setCampaignPreviewLoading] = useState(false);
 
   const loadCampaigns = async () => {
     const res = await fetch("/api/whatsapp/campaigns");
@@ -223,6 +225,25 @@ export function SettingsClient({ initial }: { initial: any }) {
       alert("Campagna avviata");
     } finally {
       setCampaignLoading(false);
+    }
+  }
+
+  async function previewCampaignRecipients() {
+    setCampaignPreviewLoading(true);
+    try {
+      const query = new URLSearchParams({
+        type: campaignType,
+        monthsBack: String(Math.max(1, Math.min(36, Number(campaignMonthsBack) || 12))),
+      });
+      const res = await fetch(`/api/whatsapp/campaigns/preview?${query.toString()}`);
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Errore anteprima destinatari");
+        return;
+      }
+      setCampaignPreviewCount(Number(data.recipients) || 0);
+    } finally {
+      setCampaignPreviewLoading(false);
     }
   }
 
@@ -699,6 +720,25 @@ export function SettingsClient({ initial }: { initial: any }) {
           onChange={(e) => setCampaignMessage(e.target.value)}
           placeholder="Messaggio campagna. Variabili supportate: %nome_cliente% %nome_attivita%"
         />
+        <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3 text-sm">
+          <p className="font-medium text-zinc-800">Anteprima destinatari</p>
+          <p className="text-xs text-zinc-600">
+            Calcola quanti clienti verranno inclusi prima di inviare la campagna.
+          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <Button variant="outline" onClick={previewCampaignRecipients} disabled={campaignPreviewLoading || campaignLoading}>
+              {campaignPreviewLoading ? "Calcolo..." : "Calcola anteprima destinatari"}
+            </Button>
+            {campaignPreviewCount !== null ? (
+              <span className="rounded-md bg-white px-2 py-1 text-xs font-semibold text-zinc-700 border border-zinc-200">
+                Destinatari stimati: {campaignPreviewCount}
+              </span>
+            ) : null}
+          </div>
+          {campaignPreviewCount === 0 ? (
+            <p className="mt-2 text-xs text-amber-700">Nessun destinatario trovato con i filtri attuali.</p>
+          ) : null}
+        </div>
         <div className="flex flex-wrap gap-2">
           <Button onClick={createCampaign} disabled={campaignLoading}>
             {campaignLoading ? "Invio in corso..." : "Crea e invia campagna"}
@@ -713,6 +753,10 @@ export function SettingsClient({ initial }: { initial: any }) {
           ) : (
             campaigns.map((row) => (
               <div key={row.id} className="rounded-md border border-zinc-200 p-3">
+                {(() => {
+                  const remaining = Math.max(0, row.totalRecipients - row.sentCount - row.skippedCount);
+                  return (
+                    <>
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-sm font-semibold">
                     {row.title} - {row.type}
@@ -722,6 +766,7 @@ export function SettingsClient({ initial }: { initial: any }) {
                 <p className="mt-1 text-xs text-zinc-600">
                   Totale: {row.totalRecipients} | Inviati: {row.sentCount} | Falliti: {row.failedCount} | Saltati: {row.skippedCount}
                 </p>
+                <p className="text-xs text-zinc-600">Restano da inviare: {remaining}</p>
                 <p className="text-xs text-zinc-500">Creata: {new Date(row.createdAt).toLocaleString("it-IT")}</p>
                 {row.status !== "COMPLETED" ? (
                   <Button
@@ -733,6 +778,9 @@ export function SettingsClient({ initial }: { initial: any }) {
                     Continua invio
                   </Button>
                 ) : null}
+                    </>
+                  );
+                })()}
               </div>
             ))
           )}
