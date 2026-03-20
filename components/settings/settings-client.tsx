@@ -665,17 +665,34 @@ export function SettingsClient({ initial }: { initial: any }) {
           </div>
         </div>
 
-        <div className="grid gap-2 md:grid-cols-3">
-          <Input value={campaignTitle} onChange={(e) => setCampaignTitle(e.target.value)} placeholder="Titolo campagna" />
-          <Input
-            type="number"
-            min="1"
-            max="36"
-            value={campaignMonthsBack}
-            onChange={(e) => setCampaignMonthsBack(e.target.value)}
-            placeholder="Clienti ultimi mesi"
-          />
-          <Input value={campaignType} readOnly />
+        <div className="grid gap-3 md:grid-cols-3">
+          <div className="space-y-1">
+            <p className="text-xs font-medium text-zinc-600">Titolo campagna</p>
+            <Input value={campaignTitle} onChange={(e) => setCampaignTitle(e.target.value)} placeholder="Es. Chiusura per ferie Agosto" />
+          </div>
+          <div className="space-y-1">
+            <p className="text-xs font-medium text-zinc-600">Clienti considerati (ultimi mesi)</p>
+            <Input
+              type="number"
+              min="1"
+              max="36"
+              value={campaignMonthsBack}
+              onChange={(e) => setCampaignMonthsBack(e.target.value)}
+              placeholder="Es. 12"
+            />
+          </div>
+          <div className="space-y-1">
+            <p className="text-xs font-medium text-zinc-600">Tipo invio selezionato</p>
+            <div
+              className={`flex h-10 items-center rounded-md border px-3 text-sm font-semibold ${
+                campaignType === "SERVICE"
+                  ? "border-emerald-300 bg-emerald-50 text-emerald-800"
+                  : "border-amber-300 bg-amber-50 text-amber-800"
+              }`}
+            >
+              {campaignType === "SERVICE" ? "Servizio (avvisi operativi)" : "Marketing (promo/offerte)"}
+            </div>
+          </div>
         </div>
         <Textarea
           value={campaignMessage}
