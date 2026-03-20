@@ -495,17 +495,17 @@ export function SettingsClient({ initial }: { initial: any }) {
         <div className="rounded-md border border-zinc-200 p-3 space-y-2">
           <h3 className="text-sm font-semibold">WhatsApp API (opzionale)</h3>
           <div className="rounded-md border border-sky-200 bg-sky-50 p-3 text-xs text-sky-900 space-y-2">
-            <p className="font-semibold">Guida rapida collegamento (elementare)</p>
+            <p className="font-semibold">Guida rapida collegamento</p>
             <ol className="list-decimal space-y-1 pl-4">
-              <li>Apri Meta for Developers e crea/configura una app con WhatsApp Business Platform.</li>
-              <li>Recupera il Phone Number ID del numero WhatsApp Business da collegare.</li>
-              <li>Genera un Access Token con permessi per invio messaggi.</li>
-              <li>Incolla Phone Number ID e Access Token qui sotto, lascia versione API su v23.0.</li>
-              <li>Attiva la checkbox e clicca Salva messaggio.</li>
+              <li>Apri Meta for Developers e attiva WhatsApp Business Platform sulla tua app.</li>
+              <li>Copia il <strong>Phone Number ID</strong> del numero WhatsApp Business che userai per inviare.</li>
+              <li>Genera un <strong>Access Token</strong> con permessi di invio messaggi.</li>
+              <li>Incolla qui sotto Phone Number ID e Access Token. Lascia la versione API su <strong>v23.0</strong> se non hai esigenze particolari.</li>
+              <li>Abilita la checkbox “Abilita invio automatico via API Meta” e clicca <strong>Salva messaggio</strong>.</li>
             </ol>
             <p>
-              Se manca qualcosa o il token non e valido, il sistema torna automaticamente al metodo manuale
-              (apertura WhatsApp con link), quindi non si blocca nulla.
+              Se la configurazione non e completa o il token non e valido, il sistema non si blocca:
+              usa automaticamente il metodo manuale (apertura WhatsApp con link).
             </p>
           </div>
           <label className="flex items-center gap-2 text-sm">
