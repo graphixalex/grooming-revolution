@@ -16,7 +16,35 @@ export async function GET() {
   const salonId = auth.session.user.salonId;
 
   const [salon, tags, treatments, staff, operators] = await Promise.all([
-    prisma.salon.findUnique({ where: { id: salonId } }),
+    prisma.salon.findUnique({
+      where: { id: salonId },
+      select: {
+        id: true,
+        salonGroupId: true,
+        nomeAttivita: true,
+        nomeSede: true,
+        paese: true,
+        timezone: true,
+        valuta: true,
+        vatRate: true,
+        vatIncluded: true,
+        indirizzo: true,
+        telefono: true,
+        email: true,
+        whatsappTemplate: true,
+        emailTemplate: true,
+        overlapAllowed: true,
+        workingHoursJson: true,
+        holidaysJson: true,
+        subscriptionPlan: true,
+        stripeCustomerId: true,
+        stripeSubscriptionId: true,
+        billingVatNumber: true,
+        billingCountry: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    }),
     prisma.quickTag.findMany({ where: { salonId }, orderBy: { ordine: "asc" } }),
     prisma.treatment.findMany({ where: { salonId }, orderBy: { ordine: "asc" } }),
     prisma.user.findMany({
@@ -75,26 +103,50 @@ export async function PATCH(req: NextRequest) {
   }
 
   if (body.section === "templates") {
-    const salon = await prisma.salon.update({
-      where: { id: salonId },
-      data: {
-        whatsappTemplate: body.whatsappTemplate,
-        emailTemplate: body.emailTemplate,
-        whatsappApiEnabled: Boolean(body.whatsappApiEnabled),
-        whatsappApiPhoneNumberId:
-          typeof body.whatsappApiPhoneNumberId === "string" && body.whatsappApiPhoneNumberId.trim().length > 0
-            ? body.whatsappApiPhoneNumberId.trim()
-            : null,
-        whatsappApiVersion:
-          typeof body.whatsappApiVersion === "string" && body.whatsappApiVersion.trim().length > 0
-            ? body.whatsappApiVersion.trim()
-            : "v23.0",
-        ...(typeof body.whatsappApiAccessToken === "string" && body.whatsappApiAccessToken.trim().length > 0
-          ? { whatsappApiAccessToken: body.whatsappApiAccessToken.trim() }
-          : {}),
-      },
-    });
-    return NextResponse.json({ ...salon, whatsappApiAccessToken: "" });
+    try {
+      const salon = await prisma.salon.update({
+        where: { id: salonId },
+        data: {
+          whatsappTemplate: body.whatsappTemplate,
+          emailTemplate: body.emailTemplate,
+          whatsappApiEnabled: Boolean(body.whatsappApiEnabled),
+          whatsappApiPhoneNumberId:
+            typeof body.whatsappApiPhoneNumberId === "string" && body.whatsappApiPhoneNumberId.trim().length > 0
+              ? body.whatsappApiPhoneNumberId.trim()
+              : null,
+          whatsappApiVersion:
+            typeof body.whatsappApiVersion === "string" && body.whatsappApiVersion.trim().length > 0
+              ? body.whatsappApiVersion.trim()
+              : "v23.0",
+          ...(typeof body.whatsappApiAccessToken === "string" && body.whatsappApiAccessToken.trim().length > 0
+            ? { whatsappApiAccessToken: body.whatsappApiAccessToken.trim() }
+            : {}),
+        },
+      });
+      return NextResponse.json({ ...salon, whatsappApiAccessToken: "" });
+    } catch (error: unknown) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        (error.code === "P2021" || error.code === "P2022")
+      ) {
+        const legacy = await prisma.salon.update({
+          where: { id: salonId },
+          data: {
+            whatsappTemplate: body.whatsappTemplate,
+            emailTemplate: body.emailTemplate,
+          },
+        });
+        return NextResponse.json({
+          ...legacy,
+          whatsappApiEnabled: false,
+          whatsappApiPhoneNumberId: "",
+          whatsappApiVersion: "v23.0",
+          whatsappApiAccessToken: "",
+          warning: "Aggiorna il database con le migration per attivare WhatsApp API.",
+        });
+      }
+      throw error;
+    }
   }
 
   if (body.section === "workingHours") {

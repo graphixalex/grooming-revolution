@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/api-auth";
 import { normalizePhone } from "@/lib/reminders";
@@ -29,15 +30,30 @@ export async function POST(req: NextRequest) {
 
   const manualUrl = buildManualUrl(body.phone, text);
 
-  const salon = await prisma.salon.findUnique({
-    where: { id: salonId },
-    select: {
-      whatsappApiEnabled: true,
-      whatsappApiPhoneNumberId: true,
-      whatsappApiAccessToken: true,
-      whatsappApiVersion: true,
-    },
-  });
+  let salon:
+    | {
+        whatsappApiEnabled: boolean;
+        whatsappApiPhoneNumberId: string | null;
+        whatsappApiAccessToken: string | null;
+        whatsappApiVersion: string | null;
+      }
+    | null = null;
+  try {
+    salon = await prisma.salon.findUnique({
+      where: { id: salonId },
+      select: {
+        whatsappApiEnabled: true,
+        whatsappApiPhoneNumberId: true,
+        whatsappApiAccessToken: true,
+        whatsappApiVersion: true,
+      },
+    });
+  } catch (error: unknown) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && (error.code === "P2021" || error.code === "P2022")) {
+      return NextResponse.json({ mode: "manual", url: manualUrl });
+    }
+    throw error;
+  }
 
   if (!salon?.whatsappApiEnabled) {
     return NextResponse.json({ mode: "manual", url: manualUrl });

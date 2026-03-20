@@ -17,7 +17,35 @@ export default async function SettingsPage() {
     : null;
 
   const [salon, tags, treatments, staff, operators, assignableSalons] = await Promise.all([
-    prisma.salon.findUnique({ where: { id: session.user.salonId } }),
+    prisma.salon.findUnique({
+      where: { id: session.user.salonId },
+      select: {
+        id: true,
+        salonGroupId: true,
+        nomeAttivita: true,
+        nomeSede: true,
+        paese: true,
+        timezone: true,
+        valuta: true,
+        vatRate: true,
+        vatIncluded: true,
+        indirizzo: true,
+        telefono: true,
+        email: true,
+        whatsappTemplate: true,
+        emailTemplate: true,
+        overlapAllowed: true,
+        workingHoursJson: true,
+        holidaysJson: true,
+        subscriptionPlan: true,
+        stripeCustomerId: true,
+        stripeSubscriptionId: true,
+        billingVatNumber: true,
+        billingCountry: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    }),
     prisma.quickTag.findMany({ where: { salonId: session.user.salonId }, orderBy: { ordine: "asc" } }),
     prisma.treatment.findMany({ where: { salonId: session.user.salonId }, orderBy: { ordine: "asc" } }),
     prisma.user.findMany({
