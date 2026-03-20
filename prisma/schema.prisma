@@ -69,6 +69,10 @@ enum WhatsAppRecipientStatus {
   SKIPPED
 }
 
+enum AppointmentReminderKind {
+  DAY_BEFORE_WHATSAPP
+}
+
 model SalonGroup {
   id                    String               @id @default(cuid())
   nome                  String
@@ -308,12 +312,32 @@ model Appointment {
   createdBy           User                 @relation("AppointmentCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   trattamentiSelezionati AppointmentTreatment[]
   transactions        Transaction[]
+  reminders           AppointmentReminder[]
 
   @@index([salonId, startAt, endAt])
   @@index([salonId, operatorId, startAt])
   @@index([salonId, clienteId])
   @@index([salonId, caneId])
   @@index([salonId, stato])
+}
+
+model AppointmentReminder {
+  id                  String                 @id @default(cuid())
+  appointmentId       String
+  kind                AppointmentReminderKind
+  status              WhatsAppRecipientStatus @default(PENDING)
+  attemptCount        Int                    @default(0)
+  messageId           String?
+  errorMessage        String?
+  lastAttemptAt       DateTime?
+  sentAt              DateTime?
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+
+  appointment         Appointment            @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+
+  @@unique([appointmentId, kind])
+  @@index([kind, status])
 }
 
 model Operator {

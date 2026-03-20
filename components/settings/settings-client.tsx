@@ -662,6 +662,9 @@ export function SettingsClient({ initial }: { initial: any }) {
           <p className="text-xs text-zinc-500">
             Se la configurazione API non e attiva o non valida, il sistema usa automaticamente il metodo manuale (wa.me).
           </p>
+          <p className="text-xs text-zinc-600">
+            Quando API e attiva, il sistema invia automaticamente un reminder WhatsApp il giorno prima degli appuntamenti prenotati.
+          </p>
         </div>
         <Button
           onClick={() =>
