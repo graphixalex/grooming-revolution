@@ -27,6 +27,7 @@ type NewDogForm = {
 export function ClientsClient() {
   const [q, setQ] = useState("");
   const [clients, setClients] = useState<Client[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [form, setForm] = useState({ nome: "", cognome: "", telefono: "", email: "", noteCliente: "", consensoPromemoria: false });
   const [dogsForm, setDogsForm] = useState<NewDogForm[]>([{ nome: "", razza: "", taglia: "M", noteCane: "" }]);
   const [importFile, setImportFile] = useState<File | null>(null);
@@ -35,6 +36,7 @@ export function ClientsClient() {
     const res = await fetch(`/api/clients?q=${encodeURIComponent(search)}`);
     const data = await res.json();
     setClients(data);
+    setSelectedIds([]);
   }
 
   useEffect(() => {
@@ -104,6 +106,64 @@ export function ClientsClient() {
     alert(`Import completato. Creati: ${data.created}, Scartati: ${data.skipped}`);
     load(q);
   }
+
+  function toggleClientSelection(clientId: string) {
+    setSelectedIds((prev) => (prev.includes(clientId) ? prev.filter((id) => id !== clientId) : [...prev, clientId]));
+  }
+
+  function toggleSelectAllVisible(checked: boolean) {
+    if (checked) {
+      setSelectedIds(clients.map((c) => c.id));
+      return;
+    }
+    setSelectedIds([]);
+  }
+
+  async function deleteSelectedClients() {
+    if (!selectedIds.length) {
+      alert("Seleziona almeno un contatto");
+      return;
+    }
+
+    const isAllVisibleSelected = clients.length > 0 && selectedIds.length === clients.length;
+    if (isAllVisibleSelected) {
+      if (!window.confirm("Sei sicuro di voler eliminare tutti i contatti?")) return;
+      if (!window.confirm("Sicuro di procedere realmente all'eliminazione?")) return;
+      if (!window.confirm("Eliminare tutti i contatti?")) return;
+    } else {
+      if (!window.confirm(`Eliminare ${selectedIds.length} contatti selezionati?`)) return;
+    }
+
+    const res = await fetch("/api/clients", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: selectedIds }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data.error || "Errore eliminazione contatti");
+      return;
+    }
+    alert(`Contatti eliminati: ${data.deleted}`);
+    load(q);
+  }
+
+  async function deleteSingleClient(clientId: string, fullName: string) {
+    if (!window.confirm(`Eliminare il contatto ${fullName}?`)) return;
+    const res = await fetch("/api/clients", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: [clientId] }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data.error || "Errore eliminazione contatto");
+      return;
+    }
+    load(q);
+  }
+
+  const allVisibleSelected = clients.length > 0 && selectedIds.length === clients.length;
 
   return (
     <div className="space-y-4">
@@ -203,16 +263,46 @@ export function ClientsClient() {
           <Input type="file" accept=".csv,text/csv,.vcf,text/vcard" onChange={(e) => setImportFile(e.target.files?.[0] ?? null)} className="max-w-sm" />
           <Button onClick={importContactsFile}>Importa clienti (CSV/VCF)</Button>
         </div>
+        <div className="flex flex-wrap items-center gap-3 rounded-md border border-zinc-200 p-3 text-sm">
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={allVisibleSelected}
+              onChange={(e) => toggleSelectAllVisible(e.target.checked)}
+            />
+            Seleziona tutti i contatti visibili
+          </label>
+          <span className="text-zinc-600">Selezionati: {selectedIds.length}</span>
+          <Button variant="outline" onClick={deleteSelectedClients} disabled={!selectedIds.length}>
+            Elimina selezionati
+          </Button>
+        </div>
         <div className="space-y-2">
           {clients.map((client) => (
             <div key={client.id} className="rounded-md border border-zinc-200 p-3">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">{client.nome} {client.cognome}</p>
-                  <p className="text-sm text-zinc-600">{client.telefono} {client.email ? `- ${client.email}` : ""}</p>
-                  <p className="text-sm text-zinc-600">Cani: {client.dogs.map((d) => d.nome).join(", ") || "Nessuno"}</p>
+                <div className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    className="mt-1"
+                    checked={selectedIds.includes(client.id)}
+                    onChange={() => toggleClientSelection(client.id)}
+                  />
+                  <div>
+                    <p className="font-medium">{client.nome} {client.cognome}</p>
+                    <p className="text-sm text-zinc-600">{client.telefono} {client.email ? `- ${client.email}` : ""}</p>
+                    <p className="text-sm text-zinc-600">Cani: {client.dogs.map((d) => d.nome).join(", ") || "Nessuno"}</p>
+                  </div>
                 </div>
-                <Link className="text-sm underline" href={`/clients/${client.id}`}>Apri scheda</Link>
+                <div className="flex items-center gap-3">
+                  <button
+                    className="text-sm text-red-700 underline"
+                    onClick={() => deleteSingleClient(client.id, `${client.nome} ${client.cognome}`)}
+                  >
+                    Elimina
+                  </button>
+                  <Link className="text-sm underline" href={`/clients/${client.id}`}>Apri scheda</Link>
+                </div>
               </div>
             </div>
           ))}
