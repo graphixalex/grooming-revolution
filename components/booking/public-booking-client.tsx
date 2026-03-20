@@ -15,6 +15,7 @@ export function PublicBookingClient({ slug }: { slug: string }) {
   const [loading, setLoading] = useState(true);
   const [configError, setConfigError] = useState("");
   const [displayName, setDisplayName] = useState("");
+  const [timeZone, setTimeZone] = useState("Europe/Zurich");
   const [description, setDescription] = useState("");
   const [treatments, setTreatments] = useState<Treatment[]>([]);
 
@@ -45,6 +46,7 @@ export function PublicBookingClient({ slug }: { slug: string }) {
         return;
       }
       setDisplayName(data.displayName || "");
+      setTimeZone(data.timeZone || "Europe/Zurich");
       setDescription(data.description || "");
       setTreatments(Array.isArray(data.treatments) ? data.treatments : []);
       setTreatmentId(data.treatments?.[0]?.id || "");
@@ -158,7 +160,8 @@ export function PublicBookingClient({ slug }: { slug: string }) {
               return (
                 <label key={key} className="flex cursor-pointer items-center gap-2 rounded-md border border-zinc-200 p-2 text-sm">
                   <input type="radio" name="slot" checked={selectedSlotKey === key} onChange={() => setSelectedSlotKey(key)} />
-                  <span>{d.toLocaleString("it-IT", { weekday: "long", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>
+                  <span>{d.toLocaleString("it-IT", { timeZone, weekday: "long", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>
+                  <span className="text-zinc-500">({timeZone})</span>
                   <span className="text-zinc-500">{s.operatorName ? `- ${s.operatorName}` : ""}</span>
                 </label>
               );
@@ -186,4 +189,3 @@ export function PublicBookingClient({ slug }: { slug: string }) {
     </div>
   );
 }
-

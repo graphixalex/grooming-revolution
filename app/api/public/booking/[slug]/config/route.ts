@@ -12,6 +12,7 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ slug: 
     select: {
       id: true,
       nomeAttivita: true,
+      timezone: true,
       indirizzo: true,
       telefono: true,
       bookingDisplayName: true,
@@ -32,6 +33,7 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ slug: 
   return NextResponse.json({
     salonId: salon.id,
     displayName: salon.bookingDisplayName || salon.nomeAttivita,
+    timeZone: salon.timezone || "Europe/Zurich",
     description: salon.bookingDescription || "",
     logoUrl: salon.bookingLogoUrl || "",
     address: salon.indirizzo || "",
@@ -39,4 +41,3 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ slug: 
     treatments: salon.treatments,
   });
 }
-

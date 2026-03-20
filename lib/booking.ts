@@ -1,7 +1,6 @@
-import { addMinutes, endOfDay, startOfDay } from "date-fns";
+import { addMinutes } from "date-fns";
 import { DogSize } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { isInsideWorkingHours } from "@/lib/business-rules";
 
 type SlotOption = {
   startAt: Date;
@@ -18,6 +17,7 @@ type WorkingHoursRow = {
 };
 
 const dayKeys = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
+type DateParts = { year: number; month: number; day: number; hour: number; minute: number; second: number };
 
 function toMinutes(time: string) {
   const [h, m] = time.split(":").map(Number);
@@ -37,10 +37,8 @@ function overlaps(startA: Date, endA: Date, startB: Date, endB: Date) {
   return startA < endB && endA > startB;
 }
 
-function isInsideOperatorRow(row: WorkingHoursRow | undefined, startAt: Date, endAt: Date) {
+function isInsideRowByMinutes(row: WorkingHoursRow | undefined, start: number, end: number) {
   if (!row?.enabled || !row.start || !row.end) return false;
-  const start = startAt.getHours() * 60 + startAt.getMinutes();
-  const end = endAt.getHours() * 60 + endAt.getMinutes();
   const rowStart = toMinutes(row.start);
   const rowEnd = toMinutes(row.end);
   if (start < rowStart || end > rowEnd) return false;
@@ -51,6 +49,50 @@ function isInsideOperatorRow(row: WorkingHoursRow | undefined, startAt: Date, en
     if (start < be && end > bs) return false;
   }
   return true;
+}
+
+function getDatePartsInTimeZone(date: Date, timeZone: string): DateParts {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).formatToParts(date);
+
+  const value = (type: string) => Number(parts.find((part) => part.type === type)?.value || 0);
+  return {
+    year: value("year"),
+    month: value("month"),
+    day: value("day"),
+    hour: value("hour"),
+    minute: value("minute"),
+    second: value("second"),
+  };
+}
+
+function getTimeZoneOffsetMs(date: Date, timeZone: string) {
+  const p = getDatePartsInTimeZone(date, timeZone);
+  const asUtc = Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second);
+  return asUtc - date.getTime();
+}
+
+function zonedDateTimeToUtc(dateParts: DateParts, timeZone: string) {
+  const utcGuess = Date.UTC(dateParts.year, dateParts.month - 1, dateParts.day, dateParts.hour, dateParts.minute, dateParts.second);
+  const offset = getTimeZoneOffsetMs(new Date(utcGuess), timeZone);
+  return new Date(utcGuess - offset);
+}
+
+function addDaysToYmd(parts: Pick<DateParts, "year" | "month" | "day">, dayOffset: number) {
+  const d = new Date(Date.UTC(parts.year, parts.month - 1, parts.day + dayOffset));
+  return {
+    year: d.getUTCFullYear(),
+    month: d.getUTCMonth() + 1,
+    day: d.getUTCDate(),
+  };
 }
 
 export function slugifyBooking(value: string) {
@@ -114,14 +156,12 @@ export async function getBookingSlotOptions(params: {
 }) {
   const maxOptions = params.maxOptions ?? 6;
   const startFrom = params.startAt ?? new Date();
-  const rangeStart = startOfDay(startFrom);
-  const rangeEnd = endOfDay(addMinutes(rangeStart, 60 * 24 * 20));
   const durationMin = await estimateBookingDuration(params);
 
   const [salon, operators, appointments] = await Promise.all([
     prisma.salon.findUnique({
       where: { id: params.salonId },
-      select: { workingHoursJson: true, overlapAllowed: true },
+      select: { workingHoursJson: true, overlapAllowed: true, timezone: true },
     }),
     prisma.operator.findMany({
       where: { salonId: params.salonId, attivo: true },
@@ -133,8 +173,8 @@ export async function getBookingSlotOptions(params: {
         salonId: params.salonId,
         deletedAt: null,
         stato: { not: "CANCELLATO" },
-        startAt: { lt: rangeEnd },
-        endAt: { gt: rangeStart },
+        startAt: { lt: addMinutes(startFrom, 60 * 24 * 21) },
+        endAt: { gt: addMinutes(startFrom, -60 * 24) },
       },
       select: { operatorId: true, startAt: true, endAt: true },
       orderBy: { startAt: "asc" },
@@ -146,26 +186,45 @@ export async function getBookingSlotOptions(params: {
   const results: SlotOption[] = [];
   const operatorsEnabled = operators.length > 0;
   const now = new Date();
+  const timeZone = salon.timezone || "Europe/Zurich";
+  const nowParts = getDatePartsInTimeZone(now, timeZone);
+  const startParts = getDatePartsInTimeZone(startFrom, timeZone);
+  const baseYmd = {
+    year: startParts.year || nowParts.year,
+    month: startParts.month || nowParts.month,
+    day: startParts.day || nowParts.day,
+  };
 
   for (let dayOffset = 0; dayOffset <= 20 && results.length < maxOptions; dayOffset += 1) {
-    const day = new Date(rangeStart);
-    day.setDate(day.getDate() + dayOffset);
-    const dayKey = dayKeys[day.getDay()];
+    const ymd = addDaysToYmd(baseYmd, dayOffset);
+    const dayUtcRef = new Date(Date.UTC(ymd.year, ymd.month - 1, ymd.day));
+    const dayKey = dayKeys[dayUtcRef.getUTCDay()];
 
     if (operatorsEnabled) {
       for (const op of operators) {
+        const salonRow = (salon.workingHoursJson as Record<string, WorkingHoursRow> | null | undefined)?.[dayKey];
+        if (!salonRow?.enabled || !salonRow.start || !salonRow.end) continue;
         const row = (op.workingHoursJson as Record<string, WorkingHoursRow> | null | undefined)?.[dayKey];
         if (!row?.enabled || !row.start || !row.end) continue;
         const startMin = toMinutes(row.start);
         const endMin = toMinutes(row.end);
 
         for (let m = startMin; m + durationMin <= endMin && results.length < maxOptions; m += 30) {
-          const slotStart = new Date(day);
-          slotStart.setHours(Math.floor(m / 60), m % 60, 0, 0);
+          const slotStart = zonedDateTimeToUtc(
+            {
+              year: ymd.year,
+              month: ymd.month,
+              day: ymd.day,
+              hour: Math.floor(m / 60),
+              minute: m % 60,
+              second: 0,
+            },
+            timeZone,
+          );
           if (slotStart <= now) continue;
           const slotEnd = addMinutes(slotStart, durationMin);
-          if (!isInsideWorkingHours(salon.workingHoursJson, slotStart, slotEnd)) continue;
-          if (!isInsideOperatorRow(row, slotStart, slotEnd)) continue;
+          if (!isInsideRowByMinutes(salonRow, m, m + durationMin)) continue;
+          if (!isInsideRowByMinutes(row, m, m + durationMin)) continue;
 
           const overlapOperator = appointments.some((a) => a.operatorId === op.id && overlaps(slotStart, slotEnd, a.startAt, a.endAt));
           if (overlapOperator) continue;
@@ -188,12 +247,20 @@ export async function getBookingSlotOptions(params: {
       const startMin = toMinutes(row.start);
       const endMin = toMinutes(row.end);
       for (let m = startMin; m + durationMin <= endMin && results.length < maxOptions; m += 30) {
-        const slotStart = new Date(day);
-        slotStart.setHours(Math.floor(m / 60), m % 60, 0, 0);
+        const slotStart = zonedDateTimeToUtc(
+          {
+            year: ymd.year,
+            month: ymd.month,
+            day: ymd.day,
+            hour: Math.floor(m / 60),
+            minute: m % 60,
+            second: 0,
+          },
+          timeZone,
+        );
         if (slotStart <= now) continue;
         const slotEnd = addMinutes(slotStart, durationMin);
-        if (!isInsideWorkingHours(salon.workingHoursJson, slotStart, slotEnd)) continue;
-        if (!isInsideOperatorRow(row, slotStart, slotEnd)) continue;
+        if (!isInsideRowByMinutes(row, m, m + durationMin)) continue;
         const overlapSalon = appointments.some((a) => overlaps(slotStart, slotEnd, a.startAt, a.endAt));
         if (overlapSalon) continue;
         results.push({
