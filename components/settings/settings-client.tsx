@@ -274,7 +274,28 @@ export function SettingsClient({ initial }: { initial: any }) {
           <Input value={salon.telefono || ""} onChange={(e) => setSalon({ ...salon, telefono: e.target.value })} placeholder="Telefono" />
           <Input value={salon.email || ""} onChange={(e) => setSalon({ ...salon, email: e.target.value })} placeholder="Email" />
           <Input value={salon.billingVatNumber || ""} onChange={(e) => setSalon({ ...salon, billingVatNumber: e.target.value })} placeholder="Partita IVA" />
+          <Input value={salon.bookingSlug || ""} onChange={(e) => setSalon({ ...salon, bookingSlug: e.target.value })} placeholder="Slug booking (es. cecilia-luxury)" />
+          <Input value={salon.bookingDisplayName || ""} onChange={(e) => setSalon({ ...salon, bookingDisplayName: e.target.value })} placeholder="Nome pubblico booking" />
+          <Input value={salon.bookingLogoUrl || ""} onChange={(e) => setSalon({ ...salon, bookingLogoUrl: e.target.value })} placeholder="URL logo booking (opzionale)" />
         </div>
+        <Textarea
+          value={salon.bookingDescription || ""}
+          onChange={(e) => setSalon({ ...salon, bookingDescription: e.target.value })}
+          placeholder="Descrizione breve pagina booking"
+        />
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={Boolean(salon.bookingEnabled)}
+            onChange={(e) => setSalon({ ...salon, bookingEnabled: e.target.checked })}
+          />
+          Abilita booking online (solo se abbonamento attivo)
+        </label>
+        {salon.bookingEnabled && salon.bookingSlug ? (
+          <p className="text-xs text-zinc-600">
+            Link booking: <a className="underline" href={`/book/${salon.bookingSlug}`} target="_blank" rel="noreferrer">/book/{salon.bookingSlug}</a>
+          </p>
+        ) : null}
         <Button onClick={() => saveSection("salon", salon)}>Salva dati attivita</Button>
       </Card>
 

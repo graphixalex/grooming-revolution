@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
-import { BarChart3, CalendarDays, CreditCard, Dog, Home, Settings, Users } from "lucide-react";
+import { BarChart3, CalendarDays, CreditCard, Dog, Home, MessageSquare, Settings, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Role = "OWNER" | "MANAGER" | "STAFF";
@@ -12,6 +12,7 @@ const links = [
   { href: "/dashboard", label: "Dashboard", icon: Home, roles: ["OWNER", "MANAGER"] as Role[] },
   { href: "/planner", label: "Agenda", icon: CalendarDays, roles: ["OWNER", "MANAGER", "STAFF"] as Role[] },
   { href: "/clients", label: "Clienti", icon: Users, roles: ["OWNER", "MANAGER", "STAFF"] as Role[] },
+  { href: "/messages", label: "Messaggi", icon: MessageSquare, roles: ["OWNER", "MANAGER", "STAFF"] as Role[] },
   { href: "/pricing", label: "Listino", icon: CreditCard, roles: ["OWNER", "MANAGER"] as Role[] },
   { href: "/reports", label: "Report", icon: BarChart3, roles: ["OWNER", "MANAGER"] as Role[] },
   { href: "/branches", label: "Multi-sede", icon: Users, roles: ["OWNER", "MANAGER"] as Role[] },

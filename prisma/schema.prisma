@@ -73,6 +73,19 @@ enum AppointmentReminderKind {
   DAY_BEFORE_WHATSAPP
 }
 
+enum BookingRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  AUTO_CONFIRMED
+}
+
+enum BookingTrustFlag {
+  NEW_CLIENT
+  STALE_CLIENT
+  TRUSTED_CLIENT
+}
+
 model SalonGroup {
   id                    String               @id @default(cuid())
   nome                  String
@@ -100,6 +113,11 @@ model Salon {
   whatsappApiPhoneNumberId String?
   whatsappApiAccessToken String?             @db.Text
   whatsappApiVersion    String?              @default("v23.0")
+  bookingEnabled        Boolean              @default(false)
+  bookingSlug           String?              @unique
+  bookingDisplayName    String?
+  bookingDescription    String?              @db.Text
+  bookingLogoUrl        String?
   emailTemplate         String?              @db.Text
   overlapAllowed        Boolean              @default(false)
   workingHoursJson      Json?
@@ -127,6 +145,7 @@ model Salon {
   consentTemplates      ConsentTemplate[]
   clientConsents        ClientConsent[]
   whatsappCampaigns     WhatsAppCampaign[]
+  bookingRequests       BookingRequest[]
 
   @@index([salonGroupId])
 }
@@ -150,6 +169,7 @@ model User {
   createdClientConsents ClientConsent[] @relation("ClientConsentCreatedBy")
   revokedClientConsents ClientConsent[] @relation("ClientConsentRevokedBy")
   whatsappCampaignsCreated WhatsAppCampaign[]
+  reviewedBookingRequests BookingRequest[] @relation("BookingRequestReviewedBy")
 
   @@unique([salonId, email])
   @@index([salonId])
@@ -174,6 +194,7 @@ model Client {
   appointments        Appointment[]
   consents            ClientConsent[]
   whatsappCampaignRecipients WhatsAppCampaignRecipient[]
+  bookingRequests     BookingRequest[]
 
   @@index([salonId, deletedAt])
   @@index([salonId, telefono])
@@ -248,6 +269,7 @@ model Dog {
   cliente             Client      @relation(fields: [clienteId], references: [id], onDelete: Cascade)
   tagRapidi           DogQuickTag[]
   appointments        Appointment[]
+  bookingRequests     BookingRequest[]
 
   @@index([salonId, clienteId, deletedAt])
 }
@@ -286,6 +308,7 @@ model Treatment {
   salon               Salon       @relation(fields: [salonId], references: [id], onDelete: Cascade)
   appointments        AppointmentTreatment[]
   priceRules          ServicePriceRule[]
+  bookingRequests     BookingRequest[]
 
   @@index([salonId, ordine])
 }
@@ -356,9 +379,48 @@ model Operator {
 
   salon               Salon       @relation(fields: [salonId], references: [id], onDelete: Cascade)
   appointments        Appointment[]
+  bookingRequests     BookingRequest[]
 
   @@index([salonId, ordine])
   @@unique([salonId, nome])
+}
+
+model BookingRequest {
+  id                  String               @id @default(cuid())
+  salonId             String
+  treatmentId         String
+  existingClientId    String?
+  existingDogId       String?
+  proposedOperatorId  String?
+  clientNome          String
+  clientCognome       String
+  clientTelefono      String
+  clientEmail         String?
+  dogNome             String
+  dogRazza            String?
+  dogTaglia           DogSize
+  dogTipoPelo         String?
+  note                String?              @db.Text
+  estimatedDurationMin Int
+  requestedStartAt    DateTime
+  requestedEndAt      DateTime
+  trustFlag           BookingTrustFlag
+  status              BookingRequestStatus @default(PENDING)
+  appointmentId       String?
+  reviewedById        String?
+  reviewedAt          DateTime?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+
+  salon               Salon                @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  treatment           Treatment            @relation(fields: [treatmentId], references: [id], onDelete: Restrict)
+  existingClient      Client?              @relation(fields: [existingClientId], references: [id], onDelete: SetNull)
+  existingDog         Dog?                 @relation(fields: [existingDogId], references: [id], onDelete: SetNull)
+  proposedOperator    Operator?            @relation(fields: [proposedOperatorId], references: [id], onDelete: SetNull)
+  reviewedBy          User?                @relation("BookingRequestReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([salonId, status, createdAt])
+  @@index([salonId, trustFlag, createdAt])
 }
 
 model AppointmentTreatment {

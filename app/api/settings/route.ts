@@ -6,6 +6,7 @@ import { getCountryMeta } from "@/lib/geo";
 import { Prisma } from "@prisma/client";
 import { canManageSettings } from "@/lib/rbac";
 import { createStaffSchema } from "@/lib/validators";
+import { slugifyBooking } from "@/lib/booking";
 
 export async function GET() {
   const auth = await requireApiSession();
@@ -41,6 +42,11 @@ export async function GET() {
         stripeSubscriptionId: true,
         billingVatNumber: true,
         billingCountry: true,
+        bookingEnabled: true,
+        bookingSlug: true,
+        bookingDisplayName: true,
+        bookingDescription: true,
+        bookingLogoUrl: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -85,21 +91,35 @@ export async function PATCH(req: NextRequest) {
 
   if (body.section === "salon") {
     const countryMeta = getCountryMeta(body.paese);
-    const salon = await prisma.salon.update({
-      where: { id: salonId },
-      data: {
-        nomeAttivita: body.nomeAttivita,
-        paese: countryMeta.code,
-        valuta: countryMeta.currency,
-        indirizzo: body.indirizzo,
-        telefono: body.telefono,
-        email: body.email,
-        timezone: body.timezone,
-        billingVatNumber: body.billingVatNumber,
-        billingCountry: body.billingCountry,
-      },
-    });
-    return NextResponse.json(salon);
+    const rawSlug = typeof body.bookingSlug === "string" ? body.bookingSlug : "";
+    const bookingSlug = rawSlug.trim().length ? slugifyBooking(rawSlug) : null;
+    try {
+      const salon = await prisma.salon.update({
+        where: { id: salonId },
+        data: {
+          nomeAttivita: body.nomeAttivita,
+          paese: countryMeta.code,
+          valuta: countryMeta.currency,
+          indirizzo: body.indirizzo,
+          telefono: body.telefono,
+          email: body.email,
+          timezone: body.timezone,
+          billingVatNumber: body.billingVatNumber,
+          billingCountry: body.billingCountry,
+          bookingEnabled: Boolean(body.bookingEnabled),
+          bookingSlug,
+          bookingDisplayName: body.bookingDisplayName || null,
+          bookingDescription: body.bookingDescription || null,
+          bookingLogoUrl: body.bookingLogoUrl || null,
+        },
+      });
+      return NextResponse.json(salon);
+    } catch (error: unknown) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+        return NextResponse.json({ error: "Slug booking gia in uso. Scegline uno diverso." }, { status: 400 });
+      }
+      throw error;
+    }
   }
 
   if (body.section === "templates") {
