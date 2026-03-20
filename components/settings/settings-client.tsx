@@ -665,6 +665,24 @@ export function SettingsClient({ initial }: { initial: any }) {
 
       <Card className="space-y-3">
         <h2 className="font-semibold">Campagne WhatsApp (invio massivo)</h2>
+        <div
+          className={`rounded-md border p-3 text-sm ${
+            salon.whatsappApiEnabled
+              ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+              : "border-amber-200 bg-amber-50 text-amber-800"
+          }`}
+        >
+          {salon.whatsappApiEnabled ? (
+            <p>
+              Invio massivo attivo: i messaggi vengono inviati tramite WhatsApp API.
+            </p>
+          ) : (
+            <p>
+              Invio massivo disponibile solo con WhatsApp API attiva in questa sede.
+              Vai sopra alla sezione “WhatsApp API (opzionale)”, configura i dati e abilita l&apos;invio automatico.
+            </p>
+          )}
+        </div>
         <div className="grid gap-3 md:grid-cols-2">
           <div className={`rounded-md border p-3 ${campaignType === "SERVICE" ? "border-emerald-300 bg-emerald-50" : "border-zinc-200 bg-white"}`}>
             <p className="text-sm font-semibold">Invio di servizio</p>
@@ -740,7 +758,7 @@ export function SettingsClient({ initial }: { initial: any }) {
           ) : null}
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button onClick={createCampaign} disabled={campaignLoading}>
+          <Button onClick={createCampaign} disabled={campaignLoading || !salon.whatsappApiEnabled}>
             {campaignLoading ? "Invio in corso..." : "Crea e invia campagna"}
           </Button>
           <Button variant="outline" onClick={loadCampaigns} disabled={campaignLoading}>
@@ -773,7 +791,7 @@ export function SettingsClient({ initial }: { initial: any }) {
                     variant="outline"
                     className="mt-2"
                     onClick={() => dispatchCampaign(row.id)}
-                    disabled={campaignLoading}
+                    disabled={campaignLoading || !salon.whatsappApiEnabled}
                   >
                     Continua invio
                   </Button>
