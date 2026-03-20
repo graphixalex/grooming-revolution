@@ -95,6 +95,10 @@ const faqs = [
     q: "Posso gestire piu sedi?",
     a: "Si. Ogni sede ha dati separati, con possibilita di visione aggregata per KPI e contabilita.",
   },
+  {
+    q: "Ho gia una lista clienti: devo inserirla a mano?",
+    a: "No. Se hai un file clienti (Excel/CSV), ci contatti e il team dev si occupa direttamente dell importazione guidata.",
+  },
 ];
 
 export default async function HomePage() {
@@ -321,6 +325,49 @@ export default async function HomePage() {
                 </p>
               </article>
             ))}
+          </div>
+        </section>
+
+        <section className="rounded-3xl border border-sky-200 bg-gradient-to-r from-sky-50 via-white to-cyan-50 p-5 shadow-sm md:p-8">
+          <div className="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-center">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-sky-800">Onboarding assistito</p>
+              <h2 className="mt-1 text-3xl font-black text-zinc-900 md:text-4xl">
+                Hai gia una lista clienti? La importiamo noi.
+              </h2>
+              <p className="mt-2 max-w-3xl text-sm text-zinc-700 md:text-base">
+                Se arrivi da Excel, CSV o da un altro gestionale, non perdi ore in inserimenti manuali:
+                il team dev si occupa direttamente dell importazione nel tuo account in modo rapido e guidato.
+              </p>
+              <ul className="mt-4 space-y-2 text-sm text-zinc-700">
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-sky-700" />
+                  Nessuna perdita di tempo in copia-incolla
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-sky-700" />
+                  Allineamento campi con verifica pre-import
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-sky-700" />
+                  Supporto diretto del team tecnico
+                </li>
+              </ul>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <a
+                href="mailto:ceciliagrooming@gmail.com?subject=Importazione%20clienti%20nel%20gestionale&body=Ciao%2C%20ho%20gia%20una%20lista%20clienti%20e%20vorrei%20supporto%20per%20l%20importazione."
+                className="rounded-xl bg-sky-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-500"
+              >
+                Contattaci per importare i clienti
+              </a>
+              <Link
+                href="/register"
+                className="rounded-xl border border-zinc-300 bg-white px-5 py-3 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
+              >
+                Inizia gratis intanto
+              </Link>
+            </div>
           </div>
         </section>
 
