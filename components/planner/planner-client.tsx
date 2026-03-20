@@ -36,7 +36,7 @@ type Appointment = {
   noteAppuntamento?: string | null;
   operator?: { id: string; nome: string; color?: string | null } | null;
   cane: { id: string; nome: string; razza?: string | null; taglia: "XS" | "S" | "M" | "L" | "XL" | "XXL" };
-  cliente: { nome: string; cognome: string; telefono: string };
+  cliente: { id: string; nome: string; cognome: string; telefono: string };
   trattamentiSelezionati: Array<{ treatment: { id: string; nome: string } }>;
   transactions: Array<{ id: string }>;
   stato: string;
@@ -213,6 +213,23 @@ function parseJumpDateInput(raw: string) {
   return null;
 }
 
+function toDateInputValue(date: Date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function toTimeInputValue(date: Date) {
+  return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+}
+
+function buildLocalDateTime(dateValue: string, timeValue: string) {
+  if (!dateValue || !timeValue) return null;
+  const d = new Date(`${dateValue}T${timeValue}:00`);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
 function ymdUTC(d: Date) {
   const y = d.getUTCFullYear();
   const m = String(d.getUTCMonth() + 1).padStart(2, "0");
@@ -346,6 +363,10 @@ export function PlannerClient({
   const [listinoQuote, setListinoQuote] = useState<ListinoQuote | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [selectedOperatorId, setSelectedOperatorId] = useState<string>("");
+  const [editDate, setEditDate] = useState("");
+  const [editTime, setEditTime] = useState("");
+  const [pendingMoveAppointmentId, setPendingMoveAppointmentId] = useState<string | null>(null);
+  const [copiedAppointmentId, setCopiedAppointmentId] = useState<string | null>(null);
 
   const [newClientForm, setNewClientForm] = useState({ nome: "", cognome: "", telefono: "", email: "", noteCliente: "", consensoPromemoria: true });
   const [newDogForm, setNewDogForm] = useState({ nome: "", razza: "", taglia: "M", noteCane: "", tagRapidiIds: [] as string[] });
@@ -661,6 +682,78 @@ export function PlannerClient({
     }
   }
 
+  async function moveAppointmentToSlot(appointmentId: string, targetStart: Date, targetOperatorId: string | null) {
+    const appointment = appointments.find((a) => a.id === appointmentId);
+    if (!appointment) return;
+    const res = await fetch("/api/appointments", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        appointmentId,
+        startAt: targetStart.toISOString(),
+        operatorId: targetOperatorId,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data.error || "Errore spostamento appuntamento");
+      return;
+    }
+    if (visibleRange) {
+      await loadAppointments(visibleRange.from, visibleRange.to);
+    } else {
+      await loadAppointments();
+    }
+  }
+
+  async function pasteAppointmentToSlot(appointmentId: string, targetStart: Date, targetOperatorId: string | null) {
+    const source = appointments.find((a) => a.id === appointmentId);
+    if (!source) return;
+    const durataMinuti = Math.max(15, Math.round((new Date(source.endAt).getTime() - new Date(source.startAt).getTime()) / 60000));
+    if (isPersonalNoteAppointment(source)) {
+      const res = await fetch("/api/appointments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          modalita: "NOTE",
+          operatorId: targetOperatorId,
+          startAt: targetStart.toISOString(),
+          durataMinuti,
+          noteAppuntamento: source.noteAppuntamento || "Nota personale",
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Errore incolla appuntamento");
+        return;
+      }
+    } else {
+      const res = await fetch("/api/appointments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          operatorId: targetOperatorId,
+          clienteId: source.cliente.id,
+          caneId: source.cane.id,
+          startAt: targetStart.toISOString(),
+          durataMinuti,
+          noteAppuntamento: source.noteAppuntamento || "",
+          trattamentiIds: source.trattamentiSelezionati.map((t) => t.treatment.id),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Errore incolla appuntamento");
+        return;
+      }
+    }
+    if (visibleRange) {
+      await loadAppointments(visibleRange.from, visibleRange.to);
+    } else {
+      await loadAppointments();
+    }
+  }
+
   async function prefillIncassoFromListino(appt: Appointment) {
     if (isPersonalNoteAppointment(appt)) return;
     if ((appt.transactions?.length ?? 0) > 0) return;
@@ -829,6 +922,14 @@ export function PlannerClient({
         <div className="w-full text-sm font-semibold md:ml-auto md:w-auto">{title}</div>
       </div>
       <div className="overflow-hidden">
+        {(pendingMoveAppointmentId || copiedAppointmentId) ? (
+          <div className="mb-2 flex flex-wrap items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-zinc-700">
+            {pendingMoveAppointmentId ? <span>Sposta attiva: tocca lo slot destinazione.</span> : null}
+            {copiedAppointmentId ? <span>Copia attiva: tocca uno slot vuoto per incollare.</span> : null}
+            <Button size="sm" variant="outline" onClick={() => setPendingMoveAppointmentId(null)}>Annulla sposta</Button>
+            <Button size="sm" variant="outline" onClick={() => setCopiedAppointmentId(null)}>Annulla copia</Button>
+          </div>
+        ) : null}
         <div className="min-w-0">
         <div className="overflow-x-auto rounded-md border border-zinc-200 bg-white" style={{ touchAction: "pan-x pan-y" }}>
           <table className="w-full border-collapse text-xs md:text-sm" style={{ minWidth: `${matrixTableMinWidth}px` }}>
@@ -891,6 +992,7 @@ export function PlannerClient({
                             <button
                               type="button"
                               key={`${day.date.toISOString()}-${op.id}-${slotMin}`}
+                              draggable={Boolean(appt)}
                               className={`h-9 w-full rounded px-1.5 text-left transition ${
                                 appt
                                   ? "border border-transparent font-semibold text-white shadow-sm ring-1 ring-black/5"
@@ -899,14 +1001,43 @@ export function PlannerClient({
                                     : "border border-zinc-100 bg-zinc-50 text-zinc-300"
                               }`}
                               style={appt ? { backgroundColor: apptBgColor, color: "#ffffff" } : undefined}
+                              onDragStart={(event) => {
+                                if (!appt) return;
+                                event.dataTransfer.setData("text/plain", appt.id);
+                                event.dataTransfer.effectAllowed = "move";
+                              }}
+                              onDragOver={(event) => {
+                                if (!inShift || op.id === "none") return;
+                                event.preventDefault();
+                                event.dataTransfer.dropEffect = "move";
+                              }}
+                              onDrop={async (event) => {
+                                if (!inShift || op.id === "none") return;
+                                event.preventDefault();
+                                const draggedAppointmentId = event.dataTransfer.getData("text/plain");
+                                if (!draggedAppointmentId) return;
+                                await moveAppointmentToSlot(draggedAppointmentId, slotStart, op.id || null);
+                              }}
                               onClick={() => {
                                 if (!inShift || op.id === "none") return;
+                                if (pendingMoveAppointmentId) {
+                                  void moveAppointmentToSlot(pendingMoveAppointmentId, slotStart, op.id || null);
+                                  setPendingMoveAppointmentId(null);
+                                  return;
+                                }
+                                if (!appt && copiedAppointmentId) {
+                                  void pasteAppointmentToSlot(copiedAppointmentId, slotStart, op.id || null);
+                                  return;
+                                }
                                 if (appt) {
                                   setSelectedAppointment(appt);
                                   setDurata((new Date(appt.endAt).getTime() - new Date(appt.startAt).getTime()) / 60000);
                                   setNote(appt.noteAppuntamento || "");
                                   setSelectedTreatments(appt.trattamentiSelezionati.map((t) => t.treatment.id));
                                   setSelectedOperatorId(appt.operator?.id || op.id);
+                                  const currentStart = new Date(appt.startAt);
+                                  setEditDate(toDateInputValue(currentStart));
+                                  setEditTime(toTimeInputValue(currentStart));
                                   setShowEdit(true);
                                   return;
                                 }
@@ -1168,6 +1299,10 @@ export function PlannerClient({
                 ))}
               </select>
             ) : null}
+            <div className="grid gap-2 md:grid-cols-2">
+              <Input type="date" value={editDate} onChange={(e) => setEditDate(e.target.value)} />
+              <Input type="time" value={editTime} onChange={(e) => setEditTime(e.target.value)} />
+            </div>
             <select className="h-10 w-full rounded-md border border-zinc-300 px-3 text-sm" value={durata} onChange={(e) => setDurata(Number(e.target.value))}>
               {durations.map((d) => (
                 <option key={d} value={d}>
@@ -1177,7 +1312,41 @@ export function PlannerClient({
             </select>
             <Textarea value={note} onChange={(e) => setNote(e.target.value)} />
             <div className="flex flex-wrap gap-2">
-              <Button onClick={() => updateAppointment({ durataMinuti: durata, noteAppuntamento: note, operatorId: selectedOperatorId || null })}>Salva</Button>
+              <Button
+                onClick={() => {
+                  const nextStart = buildLocalDateTime(editDate, editTime);
+                  if (!nextStart) {
+                    alert("Data/ora non valida");
+                    return;
+                  }
+                  void updateAppointment({
+                    startAt: nextStart.toISOString(),
+                    durataMinuti: durata,
+                    noteAppuntamento: note,
+                    operatorId: selectedOperatorId || null,
+                  });
+                }}
+              >
+                Salva
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setPendingMoveAppointmentId(selectedAppointment.id);
+                  setShowEdit(false);
+                }}
+              >
+                Sposta con tap
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setCopiedAppointmentId(selectedAppointment.id);
+                  alert("Appuntamento copiato. Tocca uno slot vuoto per incollare.");
+                }}
+              >
+                Copia appuntamento
+              </Button>
               <Button variant="outline" onClick={sendWhatsappFromEditModal}>
                 Invia WhatsApp
               </Button>
