@@ -48,10 +48,17 @@ export default async function SettingsPage() {
     }),
     prisma.quickTag.findMany({ where: { salonId: session.user.salonId }, orderBy: { ordine: "asc" } }),
     prisma.treatment.findMany({ where: { salonId: session.user.salonId }, orderBy: { ordine: "asc" } }),
-    prisma.user.findMany({
-      where: { salonId: session.user.salonId },
-      select: { id: true, email: true, ruolo: true, salon: { select: { id: true, nomeSede: true } } },
-    }),
+    session.user.role === "OWNER" && ownerGroup?.salonGroupId
+      ? prisma.user.findMany({
+          where: { salon: { salonGroupId: ownerGroup.salonGroupId } },
+          orderBy: { createdAt: "asc" },
+          select: { id: true, email: true, ruolo: true, salon: { select: { id: true, nomeSede: true } } },
+        })
+      : prisma.user.findMany({
+          where: { salonId: session.user.salonId },
+          orderBy: { createdAt: "asc" },
+          select: { id: true, email: true, ruolo: true, salon: { select: { id: true, nomeSede: true } } },
+        }),
     prisma.operator.findMany({ where: { salonId: session.user.salonId }, orderBy: { ordine: "asc" } }),
     session.user.role === "OWNER" && ownerGroup?.salonGroupId
       ? prisma.salon.findMany({

@@ -236,6 +236,108 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json(created);
   }
 
+  if (body.section === "staffUpdate" && auth.session.user.role === "OWNER") {
+    const userId = String(body.userId || "");
+    if (!userId) {
+      return NextResponse.json({ error: "userId obbligatorio" }, { status: 400 });
+    }
+    if (userId === auth.session.user.id) {
+      return NextResponse.json({ error: "Non puoi modificare questo account da qui" }, { status: 400 });
+    }
+
+    const [ownerSalon, targetUser] = await Promise.all([
+      prisma.salon.findUnique({ where: { id: salonId }, select: { salonGroupId: true } }),
+      prisma.user.findUnique({ where: { id: userId }, select: { id: true, ruolo: true, salonId: true } }),
+    ]);
+    if (!targetUser) {
+      return NextResponse.json({ error: "Utente non trovato" }, { status: 404 });
+    }
+    if (targetUser.ruolo === "OWNER") {
+      return NextResponse.json({ error: "Non puoi modificare un owner da questa sezione" }, { status: 400 });
+    }
+
+    const requestedSalonId = typeof body.salonId === "string" && body.salonId.length > 0 ? body.salonId : targetUser.salonId;
+    const targetSalon = await prisma.salon.findUnique({ where: { id: requestedSalonId }, select: { salonGroupId: true } });
+    if (!ownerSalon?.salonGroupId || !targetSalon?.salonGroupId || ownerSalon.salonGroupId !== targetSalon.salonGroupId) {
+      return NextResponse.json({ error: "Puoi gestire staff solo nelle sedi del tuo gruppo" }, { status: 400 });
+    }
+
+    const email = String(body.email || "").toLowerCase().trim();
+    if (!email) return NextResponse.json({ error: "Email obbligatoria" }, { status: 400 });
+    const existsEmail = await prisma.user.findFirst({
+      where: { salonId: requestedSalonId, email, id: { not: userId } },
+      select: { id: true },
+    });
+    if (existsEmail) {
+      return NextResponse.json({ error: "Email gia in uso nella sede selezionata" }, { status: 400 });
+    }
+
+    const nextRole = body.role === "MANAGER" ? "MANAGER" : "STAFF";
+    const rawPassword = String(body.password || "");
+    const data: Prisma.UserUpdateInput = {
+      email,
+      ruolo: nextRole,
+      salon: { connect: { id: requestedSalonId } },
+    };
+    if (rawPassword.trim().length > 0) {
+      if (rawPassword.length < 8) {
+        return NextResponse.json({ error: "Password minima 8 caratteri" }, { status: 400 });
+      }
+      data.passwordHash = await bcrypt.hash(rawPassword, 12);
+    }
+
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data,
+      select: { id: true, email: true, ruolo: true, salon: { select: { id: true, nomeSede: true } } },
+    });
+    return NextResponse.json(updated);
+  }
+
+  if (body.section === "staffDelete" && auth.session.user.role === "OWNER") {
+    const userId = String(body.userId || "");
+    if (!userId) {
+      return NextResponse.json({ error: "userId obbligatorio" }, { status: 400 });
+    }
+    if (userId === auth.session.user.id) {
+      return NextResponse.json({ error: "Non puoi eliminare il tuo account owner" }, { status: 400 });
+    }
+
+    const [ownerSalon, targetUser] = await Promise.all([
+      prisma.salon.findUnique({ where: { id: salonId }, select: { salonGroupId: true } }),
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, ruolo: true, salon: { select: { salonGroupId: true } } },
+      }),
+    ]);
+    if (!targetUser) {
+      return NextResponse.json({ error: "Utente non trovato" }, { status: 404 });
+    }
+    if (targetUser.ruolo === "OWNER") {
+      return NextResponse.json({ error: "Non puoi eliminare un owner" }, { status: 400 });
+    }
+    if (
+      !ownerSalon?.salonGroupId ||
+      !targetUser.salon?.salonGroupId ||
+      ownerSalon.salonGroupId !== targetUser.salon.salonGroupId
+    ) {
+      return NextResponse.json({ error: "Puoi eliminare staff solo nel tuo gruppo" }, { status: 400 });
+    }
+
+    try {
+      await prisma.user.delete({ where: { id: userId } });
+      return NextResponse.json({ ok: true });
+    } catch (error: unknown) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
+        return NextResponse.json(
+          { error: "Impossibile eliminare l'utente: risulta collegato a dati storici. Cambia password/ruolo invece." },
+          { status: 400 },
+        );
+      }
+      throw error;
+    }
+  }
+
   if (body.section === "operators") {
     const incoming = (body.operators as Array<{
       id?: string;

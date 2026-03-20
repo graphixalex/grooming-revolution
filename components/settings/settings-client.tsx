@@ -71,6 +71,12 @@ export function SettingsClient({ initial }: { initial: any }) {
   const [staffPassword, setStaffPassword] = useState("Password123!");
   const [staffRole, setStaffRole] = useState<"MANAGER" | "STAFF">("MANAGER");
   const [staffSalonId, setStaffSalonId] = useState<string>(initial.assignableSalons?.[0]?.id || initial.salon?.id || "");
+  const [staff, setStaff] = useState(
+    (initial.staff || []).map((s: any) => ({
+      ...s,
+      password: "",
+    })),
+  );
   const [workingHours, setWorkingHours] = useState<WorkingHoursState>(normalizeWorkingHours(initial.salon?.workingHoursJson));
   const [operators, setOperators] = useState(
     (initial.operators || []).map((o: any, idx: number) => ({
@@ -94,9 +100,42 @@ export function SettingsClient({ initial }: { initial: any }) {
     const data = await res.json();
     if (!res.ok) {
       alert(data.error || "Errore salvataggio");
-      return;
+      return null;
     }
-    alert("Salvato");
+    alert(data.warning || "Salvato");
+    return data;
+  }
+
+  async function createTeamUser() {
+    const created = await saveSection("staff", {
+      email: staffEmail,
+      password: staffPassword,
+      role: staffRole,
+      salonId: staffSalonId,
+    });
+    if (!created) return;
+    setStaff((prev: any[]) => [...prev, { ...created, password: "" }]);
+    setStaffEmail("");
+    setStaffPassword("Password123!");
+  }
+
+  async function saveTeamUser(row: any) {
+    const updated = await saveSection("staffUpdate", {
+      userId: row.id,
+      email: row.email,
+      role: row.ruolo,
+      salonId: row.salon?.id,
+      password: row.password || "",
+    });
+    if (!updated) return;
+    setStaff((prev: any[]) => prev.map((x) => (x.id === row.id ? { ...updated, password: "" } : x)));
+  }
+
+  async function deleteTeamUser(row: any) {
+    if (!confirm(`Confermi eliminazione utente ${row.email}?`)) return;
+    const result = await saveSection("staffDelete", { userId: row.id });
+    if (!result) return;
+    setStaff((prev: any[]) => prev.filter((x) => x.id !== row.id));
   }
 
   return (
@@ -573,12 +612,81 @@ export function SettingsClient({ initial }: { initial: any }) {
             ))}
           </select>
         </div>
-        <Button onClick={() => saveSection("staff", { email: staffEmail, password: staffPassword, role: staffRole, salonId: staffSalonId })}>Crea utente team</Button>
-        <div className="text-sm text-zinc-600">
-          {initial.staff.map((s: any) => (
-            <p key={s.id}>
-              {s.email} - {s.ruolo} - {s.salon?.nomeSede || "Sede principale"}
-            </p>
+        <Button onClick={createTeamUser} disabled={initial.role !== "OWNER"}>
+          Crea utente team
+        </Button>
+        {initial.role !== "OWNER" ? (
+          <p className="text-xs text-zinc-500">Solo l&apos;owner puo creare/modificare/eliminare membri team.</p>
+        ) : null}
+        <div className="space-y-2">
+          {staff.map((s: any) => (
+            <div key={s.id} className="grid gap-2 rounded-md border border-zinc-200 p-3 md:grid-cols-6">
+              <Input
+                value={s.email}
+                onChange={(e) => setStaff((prev: any[]) => prev.map((x) => (x.id === s.id ? { ...x, email: e.target.value } : x)))}
+                placeholder="Email"
+                disabled={s.ruolo === "OWNER" || initial.role !== "OWNER"}
+              />
+              <select
+                className="h-10 rounded-md border border-zinc-300 px-3 text-sm"
+                value={s.ruolo}
+                onChange={(e) => setStaff((prev: any[]) => prev.map((x) => (x.id === s.id ? { ...x, ruolo: e.target.value } : x)))}
+                disabled={s.ruolo === "OWNER" || initial.role !== "OWNER"}
+              >
+                <option value="MANAGER">Manager</option>
+                <option value="STAFF">Staff</option>
+                {s.ruolo === "OWNER" ? <option value="OWNER">Owner</option> : null}
+              </select>
+              <select
+                className="h-10 rounded-md border border-zinc-300 px-3 text-sm"
+                value={s.salon?.id || ""}
+                onChange={(e) =>
+                  setStaff((prev: any[]) =>
+                    prev.map((x) =>
+                      x.id === s.id
+                        ? {
+                            ...x,
+                            salon: {
+                              id: e.target.value,
+                              nomeSede:
+                                (initial.assignableSalons || []).find((row: any) => row.id === e.target.value)?.nomeSede ||
+                                "Sede principale",
+                            },
+                          }
+                        : x,
+                    ),
+                  )
+                }
+                disabled={s.ruolo === "OWNER" || initial.role !== "OWNER"}
+              >
+                {(initial.assignableSalons || []).map((row: any) => (
+                  <option key={row.id} value={row.id}>
+                    {row.nomeSede || "Sede principale"}
+                  </option>
+                ))}
+              </select>
+              <Input
+                type="password"
+                value={s.password || ""}
+                onChange={(e) => setStaff((prev: any[]) => prev.map((x) => (x.id === s.id ? { ...x, password: e.target.value } : x)))}
+                placeholder="Nuova password (opzionale)"
+                disabled={s.ruolo === "OWNER" || initial.role !== "OWNER"}
+              />
+              <Button
+                variant="outline"
+                onClick={() => saveTeamUser(s)}
+                disabled={s.ruolo === "OWNER" || initial.role !== "OWNER"}
+              >
+                Salva
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => deleteTeamUser(s)}
+                disabled={s.ruolo === "OWNER" || initial.role !== "OWNER"}
+              >
+                Elimina
+              </Button>
+            </div>
           ))}
         </div>
       </Card>
