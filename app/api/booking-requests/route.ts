@@ -213,3 +213,26 @@ export async function PATCH(req: NextRequest) {
 
   return NextResponse.json(approved);
 }
+
+export async function DELETE(req: NextRequest) {
+  const auth = await requireApiSession();
+  if ("error" in auth) return auth.error;
+  const salonId = auth.session.user.salonId;
+
+  const requestId = req.nextUrl.searchParams.get("requestId") || "";
+  if (!requestId) {
+    return NextResponse.json({ error: "requestId mancante" }, { status: 400 });
+  }
+
+  const request = await prisma.bookingRequest.findFirst({
+    where: { id: requestId, salonId },
+    select: { id: true, status: true },
+  });
+  if (!request) return NextResponse.json({ error: "Richiesta non trovata" }, { status: 404 });
+  if (request.status === "PENDING") {
+    return NextResponse.json({ error: "Puoi eliminare solo messaggi gia processati." }, { status: 400 });
+  }
+
+  await prisma.bookingRequest.delete({ where: { id: request.id } });
+  return NextResponse.json({ ok: true });
+}

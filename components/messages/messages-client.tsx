@@ -158,6 +158,19 @@ export function MessagesClient() {
     await load(false);
   }
 
+  async function deleteProcessedRequest(requestId: string) {
+    if (!window.confirm("Eliminare questo messaggio processato? Questa azione non si può annullare.")) return;
+    const res = await fetch(`/api/booking-requests?requestId=${encodeURIComponent(requestId)}`, {
+      method: "DELETE",
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data.error || "Errore eliminazione messaggio");
+      return;
+    }
+    await load(false);
+  }
+
   if (loading) return <p className="text-sm text-zinc-600">Caricamento richieste...</p>;
 
   return (
@@ -205,6 +218,13 @@ export function MessagesClient() {
                   <Button variant="outline" onClick={() => void openEditor(row, "service")}>Modifica servizio</Button>
                   <Button variant="outline" onClick={() => void openEditor(row, "time")}>Modifica orario</Button>
                 </div>
+              </div>
+            ) : null}
+            {row.status !== "PENDING" ? (
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" onClick={() => void deleteProcessedRequest(row.id)}>
+                  Elimina messaggio
+                </Button>
               </div>
             ) : null}
             {isEditing ? (
@@ -279,4 +299,3 @@ export function MessagesClient() {
     </div>
   );
 }
-
