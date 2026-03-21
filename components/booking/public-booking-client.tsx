@@ -17,6 +17,30 @@ const knotOptions = [
   { value: "MOLTI", label: "Ci sono molti nodi" },
 ] as const;
 
+function getIsoWeekString(date = new Date()) {
+  const tmp = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const day = tmp.getUTCDay() || 7;
+  tmp.setUTCDate(tmp.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(tmp.getUTCFullYear(), 0, 1));
+  const week = Math.ceil((((tmp.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+  return `${tmp.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
+}
+
+function isoWeekToStartIso(weekValue: string) {
+  const m = /^(\d{4})-W(\d{2})$/.exec(weekValue);
+  if (!m) return null;
+  const year = Number(m[1]);
+  const week = Number(m[2]);
+  if (!Number.isFinite(year) || !Number.isFinite(week) || week < 1 || week > 53) return null;
+  const jan4 = new Date(Date.UTC(year, 0, 4));
+  const jan4Day = jan4.getUTCDay() || 7;
+  const mondayWeek1 = new Date(jan4);
+  mondayWeek1.setUTCDate(jan4.getUTCDate() - jan4Day + 1);
+  const target = new Date(mondayWeek1);
+  target.setUTCDate(mondayWeek1.getUTCDate() + (week - 1) * 7);
+  return target.toISOString();
+}
+
 export function PublicBookingClient({ slug }: { slug: string }) {
   const [loading, setLoading] = useState(true);
   const [configError, setConfigError] = useState("");
@@ -46,6 +70,7 @@ export function PublicBookingClient({ slug }: { slug: string }) {
   const [sending, setSending] = useState(false);
   const [searchAnchorIso, setSearchAnchorIso] = useState<string>("");
   const [alternativesUsed, setAlternativesUsed] = useState(false);
+  const [selectedWeek, setSelectedWeek] = useState<string>(getIsoWeekString());
 
   useEffect(() => {
     (async () => {
@@ -75,7 +100,8 @@ export function PublicBookingClient({ slug }: { slug: string }) {
       alert("Seleziona servizio e taglia cane");
       return;
     }
-    const anchor = mode === "initial" ? new Date().toISOString() : searchAnchorIso || new Date().toISOString();
+    const baseFromWeek = isoWeekToStartIso(selectedWeek);
+    const anchor = mode === "initial" ? (baseFromWeek || new Date().toISOString()) : searchAnchorIso || baseFromWeek || new Date().toISOString();
     const startAtIso =
       mode === "alternative"
         ? new Date(new Date(anchor).getTime() + 7 * 24 * 60 * 60 * 1000).toISOString()
@@ -213,6 +239,18 @@ export function PublicBookingClient({ slug }: { slug: string }) {
               >
                 {knotOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
+              <p className="sm:col-span-2 text-xs font-medium text-zinc-700">Scegli la settimana in cui vuoi prenotare</p>
+              <Input
+                type="week"
+                className="h-11 sm:col-span-2"
+                value={selectedWeek}
+                onChange={(e) => {
+                  setSelectedWeek(e.target.value);
+                  setAlternativesUsed(false);
+                  setSlots([]);
+                  setSelectedSlotKey("");
+                }}
+              />
             </div>
             <Button className="h-11 w-full sm:w-auto" onClick={() => void loadSlots("initial")} disabled={slotsLoading}>
               {slotsLoading ? "Calcolo opzioni..." : "Trova 6 opzioni disponibili"}
