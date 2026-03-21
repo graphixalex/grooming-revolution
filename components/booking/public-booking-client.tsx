@@ -23,6 +23,9 @@ export function PublicBookingClient({ slug }: { slug: string }) {
   const [displayName, setDisplayName] = useState("");
   const [timeZone, setTimeZone] = useState("Europe/Zurich");
   const [description, setDescription] = useState("");
+  const [logoUrl, setLogoUrl] = useState("");
+  const [address, setAddress] = useState("");
+  const [phone, setPhone] = useState("");
   const [treatments, setTreatments] = useState<Treatment[]>([]);
 
   const [treatmentId, setTreatmentId] = useState("");
@@ -54,6 +57,9 @@ export function PublicBookingClient({ slug }: { slug: string }) {
       setDisplayName(data.displayName || "");
       setTimeZone(data.timeZone || "Europe/Zurich");
       setDescription(data.description || "");
+      setLogoUrl(data.logoUrl || "");
+      setAddress(data.address || "");
+      setPhone(data.phone || "");
       setTreatments(Array.isArray(data.treatments) ? data.treatments : []);
       setTreatmentId(data.treatments?.[0]?.id || "");
       setLoading(false);
@@ -153,8 +159,8 @@ export function PublicBookingClient({ slug }: { slug: string }) {
             </div>
             <div className="flex items-center justify-start md:justify-end">
               <Image
-                src="/img/logo-grooming-revolution.png"
-                alt="Grooming Revolution"
+                src={logoUrl || "/img/logo-grooming-revolution.png"}
+                alt={displayName || "Booking"}
                 width={300}
                 height={100}
                 className="h-16 w-auto rounded-lg bg-white/90 p-2 shadow-sm md:h-20"
@@ -166,8 +172,12 @@ export function PublicBookingClient({ slug }: { slug: string }) {
 
         <div className="grid gap-4 lg:grid-cols-2">
           <Card className="space-y-3">
-            <h2 className="text-lg font-semibold">1) Servizio e cane</h2>
+            <h2 className="text-lg font-semibold">Servizio e cane</h2>
+            <p className="text-xs text-zinc-600">
+              Seleziona il servizio desiderato e inserisci i dettagli del cane per ricevere opzioni orarie compatibili.
+            </p>
             <div className="grid gap-2 sm:grid-cols-2">
+              <p className="sm:col-span-2 text-xs font-medium text-zinc-700">Seleziona servizio desiderato</p>
               <select className="h-11 rounded-md border border-zinc-300 px-3 text-sm" value={treatmentId} onChange={(e) => setTreatmentId(e.target.value)}>
                 {treatments.map((t) => <option key={t.id} value={t.id}>{t.nome}</option>)}
               </select>
@@ -177,6 +187,7 @@ export function PublicBookingClient({ slug }: { slug: string }) {
               <Input className="h-11" placeholder="Nome cane" value={dogNome} onChange={(e) => setDogNome(e.target.value)} />
               <Input className="h-11" placeholder="Razza cane" value={dogRazza} onChange={(e) => setDogRazza(e.target.value)} />
               <Input className="h-11 sm:col-span-2" placeholder="Tipo pelo (es. lungo, riccio)" value={dogTipoPelo} onChange={(e) => setDogTipoPelo(e.target.value)} />
+              <p className="sm:col-span-2 text-xs font-medium text-zinc-700">Presenza nodi sul pelo</p>
               <select
                 className="h-11 sm:col-span-2 rounded-md border border-zinc-300 px-3 text-sm"
                 value={dogNodi}
@@ -188,11 +199,14 @@ export function PublicBookingClient({ slug }: { slug: string }) {
             <Button className="h-11 w-full sm:w-auto" onClick={loadSlots} disabled={slotsLoading}>
               {slotsLoading ? "Calcolo opzioni..." : "Trova 6 opzioni disponibili"}
             </Button>
+            <p className="text-xs text-zinc-600">
+              Dopo aver compilato i dati e premuto il bottone, il sistema mostra solo slot reali disponibili in agenda.
+            </p>
             {estimatedDuration ? <p className="text-sm text-zinc-600">Durata stimata: {estimatedDuration} minuti</p> : null}
           </Card>
 
           <Card className="space-y-3">
-            <h2 className="text-lg font-semibold">2) Scegli una delle opzioni</h2>
+            <h2 className="text-lg font-semibold">Scegli una delle opzioni</h2>
             {slots.length ? (
               <div className="space-y-2">
                 {slots.map((s) => {
@@ -210,7 +224,7 @@ export function PublicBookingClient({ slug }: { slug: string }) {
                 })}
               </div>
             ) : (
-              <p className="text-sm text-zinc-600">Compila il blocco 1 e premi “Trova 6 opzioni disponibili”.</p>
+              <p className="text-sm text-zinc-600">Le opzioni orarie appariranno qui.</p>
             )}
           </Card>
         </div>
@@ -226,7 +240,7 @@ export function PublicBookingClient({ slug }: { slug: string }) {
         </Card>
 
         <Card className="space-y-3">
-          <h2 className="text-lg font-semibold">3) Dati proprietario</h2>
+          <h2 className="text-lg font-semibold">Dati proprietario</h2>
           <div className="grid gap-2 sm:grid-cols-2">
             <Input className="h-11" placeholder="Nome" value={clientNome} onChange={(e) => setClientNome(e.target.value)} />
             <Input className="h-11" placeholder="Cognome" value={clientCognome} onChange={(e) => setClientCognome(e.target.value)} />
@@ -240,6 +254,15 @@ export function PublicBookingClient({ slug }: { slug: string }) {
             {sending ? "Invio..." : "Invia richiesta / prenotazione"}
           </Button>
         </Card>
+
+        <footer className="rounded-2xl border border-zinc-200 bg-white px-4 py-4 text-xs text-zinc-600 shadow-sm md:px-6">
+          <p className="font-semibold text-zinc-800">Booking {displayName}</p>
+          <p>
+            {address ? `Sede: ${address}` : "Sede: dati sede non disponibili"}
+            {phone ? ` - Tel: ${phone}` : ""}
+          </p>
+          <p className="mt-1 text-zinc-500">A cura di Grooming Revolution SaaS.</p>
+        </footer>
       </div>
     </div>
   );
