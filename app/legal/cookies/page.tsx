@@ -1,11 +1,9 @@
-import { Card } from "@/components/ui/card";
+import { LegalShell } from "@/components/legal/legal-shell";
 
 export default function CookiesPage() {
   return (
-    <main className="mx-auto max-w-4xl p-6">
-      <Card className="space-y-4">
-        <h1 className="text-2xl font-semibold">Cookie Policy</h1>
-        <p>Ultimo aggiornamento: 21 marzo 2026.</p>
+    <LegalShell title="Cookie Policy" updatedAt="21 marzo 2026">
+      <div className="space-y-4">
         <p>
           La presente Cookie Policy spiega come Grooming Revolution utilizza cookie e tecnologie simili sul sito pubblico,
           nella web app e nelle aree autenticazione. L&apos;uso della piattaforma implica presa visione della presente informativa.
@@ -70,8 +68,8 @@ export default function CookiesPage() {
         <p>
           Per richieste su cookie e tracciamenti: usa i canali ufficiali indicati nel footer e nella documentazione legale del servizio.
         </p>
-      </Card>
-    </main>
+      </div>
+    </LegalShell>
   );
 }
 

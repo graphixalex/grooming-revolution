@@ -1,11 +1,9 @@
-import { Card } from "@/components/ui/card";
+import { LegalShell } from "@/components/legal/legal-shell";
 
 export default function TermsPage() {
   return (
-    <main className="mx-auto max-w-4xl p-6">
-      <Card className="space-y-4">
-        <h1 className="text-2xl font-semibold">Termini di Servizio</h1>
-        <p>Ultimo aggiornamento: 21 marzo 2026.</p>
+    <LegalShell title="Termini di Servizio" updatedAt="21 marzo 2026">
+      <div className="space-y-4">
         <p>
           I presenti Termini disciplinano l&apos;uso della piattaforma SaaS Grooming Revolution da parte di professionisti della
           toelettatura e relative organizzazioni. L&apos;accesso e l&apos;uso del servizio implicano accettazione integrale dei presenti Termini.
@@ -86,8 +84,7 @@ export default function TermsPage() {
           Il Fornitore può aggiornare i presenti Termini per esigenze tecniche, legali o organizzative. Le modifiche rilevanti vengono pubblicate con data
           di aggiornamento; l&apos;uso continuato del servizio dopo la pubblicazione costituisce accettazione dei nuovi termini.
         </p>
-      </Card>
-    </main>
+      </div>
+    </LegalShell>
   );
 }
-

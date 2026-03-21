@@ -1,11 +1,9 @@
-import { Card } from "@/components/ui/card";
+import { LegalShell } from "@/components/legal/legal-shell";
 
 export default function PrivacyPage() {
   return (
-    <main className="mx-auto max-w-4xl p-6">
-      <Card className="space-y-4">
-        <h1 className="text-2xl font-semibold">Privacy Policy</h1>
-        <p>Ultimo aggiornamento: 21 marzo 2026.</p>
+    <LegalShell title="Privacy Policy" updatedAt="21 marzo 2026">
+      <div className="space-y-4">
         <p>
           La presente informativa descrive come Grooming Revolution tratta i dati personali in qualità di fornitore software.
           Per i dati caricati dai saloni (clienti finali, animali, appuntamenti), il salone opera normalmente come Titolare del trattamento.
@@ -77,8 +75,7 @@ export default function PrivacyPage() {
           La Privacy Policy può essere aggiornata per esigenze tecniche, legali o organizzative. La versione più recente è pubblicata
           su questa pagina con indicazione della data di aggiornamento.
         </p>
-      </Card>
-    </main>
+      </div>
+    </LegalShell>
   );
 }
-
