@@ -229,6 +229,7 @@ export async function getBookingSlotOptions(params: {
     const dayKey = dayKeys[dayUtcRef.getUTCDay()];
 
     let dayAdded = 0;
+    let firstDayStartMin: number | null = null;
 
     if (operatorsEnabled) {
       for (const op of operators) {
@@ -255,6 +256,11 @@ export async function getBookingSlotOptions(params: {
           const slotEnd = addMinutes(slotStart, durationMin);
           if (!isInsideRowByMinutes(salonRow, m, m + durationMin)) continue;
           if (!isInsideRowByMinutes(row, m, m + durationMin)) continue;
+          if (dayAdded >= 1 && firstDayStartMin !== null) {
+            const minGap = 180;
+            const preferFrom = Math.max(firstDayStartMin + minGap, 13 * 60);
+            if (m < preferFrom) continue;
+          }
 
           const overlapOperator = appointments.some((a) => a.operatorId === op.id && overlaps(slotStart, slotEnd, a.startAt, a.endAt));
           if (overlapOperator) continue;
@@ -269,6 +275,7 @@ export async function getBookingSlotOptions(params: {
             operatorId: op.id,
             operatorName: op.nome,
           });
+          if (firstDayStartMin === null) firstDayStartMin = m;
           dayAdded += 1;
         }
       }
@@ -292,6 +299,11 @@ export async function getBookingSlotOptions(params: {
         if (slotStart <= now) continue;
         const slotEnd = addMinutes(slotStart, durationMin);
         if (!isInsideRowByMinutes(row, m, m + durationMin)) continue;
+        if (dayAdded >= 1 && firstDayStartMin !== null) {
+          const minGap = 180;
+          const preferFrom = Math.max(firstDayStartMin + minGap, 13 * 60);
+          if (m < preferFrom) continue;
+        }
         const overlapSalon = appointments.some((a) => overlaps(slotStart, slotEnd, a.startAt, a.endAt));
         if (overlapSalon) continue;
         results.push({
@@ -300,6 +312,7 @@ export async function getBookingSlotOptions(params: {
           operatorId: null,
           operatorName: null,
         });
+        if (firstDayStartMin === null) firstDayStartMin = m;
         dayAdded += 1;
       }
     }

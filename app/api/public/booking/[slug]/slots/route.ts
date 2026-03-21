@@ -22,6 +22,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   const dogTipoPelo = String(body.dogTipoPelo || "");
   const dogNodiRaw = String(body.dogNodi || "NESSUNO").trim().toUpperCase();
   const dogNodi = ["NESSUNO", "MODERATI", "MOLTI"].includes(dogNodiRaw) ? dogNodiRaw : "NESSUNO";
+  const startAtRaw = body.startAt ? String(body.startAt) : "";
+  const startAt = startAtRaw ? new Date(startAtRaw) : new Date();
+  if (Number.isNaN(startAt.getTime())) {
+    return NextResponse.json({ error: "Data di ricerca non valida" }, { status: 400 });
+  }
   if (!treatmentId || !["XS", "S", "M", "L", "XL", "XXL"].includes(dogSize)) {
     return NextResponse.json({ error: "Dati servizio/cane non validi" }, { status: 400 });
   }
@@ -34,6 +39,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     dogTipoPelo,
     dogNodi,
     maxOptions: 6,
+    startAt,
   });
 
   return NextResponse.json({

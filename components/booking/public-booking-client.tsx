@@ -44,6 +44,8 @@ export function PublicBookingClient({ slug }: { slug: string }) {
   const [estimatedDuration, setEstimatedDuration] = useState<number | null>(null);
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [sending, setSending] = useState(false);
+  const [searchAnchorIso, setSearchAnchorIso] = useState<string>("");
+  const [alternativesUsed, setAlternativesUsed] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -68,9 +70,17 @@ export function PublicBookingClient({ slug }: { slug: string }) {
 
   const selectedSlot = useMemo(() => slots.find((s) => `${s.startAt}|${s.operatorId || ""}` === selectedSlotKey) || null, [slots, selectedSlotKey]);
 
-  async function loadSlots() {
+  async function loadSlots(mode: "initial" | "alternative" = "initial") {
     if (!treatmentId || !dogTaglia) {
       alert("Seleziona servizio e taglia cane");
+      return;
+    }
+    const anchor = mode === "initial" ? new Date().toISOString() : searchAnchorIso || new Date().toISOString();
+    const startAtIso =
+      mode === "alternative"
+        ? new Date(new Date(anchor).getTime() + 7 * 24 * 60 * 60 * 1000).toISOString()
+        : anchor;
+    if (mode === "alternative" && alternativesUsed) {
       return;
     }
     setSlotsLoading(true);
@@ -83,6 +93,7 @@ export function PublicBookingClient({ slug }: { slug: string }) {
         dogRazza,
         dogTipoPelo,
         dogNodi,
+        startAt: startAtIso,
       }),
     });
     const data = await res.json();
@@ -94,6 +105,12 @@ export function PublicBookingClient({ slug }: { slug: string }) {
     setEstimatedDuration(data.estimatedDurationMin || null);
     setSlots(data.slots || []);
     setSelectedSlotKey("");
+    if (mode === "initial") {
+      setSearchAnchorIso(anchor);
+      setAlternativesUsed(false);
+    } else {
+      setAlternativesUsed(true);
+    }
   }
 
   async function sendRequest() {
@@ -197,7 +214,7 @@ export function PublicBookingClient({ slug }: { slug: string }) {
                 {knotOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
             </div>
-            <Button className="h-11 w-full sm:w-auto" onClick={loadSlots} disabled={slotsLoading}>
+            <Button className="h-11 w-full sm:w-auto" onClick={() => void loadSlots("initial")} disabled={slotsLoading}>
               {slotsLoading ? "Calcolo opzioni..." : "Trova 6 opzioni disponibili"}
             </Button>
             <p className="text-xs text-zinc-600">
@@ -227,6 +244,22 @@ export function PublicBookingClient({ slug }: { slug: string }) {
             ) : (
               <p className="text-sm text-zinc-600">Le opzioni orarie appariranno qui.</p>
             )}
+            {slots.length > 0 && !alternativesUsed ? (
+              <Button
+                variant="outline"
+                className="h-10 w-full sm:w-auto"
+                onClick={() => void loadSlots("alternative")}
+                disabled={slotsLoading}
+              >
+                {slotsLoading ? "Generazione..." : "Genera altre 6 alternative"}
+              </Button>
+            ) : null}
+            {alternativesUsed ? (
+              <p className="text-xs text-zinc-600">
+                Hai gi&agrave; generato una seconda proposta. Se non trovi un orario adatto, chiama in salone
+                {phone ? ` o invia un WhatsApp al team (${phone})` : " o invia un WhatsApp al team"} per prenotare un appuntamento idoneo.
+              </p>
+            ) : null}
           </Card>
         </div>
 

@@ -113,6 +113,7 @@ export function SettingsClient({ initial }: { initial: any }) {
   const [campaigns, setCampaigns] = useState<CampaignRow[]>([]);
   const [campaignPreviewCount, setCampaignPreviewCount] = useState<number | null>(null);
   const [campaignPreviewLoading, setCampaignPreviewLoading] = useState(false);
+  const [bookingLinkCopied, setBookingLinkCopied] = useState(false);
 
   const loadCampaigns = async () => {
     const res = await fetch("/api/whatsapp/campaigns");
@@ -247,6 +248,18 @@ export function SettingsClient({ initial }: { initial: any }) {
     }
   }
 
+  async function copyBookingLink() {
+    if (!salon.bookingSlug || typeof window === "undefined") return;
+    const fullLink = `${window.location.origin}/book/${salon.bookingSlug}`;
+    try {
+      await navigator.clipboard.writeText(fullLink);
+      setBookingLinkCopied(true);
+      window.setTimeout(() => setBookingLinkCopied(false), 1800);
+    } catch {
+      alert("Impossibile copiare il link. Copialo manualmente.");
+    }
+  }
+
   return (
     <div className="space-y-4">
       <Card className="space-y-2">
@@ -283,19 +296,49 @@ export function SettingsClient({ initial }: { initial: any }) {
           onChange={(e) => setSalon({ ...salon, bookingDescription: e.target.value })}
           placeholder="Descrizione breve pagina booking"
         />
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={Boolean(salon.bookingEnabled)}
-            onChange={(e) => setSalon({ ...salon, bookingEnabled: e.target.checked })}
-          />
-          Abilita booking online (solo se abbonamento attivo)
-        </label>
-        {salon.bookingEnabled && salon.bookingSlug ? (
+        <div className="space-y-3 rounded-xl border border-zinc-200 bg-zinc-50 p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="text-sm font-semibold text-zinc-900">Booking online pubblico</p>
+              <p className="text-xs text-zinc-600">
+                Attiva la pagina per permettere ai clienti di inviare richieste direttamente in agenda, senza overbooking.
+              </p>
+            </div>
+            <label className="inline-flex items-center gap-2 rounded-full border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800">
+              <input
+                type="checkbox"
+                checked={Boolean(salon.bookingEnabled)}
+                onChange={(e) => setSalon({ ...salon, bookingEnabled: e.target.checked })}
+              />
+              {salon.bookingEnabled ? "Online" : "Offline"}
+            </label>
+          </div>
           <p className="text-xs text-zinc-600">
-            Link booking: <a className="underline" href={`/book/${salon.bookingSlug}`} target="_blank" rel="noreferrer">/book/{salon.bookingSlug}</a>
+            Se disattivi il booking, il link pubblico va offline. Se lo riattivi, torna disponibile con la stessa configurazione.
           </p>
-        ) : null}
+          {salon.bookingSlug ? (
+            <div className="rounded-lg border border-zinc-200 bg-white p-2">
+              <p className="text-xs text-zinc-500">Link pubblico booking</p>
+              <a className="break-all text-sm font-medium text-zinc-800 underline" href={`/book/${salon.bookingSlug}`} target="_blank" rel="noreferrer">
+                {`/book/${salon.bookingSlug}`}
+              </a>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <Button type="button" variant="outline" onClick={copyBookingLink}>
+                  {bookingLinkCopied ? "Link copiato" : "Copia link"}
+                </Button>
+                <Button type="button" variant="outline" asChild>
+                  <a href={`/book/${salon.bookingSlug}`} target="_blank" rel="noreferrer">
+                    Apri pagina booking
+                  </a>
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-amber-700">
+              Imposta uno slug booking per generare il link pubblico (esempio: cecilia-luxury).
+            </p>
+          )}
+        </div>
         <Button onClick={() => saveSection("salon", salon)}>Salva dati attivita</Button>
       </Card>
 
