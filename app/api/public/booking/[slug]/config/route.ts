@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET(_: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const salon = await prisma.salon.findFirst({
@@ -27,17 +30,27 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ slug: 
   });
 
   if (!salon) {
-    return NextResponse.json({ error: "Booking non disponibile" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Booking non disponibile" },
+      { status: 404, headers: { "Cache-Control": "no-store, no-cache, must-revalidate" } },
+    );
   }
 
-  return NextResponse.json({
-    salonId: salon.id,
-    displayName: salon.bookingDisplayName || salon.nomeAttivita,
-    timeZone: salon.timezone || "Europe/Zurich",
-    description: salon.bookingDescription || "",
-    logoUrl: salon.bookingLogoUrl || "",
-    address: salon.indirizzo || "",
-    phone: salon.telefono || "",
-    treatments: salon.treatments,
-  });
+  return NextResponse.json(
+    {
+      salonId: salon.id,
+      displayName: salon.bookingDisplayName || salon.nomeAttivita,
+      timeZone: salon.timezone || "Europe/Zurich",
+      description: salon.bookingDescription || "",
+      logoUrl: salon.bookingLogoUrl || "",
+      address: salon.indirizzo || "",
+      phone: salon.telefono || "",
+      treatments: salon.treatments,
+    },
+    {
+      headers: {
+        "Cache-Control": "no-store, no-cache, must-revalidate",
+      },
+    },
+  );
 }
