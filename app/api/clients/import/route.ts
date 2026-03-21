@@ -179,7 +179,7 @@ export async function POST(req: NextRequest) {
 
   const salon = await prisma.salon.findUnique({ where: { id: salonId }, select: { subscriptionPlan: true } });
   const existingCount = await prisma.client.count({ where: { salonId, deletedAt: null } });
-  const limit = salon?.subscriptionPlan === "FREE" ? 100 : Number.MAX_SAFE_INTEGER;
+  const limit = salon?.subscriptionPlan === "FREE" ? 50 : Number.MAX_SAFE_INTEGER;
   let remaining = Math.max(0, limit - existingCount);
 
   let created = 0;

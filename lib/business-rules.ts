@@ -13,7 +13,7 @@ export async function canCreateClient(salonId: string) {
   if (!salon || salon.subscriptionPlan !== "FREE") return true;
 
   const count = await prisma.client.count({ where: { salonId, deletedAt: null } });
-  return count < 100;
+  return count < 50;
 }
 
 export async function ensureDogLimit(salonId: string, clienteId: string) {

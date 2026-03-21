@@ -12,7 +12,6 @@ import {
   Dog,
   Euro,
   Layers3,
-  Mail,
   MessageCircle,
   Sparkles,
   Star,
@@ -81,7 +80,7 @@ const testimonials = [
 const faqs = [
   {
     q: "Quanto costa davvero?",
-    a: "Gratis fino a 100 clienti. Dopo 100 clienti: piano FULL a 20 EUR/mese + IVA, costo fisso.",
+    a: "Gratis fino a 50 clienti. Dopo 50 clienti: piano FULL a 20 EUR/mese + IVA, costo fisso.",
   },
   {
     q: "E adatto a mobile/tablet?",
@@ -106,14 +105,14 @@ export default async function HomePage() {
   if (session?.user) redirect("/dashboard");
 
   return (
-    <main className="relative min-h-screen overflow-hidden px-4 py-6 md:px-8 md:py-10 xl:px-12">
+    <main className="relative min-h-screen overflow-hidden px-3 py-4 sm:px-4 sm:py-6 md:px-8 md:py-10 xl:px-12 2xl:px-16">
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute -left-24 top-10 h-72 w-72 rounded-full bg-rose-200/45 blur-3xl" />
         <div className="absolute right-0 top-24 h-80 w-80 rounded-full bg-amber-200/35 blur-3xl" />
         <div className="absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-zinc-300/25 blur-3xl" />
       </div>
 
-      <div className="relative mx-auto max-w-[1420px] space-y-6">
+      <div className="relative mx-auto w-full max-w-[1880px] space-y-6">
         <section className="rounded-3xl border border-zinc-200 bg-white/92 p-4 shadow-sm md:p-7">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="h-16 w-full max-w-[360px] overflow-hidden rounded-lg border border-rose-300 bg-gradient-to-r from-rose-100 via-rose-100 to-pink-200 p-1">
@@ -176,8 +175,8 @@ export default async function HomePage() {
             <div className="grid gap-3">
               <article className="rounded-2xl border border-zinc-200 bg-gradient-to-r from-zinc-900 to-zinc-800 p-5 text-white shadow-sm">
                 <p className="text-xs uppercase tracking-wide text-zinc-300">Modello prezzo semplice</p>
-                <p className="mt-1 text-3xl font-black">Gratis fino a 100 clienti</p>
-                <p className="mt-1 text-sm text-zinc-200">Oltre 100: FULL a 20 EUR/mese + IVA, costo fisso.</p>
+                <p className="mt-1 text-3xl font-black">Gratis fino a 50 clienti</p>
+                <p className="mt-1 text-sm text-zinc-200">Oltre 50: FULL a 20 EUR/mese + IVA, costo fisso.</p>
               </article>
               <article className="rounded-2xl border border-red-200 bg-gradient-to-r from-red-50 via-white to-rose-50 p-5 shadow-sm">
                 <p className="text-xs font-bold uppercase tracking-widest text-red-700">No-show in evidenza</p>
@@ -215,11 +214,12 @@ export default async function HomePage() {
                 Comunicazioni clienti
               </p>
               <h2 className="mt-3 text-3xl font-black leading-tight text-zinc-900 md:text-4xl">
-                Messaggi WhatsApp ed Email pronti, inviati in un click
+                Comunicazioni WhatsApp rapide, professionali, sempre tracciabili
               </h2>
               <p className="mt-3 text-sm leading-relaxed text-zinc-700 md:text-base">
                 Durante la gestione appuntamenti puoi aprire subito WhatsApp con testo preimpostato personalizzato.
-                Hai template configurabili per WhatsApp ed Email in impostazioni, cosi il team comunica in modo
+                Hai template configurabili WhatsApp in impostazioni, con invio manuale o tramite WhatsApp Business API,
+                cosi il team comunica in modo
                 professionale e coerente senza perdere tempo.
               </p>
               <div className="mt-4 grid gap-2 sm:grid-cols-2">
@@ -228,8 +228,8 @@ export default async function HomePage() {
                   <p className="text-sm font-bold text-zinc-900">Messaggio precompilato in 1 click</p>
                 </div>
                 <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">
-                  <p className="text-xs text-zinc-500">Email</p>
-                  <p className="text-sm font-bold text-zinc-900">Template personalizzabile per il salone</p>
+                  <p className="text-xs text-zinc-500">WhatsApp Business API</p>
+                  <p className="text-sm font-bold text-zinc-900">Invio automatico quando vuoi scalare</p>
                 </div>
               </div>
             </div>
@@ -241,10 +241,6 @@ export default async function HomePage() {
                   Ciao Cecilia, ti confermiamo l appuntamento di Luna il 22/03 alle 14:30 presso Paradiso.
                 </div>
                 <div className="mt-2 flex items-center justify-end gap-2">
-                  <span className="inline-flex items-center gap-1 rounded-md border border-zinc-200 bg-white px-2 py-1 text-xs text-zinc-600">
-                    <Mail className="h-3.5 w-3.5" />
-                    Email template
-                  </span>
                   <span className="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-2 py-1 text-xs font-semibold text-white">
                     <MessageCircle className="h-3.5 w-3.5" />
                     WhatsApp
@@ -265,6 +261,36 @@ export default async function HomePage() {
                   <p className="text-sm font-black text-zinc-900">TRACK</p>
                 </div>
               </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="rounded-3xl border border-emerald-200 bg-gradient-to-r from-emerald-50 via-white to-teal-50 p-5 shadow-sm md:p-8">
+          <div className="grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
+            <div>
+              <p className="inline-flex items-center gap-2 rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold tracking-wide text-emerald-800">
+                <CalendarDays className="h-3.5 w-3.5" />
+                Booking online sicuro
+              </p>
+              <h2 className="mt-3 text-3xl font-black leading-tight text-zinc-900 md:text-4xl">
+                Prenotazioni clienti smart, senza overbooking e con controllo tempi reali
+              </h2>
+              <p className="mt-2 text-sm text-zinc-700 md:text-base">
+                Il cliente vede solo gli slot realmente disponibili. Il motore considera agenda, operatori, orari,
+                assenze e durata servizi basata su taglia/pelo/trattamento.
+              </p>
+              <ul className="mt-4 space-y-2 text-sm text-zinc-700">
+                <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-700" />Niente sovrapposizioni in agenda</li>
+                <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-700" />6 opzioni settimanali realmente prenotabili</li>
+                <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-700" />Nuovi clienti in richiesta con verifica team</li>
+              </ul>
+            </div>
+            <div className="rounded-2xl border border-zinc-200 bg-white p-4">
+              <p className="text-xs text-zinc-500">Flusso operativo</p>
+              <p className="mt-1 text-lg font-black text-zinc-900">Cliente, slot disponibile, team, agenda confermata</p>
+              <p className="mt-2 text-sm text-zinc-700">
+                Per i saloni: massima sicurezza operativa. Per i clienti: esperienza veloce, chiara e mobile-first.
+              </p>
             </div>
           </div>
         </section>
@@ -356,7 +382,9 @@ export default async function HomePage() {
             </div>
             <div className="flex flex-wrap gap-3">
               <a
-                href="mailto:ceciliagrooming@gmail.com?subject=Importazione%20clienti%20nel%20gestionale&body=Ciao%2C%20ho%20gia%20una%20lista%20clienti%20e%20vorrei%20supporto%20per%20l%20importazione."
+                href="https://wa.me/41784104391?text=Ciao%2C%20ho%20gia%20una%20lista%20clienti%20e%20vorrei%20supporto%20per%20l%20importazione."
+                target="_blank"
+                rel="noreferrer"
                 className="rounded-xl bg-sky-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-500"
               >
                 Contattaci per importare i clienti
@@ -377,7 +405,7 @@ export default async function HomePage() {
               <p className="text-xs uppercase tracking-widest text-zinc-400">Piano unico e trasparente</p>
               <h2 className="mt-1 text-3xl font-black leading-tight">Cresci senza sorprese sui costi</h2>
               <p className="mt-2 max-w-2xl text-sm text-zinc-200 md:text-base">
-                Fino a 100 clienti: gratis. Oltre: 20 EUR/mese + IVA. Prezzo basso, fisso, chiaro.
+                Fino a 50 clienti: gratis. Oltre: 20 EUR/mese + IVA. Prezzo basso, fisso, chiaro.
               </p>
               <ul className="mt-4 space-y-2 text-sm text-zinc-200">
                 <li className="flex items-center gap-2">
@@ -416,10 +444,10 @@ export default async function HomePage() {
             <div>
               <p className="text-xs font-bold uppercase tracking-wider text-zinc-600">Offerta chiara per decidere ora</p>
               <h2 className="mt-1 text-3xl font-black text-zinc-900 md:text-4xl">
-                Parti gratis oggi. Paghi solo quando superi 100 clienti.
+                Parti gratis oggi. Paghi solo quando superi 50 clienti.
               </h2>
               <p className="mt-2 text-sm text-zinc-700 md:text-base">
-                Niente rischio iniziale: testi il sistema, organizzi il salone e cresci. Quando superi 100 clienti,
+                Niente rischio iniziale: testi il sistema, organizzi il salone e cresci. Quando superi 50 clienti,
                 il piano FULL resta fisso a 20 EUR/mese + IVA.
               </p>
             </div>
@@ -454,6 +482,31 @@ export default async function HomePage() {
             ))}
           </div>
         </section>
+
+        <footer className="rounded-3xl border border-zinc-200 bg-zinc-950 p-6 text-zinc-200 shadow-sm md:p-8">
+          <div className="grid gap-6 md:grid-cols-3">
+            <div>
+              <p className="text-sm font-semibold">Cecilia Luxury Grooming</p>
+              <p className="mt-1 text-xs text-zinc-400">Sede legale: Paradiso, Ticino, Svizzera</p>
+              <p className="text-xs text-zinc-400">Piattaforma SaaS per toelettature professionali</p>
+            </div>
+            <div>
+              <p className="text-sm font-semibold">Contatti</p>
+              <p className="mt-1 text-xs text-zinc-400">Telefono: +41 00 000 00 00</p>
+              <p className="text-xs text-zinc-400">WhatsApp: +41 00 000 00 00</p>
+              <p className="text-xs text-zinc-400">Assistenza clienti via WhatsApp Business</p>
+            </div>
+            <div>
+              <p className="text-sm font-semibold">Legale</p>
+              <div className="mt-1 flex flex-col gap-1 text-xs">
+                <Link href="/legal/privacy" className="text-zinc-300 hover:text-white">Privacy Policy</Link>
+                <Link href="/legal/terms" className="text-zinc-300 hover:text-white">Termini di Servizio</Link>
+                <Link href="/legal/cookies" className="text-zinc-300 hover:text-white">Cookie Policy</Link>
+              </div>
+            </div>
+          </div>
+          <p className="mt-6 text-xs text-zinc-500">© {new Date().getFullYear()} Cecilia Luxury Grooming. Tutti i diritti riservati.</p>
+        </footer>
       </div>
     </main>
   );

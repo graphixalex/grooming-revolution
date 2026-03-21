@@ -19,7 +19,7 @@ export default async function BillingPage() {
       <h1 className="text-2xl font-semibold">Billing</h1>
       <Card>
         <p>Piano attuale: <strong>{salon?.subscriptionPlan}</strong></p>
-        <p className="text-sm text-zinc-600">Trial: fino a 100 clienti inclusi.</p>
+        <p className="text-sm text-zinc-600">Trial: fino a 50 clienti inclusi.</p>
         <p className="text-sm text-zinc-600">Piano FULL: EUR 20,00 / mese + IVA ({vatPercent}%).</p>
         <p className="text-sm text-zinc-600">Totale indicativo mensile: EUR {monthlyGross.toFixed(2)} IVA inclusa.</p>
         <p className="text-sm text-zinc-600">Pagamento automatico mensile su carta tramite Stripe, finche non disdici.</p>

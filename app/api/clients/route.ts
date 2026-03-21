@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
 
   const canCreate = await canCreateClient(salonId);
   if (!canCreate) {
-    return NextResponse.json({ error: "Piano Free: limite massimo 100 clienti raggiunto" }, { status: 403 });
+    return NextResponse.json({ error: "Piano Free: limite massimo 50 clienti raggiunto" }, { status: 403 });
   }
 
   const json = await req.json();

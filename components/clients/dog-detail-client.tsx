@@ -66,19 +66,6 @@ export function DogDetailClient({ payload, salon }: { payload: any; salon: any }
     window.open(waPayload.manualUrl, "_blank");
   }
 
-  const mailtoLink = useMemo(() => {
-    if (!latestAppointment || !data.dog.cliente.email) return "#";
-    const vars = reminderVariables({
-      nomeCliente: data.dog.cliente.nome,
-      nomePet: data.dog.nome,
-      startAt: new Date(latestAppointment.startAt),
-      nomeAttivita: salon.nomeAttivita,
-      indirizzoAttivita: salon.indirizzo || "",
-    });
-    const body = renderTemplate(salon.emailTemplate || "Promemoria appuntamento", vars);
-    return `mailto:${data.dog.cliente.email}?subject=${encodeURIComponent("Promemoria appuntamento toelettatura")}&body=${encodeURIComponent(body)}`;
-  }, [latestAppointment, data, salon]);
-
   async function savePreferenze() {
     setSavingPreferenze(true);
     const res = await fetch(`/api/dogs/${data.dog.id}`, {
@@ -123,7 +110,6 @@ export function DogDetailClient({ payload, salon }: { payload: any; salon: any }
         <h2 className="mb-2 font-semibold">Promemoria WhatsApp</h2>
         <div className="flex gap-2">
           <Button onClick={sendWhatsapp}>Invia promemoria WhatsApp</Button>
-          {data.dog.cliente.email ? <a href={mailtoLink}><Button variant="outline">Invia promemoria Email</Button></a> : null}
         </div>
       </Card>
 

@@ -35,7 +35,6 @@ export function PublicBookingClient({ slug }: { slug: string }) {
   const [clientNome, setClientNome] = useState("");
   const [clientCognome, setClientCognome] = useState("");
   const [clientTelefono, setClientTelefono] = useState("");
-  const [clientEmail, setClientEmail] = useState("");
 
   const [slots, setSlots] = useState<Slot[]>([]);
   const [selectedSlotKey, setSelectedSlotKey] = useState("");
@@ -110,7 +109,6 @@ export function PublicBookingClient({ slug }: { slug: string }) {
         clientNome,
         clientCognome,
         clientTelefono,
-        clientEmail,
         dogNome,
         dogRazza,
         dogTaglia,
@@ -217,13 +215,22 @@ export function PublicBookingClient({ slug }: { slug: string }) {
           </Card>
         </div>
 
+        <Card className="space-y-2 border-emerald-200 bg-emerald-50/70">
+          <h2 className="text-lg font-semibold text-emerald-900">Prenotazione sicura per il salone</h2>
+          <p className="text-sm text-emerald-800">
+            Gli slot proposti sono controllati in tempo reale: no overbooking, no sovrapposizioni operatore, rispetto orari e durate servizio.
+          </p>
+          <p className="text-xs text-emerald-700">
+            In caso di conflitto improvviso lo slot viene bloccato e ti viene proposta una nuova scelta.
+          </p>
+        </Card>
+
         <Card className="space-y-3">
           <h2 className="text-lg font-semibold">3) Dati proprietario</h2>
           <div className="grid gap-2 sm:grid-cols-2">
             <Input className="h-11" placeholder="Nome" value={clientNome} onChange={(e) => setClientNome(e.target.value)} />
             <Input className="h-11" placeholder="Cognome" value={clientCognome} onChange={(e) => setClientCognome(e.target.value)} />
-            <Input className="h-11" placeholder="Telefono" value={clientTelefono} onChange={(e) => setClientTelefono(e.target.value)} />
-            <Input className="h-11" placeholder="Email (opzionale)" value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} />
+            <Input className="h-11 sm:col-span-2" placeholder="Telefono" value={clientTelefono} onChange={(e) => setClientTelefono(e.target.value)} />
           </div>
           <Textarea placeholder="Note (opzionale)" value={note} onChange={(e) => setNote(e.target.value)} />
           <p className="text-xs text-zinc-500">

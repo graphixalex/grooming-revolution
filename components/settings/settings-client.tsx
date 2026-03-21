@@ -618,7 +618,7 @@ export function SettingsClient({ initial }: { initial: any }) {
       </Card>
 
       <Card className="space-y-2">
-        <h2 className="font-semibold">Modelli messaggi WhatsApp / Email</h2>
+        <h2 className="font-semibold">Modelli messaggi WhatsApp</h2>
         <p className="text-xs text-zinc-500">Placeholder: %nome_cliente% %nome_pet% %data_appuntamento% %orario_appuntamento% %nome_attivita% %indirizzo_attivita%</p>
         <div className="space-y-1">
           <p className="text-xs font-medium text-zinc-700">Modello WhatsApp</p>
@@ -626,15 +626,6 @@ export function SettingsClient({ initial }: { initial: any }) {
             value={salon.whatsappTemplate || ""}
             onChange={(e) => setSalon({ ...salon, whatsappTemplate: e.target.value })}
             placeholder="Ciao %nome_cliente%, promemoria per %nome_pet% il %data_appuntamento% alle %orario_appuntamento% presso %nome_attivita%."
-            className="min-h-[110px]"
-          />
-        </div>
-        <div className="space-y-1">
-          <p className="text-xs font-medium text-zinc-700">Modello Email</p>
-          <Textarea
-            value={salon.emailTemplate || ""}
-            onChange={(e) => setSalon({ ...salon, emailTemplate: e.target.value })}
-            placeholder="Gentile %nome_cliente%, ricordiamo l'appuntamento di %nome_pet% in data %data_appuntamento% alle %orario_appuntamento%."
             className="min-h-[110px]"
           />
         </div>
@@ -691,7 +682,6 @@ export function SettingsClient({ initial }: { initial: any }) {
           onClick={() =>
             saveSection("templates", {
               whatsappTemplate: salon.whatsappTemplate,
-              emailTemplate: salon.emailTemplate,
               whatsappApiEnabled: Boolean(salon.whatsappApiEnabled),
               whatsappApiPhoneNumberId: salon.whatsappApiPhoneNumberId || "",
               whatsappApiVersion: salon.whatsappApiVersion || "v23.0",

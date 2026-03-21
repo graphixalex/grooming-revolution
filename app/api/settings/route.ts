@@ -128,7 +128,6 @@ export async function PATCH(req: NextRequest) {
         where: { id: salonId },
         data: {
           whatsappTemplate: body.whatsappTemplate,
-          emailTemplate: body.emailTemplate,
           whatsappApiEnabled: Boolean(body.whatsappApiEnabled),
           whatsappApiPhoneNumberId:
             typeof body.whatsappApiPhoneNumberId === "string" && body.whatsappApiPhoneNumberId.trim().length > 0
@@ -153,7 +152,6 @@ export async function PATCH(req: NextRequest) {
           where: { id: salonId },
           data: {
             whatsappTemplate: body.whatsappTemplate,
-            emailTemplate: body.emailTemplate,
           },
         });
         return NextResponse.json({
