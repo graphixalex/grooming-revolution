@@ -28,7 +28,7 @@ const pillars = [
   },
   {
     title: "Clienti + cani + storico",
-    text: "Ogni scheda e completa: dati utili, note, trattamenti e contesto reale per lavorare meglio.",
+    text: "Ogni scheda è completa: dati utili, note, trattamenti e contesto reale per lavorare meglio.",
     icon: Dog,
   },
   {
@@ -37,13 +37,13 @@ const pillars = [
     icon: BellRing,
   },
   {
-    title: "Contabilita semplice",
-    text: "Incassi, mancia, metodi pagamento e KPI immediati per decisioni rapide e margini piu controllati.",
+    title: "Contabilità semplice",
+    text: "Incassi, mancia, metodi pagamento e KPI immediati per decisioni rapide e margini più controllati.",
     icon: Euro,
   },
   {
     title: "Multi-sede professionale",
-    text: "Ogni sede separata, dati puliti, confronto aggregato quando serve: niente confusione tra attivita.",
+    text: "Ogni sede separata, dati puliti, confronto aggregato quando serve: niente confusione tra attività.",
     icon: Building2,
   },
   {
@@ -58,21 +58,21 @@ const testimonials = [
     name: "Cecilia, Owner",
     role: "2 sedi attive",
     quote:
-      "Prima lavoravo a memoria. Adesso vedo tutto: agenda, operatori, no-show e incassi. Il salone e piu ordinato e piu redditizio.",
+      "Prima lavoravo a memoria. Adesso vedo tutto: agenda, operatori, no-show e incassi. Il salone è più ordinato e più redditizio.",
     kpi: "-37% no-show in 2 mesi",
   },
   {
     name: "Marco, Manager",
     role: "Team 4 operatori",
     quote:
-      "Con l agenda a colonne per operatore abbiamo eliminato sovrapposizioni e tempi morti. Il team lavora molto meglio.",
+      "Con l'agenda a colonne per operatore abbiamo eliminato sovrapposizioni e tempi morti. Il team lavora molto meglio.",
     kpi: "+5h/sett risparmiate",
   },
   {
     name: "Alessio, Multi-sede",
     role: "Owner",
     quote:
-      "Il passaggio tra sedi e immediato, i dati restano separati ma posso vedere il totale quando devo decidere.",
+      "Il passaggio tra sedi è immediato, i dati restano separati ma posso vedere il totale quando devo decidere.",
     kpi: "Controllo completo giornaliero",
   },
 ];
@@ -83,20 +83,20 @@ const faqs = [
     a: "Gratis fino a 50 clienti. Dopo 50 clienti: piano FULL a 20 EUR/mese + IVA, costo fisso.",
   },
   {
-    q: "E adatto a mobile/tablet?",
-    a: "Si. E stato progettato per uso operativo quotidiano su smartphone, tablet e desktop.",
+    q: "È adatto a mobile/tablet?",
+    a: "Sì. È stato progettato per uso operativo quotidiano su smartphone, tablet e desktop.",
   },
   {
     q: "Gestisce team e turni operatori?",
-    a: "Si. Configuri giorni/orari operatori e li usi direttamente in agenda per assegnazioni rapide.",
+    a: "Sì. Configuri giorni/orari operatori e li usi direttamente in agenda per assegnazioni rapide.",
   },
   {
-    q: "Posso gestire piu sedi?",
-    a: "Si. Ogni sede ha dati separati, con possibilita di visione aggregata per KPI e contabilita.",
+    q: "Posso gestire più sedi?",
+    a: "Sì. Ogni sede ha dati separati, con possibilità di visione aggregata per KPI e contabilità.",
   },
   {
-    q: "Ho gia una lista clienti: devo inserirla a mano?",
-    a: "No. Se hai un file clienti (Excel/CSV), ci contatti e il team dev si occupa direttamente dell importazione guidata.",
+    q: "Ho già una lista clienti: devo inserirla a mano?",
+    a: "No. Se hai un file clienti (Excel/CSV), ci contatti e il team dev si occupa direttamente dell'importazione guidata.",
   },
 ];
 
@@ -154,7 +154,7 @@ export default async function HomePage() {
               </h1>
               <p className="mt-4 max-w-3xl text-base leading-relaxed text-zinc-700 md:text-lg">
                 Grooming Revolution unisce agenda operativa, gestione team, multi-sede, clienti, cani,
-                contabilita e KPI in un unico flusso. Meno caos, meno no-show, piu controllo vero.
+                contabilità e KPI in un unico flusso. Meno caos, meno no-show, più controllo vero.
               </p>
               <div className="mt-6 flex flex-wrap gap-3">
                 <Link
@@ -219,7 +219,7 @@ export default async function HomePage() {
               <p className="mt-3 text-sm leading-relaxed text-zinc-700 md:text-base">
                 Durante la gestione appuntamenti puoi aprire subito WhatsApp con testo preimpostato personalizzato.
                 Hai template configurabili WhatsApp in impostazioni, con invio manuale o tramite WhatsApp Business API,
-                cosi il team comunica in modo
+                così il team comunica in modo
                 professionale e coerente senza perdere tempo.
               </p>
               <div className="mt-4 grid gap-2 sm:grid-cols-2">
@@ -238,7 +238,7 @@ export default async function HomePage() {
               <div className="rounded-xl border border-zinc-200 bg-white p-3 shadow-sm">
                 <p className="text-xs text-zinc-500">Anteprima messaggio</p>
                 <div className="mt-2 rounded-lg bg-emerald-100/80 p-3 text-sm text-zinc-800">
-                  Ciao Cecilia, ti confermiamo l appuntamento di Luna il 22/03 alle 14:30 presso Paradiso.
+                  Ciao Cecilia, ti confermiamo l&apos;appuntamento di Luna il 22/03 alle 14:30 presso Paradiso.
                 </div>
                 <div className="mt-2 flex items-center justify-end gap-2">
                   <span className="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-2 py-1 text-xs font-semibold text-white">
@@ -301,7 +301,7 @@ export default async function HomePage() {
             <p className="mt-1 text-xl font-black text-zinc-900">Agenda + Operatori + Incassi</p>
           </article>
           <article className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <p className="text-xs text-zinc-500">Scalabilita</p>
+            <p className="text-xs text-zinc-500">Scalabilità</p>
             <p className="mt-1 text-xl font-black text-zinc-900">Da 1 sede a multi-sede senza attriti</p>
           </article>
           <article className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
@@ -332,7 +332,7 @@ export default async function HomePage() {
         </section>
 
         <section className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm md:p-8">
-          <h2 className="text-2xl font-black text-zinc-900 md:text-3xl">Perche chi gestisce un salone lo sceglie</h2>
+          <h2 className="text-2xl font-black text-zinc-900 md:text-3xl">Perché chi gestisce un salone lo sceglie</h2>
           <div className="mt-5 grid gap-4 md:grid-cols-3">
             {testimonials.map((t) => (
               <article key={t.name} className="rounded-2xl border border-zinc-200 bg-zinc-50/70 p-4">
@@ -359,11 +359,11 @@ export default async function HomePage() {
             <div>
               <p className="text-xs font-bold uppercase tracking-wider text-sky-800">Onboarding assistito</p>
               <h2 className="mt-1 text-3xl font-black text-zinc-900 md:text-4xl">
-                Hai gia una lista clienti? La importiamo noi.
+                Hai già una lista clienti? La importiamo noi.
               </h2>
               <p className="mt-2 max-w-3xl text-sm text-zinc-700 md:text-base">
                 Se arrivi da Excel, CSV o da un altro gestionale, non perdi ore in inserimenti manuali:
-                il team dev si occupa direttamente dell importazione nel tuo account in modo rapido e guidato.
+                il team dev si occupa direttamente dell&apos;importazione nel tuo account in modo rapido e guidato.
               </p>
               <ul className="mt-4 space-y-2 text-sm text-zinc-700">
                 <li className="flex items-center gap-2">
@@ -414,11 +414,11 @@ export default async function HomePage() {
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 text-amber-300" />
-                  Nessuna complessita inutile
+                  Nessuna complessità inutile
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 text-amber-300" />
-                  Focus totale su operativita e crescita
+                  Focus totale su operatività e crescita
                 </li>
               </ul>
             </div>
