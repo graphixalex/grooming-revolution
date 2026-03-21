@@ -82,6 +82,7 @@ export function PublicBookingClient({ slug }: { slug: string }) {
         dogSize: dogTaglia,
         dogRazza,
         dogTipoPelo,
+        dogNodi,
       }),
     });
     const data = await res.json();

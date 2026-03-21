@@ -134,6 +134,7 @@ export async function estimateBookingDuration(params: {
   dogSize: DogSize;
   dogRazza?: string | null;
   dogTipoPelo?: string | null;
+  dogNodi?: "NESSUNO" | "MODERATI" | "MOLTI" | string | null;
   at?: Date;
 }) {
   const at = params.at ?? new Date();
@@ -165,7 +166,10 @@ export async function estimateBookingDuration(params: {
     .sort((a, b) => (b.score !== a.score ? b.score - a.score : b.from - a.from))[0];
 
   const raw = best?.duration ?? 60;
-  return Math.max(15, Math.ceil(raw / 15) * 15);
+  const nodi = String(params.dogNodi || "NESSUNO").toUpperCase();
+  const nodiExtra = nodi === "MODERATI" ? 30 : nodi === "MOLTI" ? 60 : 0;
+  const finalDuration = raw + nodiExtra;
+  return Math.max(15, Math.ceil(finalDuration / 15) * 15);
 }
 
 export async function getBookingSlotOptions(params: {
@@ -174,6 +178,7 @@ export async function getBookingSlotOptions(params: {
   dogSize: DogSize;
   dogRazza?: string | null;
   dogTipoPelo?: string | null;
+  dogNodi?: "NESSUNO" | "MODERATI" | "MOLTI" | string | null;
   maxOptions?: number;
   startAt?: Date;
 }) {
@@ -223,6 +228,8 @@ export async function getBookingSlotOptions(params: {
     const dayUtcRef = new Date(Date.UTC(ymd.year, ymd.month - 1, ymd.day));
     const dayKey = dayKeys[dayUtcRef.getUTCDay()];
 
+    let dayAdded = 0;
+
     if (operatorsEnabled) {
       for (const op of operators) {
         const salonRow = (salon.workingHoursJson as Record<string, WorkingHoursRow> | null | undefined)?.[dayKey];
@@ -232,7 +239,7 @@ export async function getBookingSlotOptions(params: {
         const startMin = toMinutes(row.start);
         const endMin = toMinutes(row.end);
 
-        for (let m = startMin; m + durationMin <= endMin && results.length < maxOptions; m += 30) {
+        for (let m = startMin; m + durationMin <= endMin && results.length < maxOptions && dayAdded < 2; m += 30) {
           const slotStart = zonedDateTimeToUtc(
             {
               year: ymd.year,
@@ -262,6 +269,7 @@ export async function getBookingSlotOptions(params: {
             operatorId: op.id,
             operatorName: op.nome,
           });
+          dayAdded += 1;
         }
       }
     } else {
@@ -269,7 +277,7 @@ export async function getBookingSlotOptions(params: {
       if (!row?.enabled || !row.start || !row.end) continue;
       const startMin = toMinutes(row.start);
       const endMin = toMinutes(row.end);
-      for (let m = startMin; m + durationMin <= endMin && results.length < maxOptions; m += 30) {
+      for (let m = startMin; m + durationMin <= endMin && results.length < maxOptions && dayAdded < 2; m += 30) {
         const slotStart = zonedDateTimeToUtc(
           {
             year: ymd.year,
@@ -292,6 +300,7 @@ export async function getBookingSlotOptions(params: {
           operatorId: null,
           operatorName: null,
         });
+        dayAdded += 1;
       }
     }
   }

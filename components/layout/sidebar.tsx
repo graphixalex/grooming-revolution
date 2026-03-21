@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
+import { useEffect, useState } from "react";
 import { BarChart3, CalendarDays, CreditCard, Dog, Home, MessageSquare, Settings, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -23,7 +24,30 @@ const links = [
 
 export function Sidebar({ role }: { role: Role }) {
   const pathname = usePathname();
+  const [pendingMessages, setPendingMessages] = useState(0);
   const visibleLinks = links.filter((link) => link.roles.includes(role));
+
+  useEffect(() => {
+    let mounted = true;
+    async function loadPending() {
+      try {
+        const res = await fetch("/api/booking-requests/pending-count", { cache: "no-store" });
+        const data = await res.json();
+        if (!mounted) return;
+        setPendingMessages(Number(data.count || 0));
+      } catch {
+        if (!mounted) return;
+        setPendingMessages(0);
+      }
+    }
+    void loadPending();
+    const id = window.setInterval(() => void loadPending(), 20000);
+    return () => {
+      mounted = false;
+      window.clearInterval(id);
+    };
+  }, []);
+
   return (
     <>
       <div className="border-b border-zinc-200 bg-white p-3 md:hidden">
@@ -52,6 +76,9 @@ export function Sidebar({ role }: { role: Role }) {
               >
                 <Icon className="h-4 w-4" />
                 {link.label}
+                {link.href === "/messages" && pendingMessages > 0 ? (
+                  <span className="ml-1 inline-flex h-2.5 w-2.5 rounded-full bg-red-500" title={`${pendingMessages} nuove richieste`} />
+                ) : null}
               </Link>
             );
           })}
@@ -83,6 +110,11 @@ export function Sidebar({ role }: { role: Role }) {
               >
                 <Icon className="h-4 w-4" />
                 {link.label}
+                {link.href === "/messages" && pendingMessages > 0 ? (
+                  <span className="ml-auto inline-flex min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                    {pendingMessages > 99 ? "99+" : pendingMessages}
+                  </span>
+                ) : null}
               </Link>
             );
           })}

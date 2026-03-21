@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/api-auth";
-import { isBookingSlotStillAvailable } from "@/lib/booking";
+import { estimateBookingDuration, isBookingSlotStillAvailable } from "@/lib/booking";
+import { addMinutes } from "date-fns";
+
+function extractDogNodi(note: string | null | undefined): "NESSUNO" | "MODERATI" | "MOLTI" {
+  const text = String(note || "").toLowerCase();
+  if (text.includes("nodi: molti")) return "MOLTI";
+  if (text.includes("nodi: moderati")) return "MODERATI";
+  return "NESSUNO";
+}
 
 export async function GET() {
   const auth = await requireApiSession();
@@ -18,7 +26,12 @@ export async function GET() {
     orderBy: { createdAt: "desc" },
     take: 200,
   });
-  return NextResponse.json(rows);
+  const treatments = await prisma.treatment.findMany({
+    where: { salonId, attivo: true },
+    orderBy: { ordine: "asc" },
+    select: { id: true, nome: true },
+  });
+  return NextResponse.json({ rows, treatments });
 }
 
 export async function PATCH(req: NextRequest) {
@@ -28,7 +41,7 @@ export async function PATCH(req: NextRequest) {
   const body = await req.json();
   const requestId = String(body.requestId || "");
   const action = String(body.action || "");
-  if (!requestId || !["approve", "reject"].includes(action)) {
+  if (!requestId || !["approve", "reject", "update"].includes(action)) {
     return NextResponse.json({ error: "Payload non valido" }, { status: 400 });
   }
 
@@ -39,6 +52,62 @@ export async function PATCH(req: NextRequest) {
   if (!request) return NextResponse.json({ error: "Richiesta non trovata" }, { status: 404 });
   if (request.status !== "PENDING") {
     return NextResponse.json({ error: "Richiesta gia processata" }, { status: 400 });
+  }
+
+  if (action === "update") {
+    const treatmentIdRaw = String(body.treatmentId || request.treatmentId);
+    const selectedStartAtRaw = String(body.selectedStartAt || request.requestedStartAt.toISOString());
+    const selectedOperatorIdRaw = body.selectedOperatorId === null || body.selectedOperatorId === undefined
+      ? (request.proposedOperatorId || null)
+      : String(body.selectedOperatorId || "");
+    const selectedStartAt = new Date(selectedStartAtRaw);
+    if (!treatmentIdRaw || Number.isNaN(selectedStartAt.getTime())) {
+      return NextResponse.json({ error: "Dati modifica non validi" }, { status: 400 });
+    }
+
+    const treatment = await prisma.treatment.findFirst({
+      where: { id: treatmentIdRaw, salonId, attivo: true },
+      select: { id: true },
+    });
+    if (!treatment) {
+      return NextResponse.json({ error: "Servizio non disponibile" }, { status: 400 });
+    }
+
+    const durationMin = await estimateBookingDuration({
+      salonId,
+      treatmentId: treatmentIdRaw,
+      dogSize: request.dogTaglia,
+      dogRazza: request.dogRazza,
+      dogTipoPelo: request.dogTipoPelo,
+      dogNodi: extractDogNodi(request.note),
+    });
+    const selectedEndAt = addMinutes(selectedStartAt, durationMin);
+
+    const stillAvailable = await isBookingSlotStillAvailable({
+      salonId,
+      startAt: selectedStartAt,
+      endAt: selectedEndAt,
+      operatorId: selectedOperatorIdRaw || null,
+    });
+    if (!stillAvailable) {
+      return NextResponse.json({ error: "Slot non disponibile per la nuova durata. Scegli un altro orario." }, { status: 409 });
+    }
+
+    const updated = await prisma.bookingRequest.update({
+      where: { id: request.id },
+      data: {
+        treatmentId: treatmentIdRaw,
+        proposedOperatorId: selectedOperatorIdRaw || null,
+        requestedStartAt: selectedStartAt,
+        requestedEndAt: selectedEndAt,
+        estimatedDurationMin: durationMin,
+      },
+      include: {
+        treatment: { select: { nome: true } },
+        proposedOperator: { select: { nome: true } },
+      },
+    });
+    return NextResponse.json(updated);
   }
 
   if (action === "reject") {

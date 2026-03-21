@@ -82,6 +82,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     dogSize: dogTaglia,
     dogRazza,
     dogTipoPelo,
+    dogNodi,
     maxOptions: 6,
     startAt: new Date(),
   });

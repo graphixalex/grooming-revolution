@@ -20,6 +20,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   const dogSize = String(body.dogSize || "") as DogSize;
   const dogRazza = String(body.dogRazza || "");
   const dogTipoPelo = String(body.dogTipoPelo || "");
+  const dogNodiRaw = String(body.dogNodi || "NESSUNO").trim().toUpperCase();
+  const dogNodi = ["NESSUNO", "MODERATI", "MOLTI"].includes(dogNodiRaw) ? dogNodiRaw : "NESSUNO";
   if (!treatmentId || !["XS", "S", "M", "L", "XL", "XXL"].includes(dogSize)) {
     return NextResponse.json({ error: "Dati servizio/cane non validi" }, { status: 400 });
   }
@@ -30,6 +32,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     dogSize,
     dogRazza,
     dogTipoPelo,
+    dogNodi,
     maxOptions: 6,
   });
 
@@ -43,4 +46,3 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     })),
   });
 }
-
