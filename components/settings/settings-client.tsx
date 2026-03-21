@@ -326,11 +326,14 @@ export function SettingsClient({ initial }: { initial: any }) {
                 <Button type="button" variant="outline" onClick={copyBookingLink}>
                   {bookingLinkCopied ? "Link copiato" : "Copia link"}
                 </Button>
-                <Button type="button" variant="outline" asChild>
-                  <a href={`/book/${salon.bookingSlug}`} target="_blank" rel="noreferrer">
-                    Apri pagina booking
-                  </a>
-                </Button>
+                <a
+                  href={`/book/${salon.bookingSlug}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex h-10 items-center justify-center rounded-xl border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-800 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-zinc-300 hover:bg-zinc-50"
+                >
+                  Apri pagina booking
+                </a>
               </div>
             </div>
           ) : (
