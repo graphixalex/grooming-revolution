@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/api-auth";
+import { isBookingSlotStillAvailable } from "@/lib/booking";
 
 export async function GET() {
   const auth = await requireApiSession();
@@ -54,6 +55,17 @@ export async function PATCH(req: NextRequest) {
 
   const fallbackCreatedBy = auth.session.user.id;
   const approved = await prisma.$transaction(async (trx) => {
+    const stillAvailable = await isBookingSlotStillAvailable({
+      salonId,
+      startAt: request.requestedStartAt,
+      endAt: request.requestedEndAt,
+      operatorId: request.proposedOperatorId,
+      db: trx,
+    });
+    if (!stillAvailable) {
+      throw new Error("SLOT_UNAVAILABLE");
+    }
+
     let clientId = request.existingClientId;
     if (!clientId) {
       const createdClient = await trx.client.create({
@@ -117,8 +129,18 @@ export async function PATCH(req: NextRequest) {
         reviewedAt: new Date(),
       },
     });
+  }, {
+    isolationLevel: "Serializable",
+  }).catch((error: unknown) => {
+    const message = error instanceof Error ? error.message : String(error);
+    if (message.includes("SLOT_UNAVAILABLE")) return null;
+    if (message.includes("P2034") || message.toLowerCase().includes("serialize")) return null;
+    throw error;
   });
+
+  if (!approved) {
+    return NextResponse.json({ error: "Slot non piu disponibile: aggiorna le opzioni o scegli un altro orario." }, { status: 409 });
+  }
 
   return NextResponse.json(approved);
 }
-

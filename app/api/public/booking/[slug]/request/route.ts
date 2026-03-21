@@ -1,40 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { BookingTrustFlag, DogSize } from "@prisma/client";
-import { addDays } from "date-fns";
+import { addDays, subMinutes } from "date-fns";
 import { prisma } from "@/lib/prisma";
-import { getBookingSlotOptions } from "@/lib/booking";
+import { getBookingSlotOptions, isBookingSlotStillAvailable } from "@/lib/booking";
 
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const RATE_LIMIT_MAX = 20;
-const rateLimitStore = new Map<string, number[]>();
 
 function normalizePhone(value: string) {
   return value.replace(/\s+/g, "").trim();
 }
 
-function rateLimitKey(req: NextRequest, slug: string) {
-  const forwarded = req.headers.get("x-forwarded-for") || "";
-  const ip = forwarded.split(",")[0]?.trim() || "unknown";
-  return `${slug}:${ip}`;
-}
-
-function allowRateLimit(key: string) {
-  const now = Date.now();
-  const current = (rateLimitStore.get(key) || []).filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
-  if (current.length >= RATE_LIMIT_MAX) {
-    rateLimitStore.set(key, current);
-    return false;
-  }
-  current.push(now);
-  rateLimitStore.set(key, current);
-  return true;
-}
-
 export async function POST(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  if (!allowRateLimit(rateLimitKey(req, slug))) {
-    return NextResponse.json({ error: "Troppi tentativi. Riprova tra qualche minuto." }, { status: 429 });
-  }
 
   const salon = await prisma.salon.findFirst({
     where: { bookingSlug: slug, bookingEnabled: true, subscriptionPlan: { not: "FREE" } },
@@ -62,6 +40,30 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   }
   if (!["XS", "S", "M", "L", "XL", "XXL"].includes(dogTaglia) || Number.isNaN(selectedStartAt.getTime())) {
     return NextResponse.json({ error: "Dati cane/data non validi" }, { status: 400 });
+  }
+
+  const recentByPhone = await prisma.bookingRequest.count({
+    where: {
+      salonId: salon.id,
+      clientTelefono,
+      createdAt: { gte: subMinutes(new Date(), RATE_LIMIT_WINDOW_MS / (60 * 1000)) },
+    },
+  });
+  if (recentByPhone >= RATE_LIMIT_MAX) {
+    return NextResponse.json({ error: "Troppi tentativi. Riprova tra qualche minuto." }, { status: 429 });
+  }
+  const recentDuplicate = await prisma.bookingRequest.findFirst({
+    where: {
+      salonId: salon.id,
+      clientTelefono,
+      treatmentId,
+      requestedStartAt: selectedStartAt,
+      createdAt: { gte: subMinutes(new Date(), 5) },
+    },
+    select: { id: true },
+  });
+  if (recentDuplicate) {
+    return NextResponse.json({ error: "Richiesta gia inviata da poco per questo slot." }, { status: 409 });
   }
 
   const treatment = await prisma.treatment.findFirst({
@@ -145,6 +147,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     let dogId = existingDog?.id || null;
 
     if (trustFlag === "TRUSTED_CLIENT") {
+      const stillAvailable = await isBookingSlotStillAvailable({
+        salonId: salon.id,
+        startAt: matchedSlot.startAt,
+        endAt: matchedSlot.endAt,
+        operatorId: matchedSlot.operatorId,
+        db: trx,
+      });
+      if (!stillAvailable) {
+        throw new Error("SLOT_UNAVAILABLE");
+      }
+
       if (!clientId) {
         const c = await trx.client.create({
           data: {
@@ -224,7 +237,22 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     });
 
     return request;
+  }, {
+    isolationLevel: "Serializable",
+  }).catch((error: unknown) => {
+    const message = error instanceof Error ? error.message : String(error);
+    if (message.includes("SLOT_UNAVAILABLE")) {
+      return null;
+    }
+    if (message.includes("P2034") || message.toLowerCase().includes("serialize")) {
+      return null;
+    }
+    throw error;
   });
+
+  if (!created) {
+    return NextResponse.json({ error: "Lo slot scelto non e piu disponibile. Aggiorna le opzioni." }, { status: 409 });
+  }
 
   return NextResponse.json({
     ok: true,
@@ -237,4 +265,3 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
         : "Richiesta inviata. Il team ti contattera per conferma.",
   });
 }
-

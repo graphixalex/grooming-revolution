@@ -17,6 +17,7 @@ type WorkingHoursRow = {
 };
 
 const dayKeys = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
+type DayKey = (typeof dayKeys)[number];
 type DateParts = { year: number; month: number; day: number; hour: number; minute: number; second: number };
 
 function toMinutes(time: string) {
@@ -49,6 +50,19 @@ function isInsideRowByMinutes(row: WorkingHoursRow | undefined, start: number, e
     if (start < be && end > bs) return false;
   }
   return true;
+}
+
+function weekdayToDayKey(weekday: string): DayKey {
+  const map: Record<string, DayKey> = {
+    Sun: "sun",
+    Mon: "mon",
+    Tue: "tue",
+    Wed: "wed",
+    Thu: "thu",
+    Fri: "fri",
+    Sat: "sat",
+  };
+  return map[weekday] ?? "mon";
 }
 
 function getDatePartsInTimeZone(date: Date, timeZone: string): DateParts {
@@ -92,6 +106,15 @@ function addDaysToYmd(parts: Pick<DateParts, "year" | "month" | "day">, dayOffse
     year: d.getUTCFullYear(),
     month: d.getUTCMonth() + 1,
     day: d.getUTCDate(),
+  };
+}
+
+function getDayKeyAndMinutesInTimeZone(date: Date, timeZone: string) {
+  const parts = getDatePartsInTimeZone(date, timeZone);
+  const weekday = new Intl.DateTimeFormat("en-US", { timeZone, weekday: "short" }).format(date);
+  return {
+    dayKey: weekdayToDayKey(weekday),
+    minutes: parts.hour * 60 + parts.minute,
   };
 }
 
@@ -274,4 +297,66 @@ export async function getBookingSlotOptions(params: {
   }
 
   return { durationMin, slots: results.slice(0, maxOptions) };
+}
+
+export async function isBookingSlotStillAvailable(params: {
+  salonId: string;
+  startAt: Date;
+  endAt: Date;
+  operatorId?: string | null;
+  db?: any;
+}) {
+  const db = params.db ?? prisma;
+  const salon = await db.salon.findUnique({
+    where: { id: params.salonId },
+    select: { overlapAllowed: true, workingHoursJson: true, timezone: true },
+  });
+  if (!salon) return false;
+
+  const timeZone = salon.timezone || "Europe/Zurich";
+  const startInfo = getDayKeyAndMinutesInTimeZone(params.startAt, timeZone);
+  const endInfo = getDayKeyAndMinutesInTimeZone(params.endAt, timeZone);
+  if (startInfo.dayKey !== endInfo.dayKey) return false;
+
+  const salonRow = (salon.workingHoursJson as Record<string, WorkingHoursRow> | null | undefined)?.[startInfo.dayKey];
+  if (!isInsideRowByMinutes(salonRow, startInfo.minutes, endInfo.minutes)) return false;
+
+  if (params.operatorId) {
+    const op = await db.operator.findFirst({
+      where: { id: params.operatorId, salonId: params.salonId, attivo: true },
+      select: { workingHoursJson: true },
+    });
+    if (!op) return false;
+    const opRow = (op.workingHoursJson as Record<string, WorkingHoursRow> | null | undefined)?.[startInfo.dayKey];
+    if (!isInsideRowByMinutes(opRow, startInfo.minutes, endInfo.minutes)) return false;
+
+    const overlapOperator = await db.appointment.findFirst({
+      where: {
+        salonId: params.salonId,
+        operatorId: params.operatorId,
+        deletedAt: null,
+        stato: { not: "CANCELLATO" },
+        startAt: { lt: params.endAt },
+        endAt: { gt: params.startAt },
+      },
+      select: { id: true },
+    });
+    if (overlapOperator) return false;
+  }
+
+  if (!salon.overlapAllowed) {
+    const overlapSalon = await db.appointment.findFirst({
+      where: {
+        salonId: params.salonId,
+        deletedAt: null,
+        stato: { not: "CANCELLATO" },
+        startAt: { lt: params.endAt },
+        endAt: { gt: params.startAt },
+      },
+      select: { id: true },
+    });
+    if (overlapSalon) return false;
+  }
+
+  return true;
 }
