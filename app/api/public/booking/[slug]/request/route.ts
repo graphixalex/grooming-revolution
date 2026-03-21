@@ -29,6 +29,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   const dogRazza = String(body.dogRazza || "").trim() || null;
   const dogTaglia = String(body.dogTaglia || "") as DogSize;
   const dogTipoPelo = String(body.dogTipoPelo || "").trim() || null;
+  const dogNodiRaw = String(body.dogNodi || "NESSUNO").trim().toUpperCase();
+  const dogNodi = ["NESSUNO", "MODERATI", "MOLTI"].includes(dogNodiRaw) ? dogNodiRaw : "NESSUNO";
   const note = String(body.note || "").trim() || null;
   const treatmentId = String(body.treatmentId || "").trim();
   const selectedStartAtRaw = String(body.selectedStartAt || "");
@@ -146,6 +148,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     let clientId = existingClient?.id || null;
     let dogId = existingDog?.id || null;
 
+    const composedNote = `${dogNodi === "NESSUNO" ? "Nodi: assenti" : dogNodi === "MODERATI" ? "Nodi: moderati" : "Nodi: molti"}${
+      note ? `\n${note}` : ""
+    }`;
+
     if (trustFlag === "TRUSTED_CLIENT") {
       const stillAvailable = await isBookingSlotStillAvailable({
         salonId: salon.id,
@@ -181,7 +187,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
             nome: dogNome,
             razza: dogRazza,
             taglia: dogTaglia,
-            noteCane: dogTipoPelo ? `Tipo pelo: ${dogTipoPelo}` : null,
+            noteCane: [dogTipoPelo ? `Tipo pelo: ${dogTipoPelo}` : null, `Nodi dichiarati: ${dogNodi.toLowerCase()}`]
+              .filter(Boolean)
+              .join(" | "),
           },
           select: { id: true },
         });
@@ -197,7 +205,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
           startAt: matchedSlot.startAt,
           endAt: matchedSlot.endAt,
           durataMinuti: durationMin,
-          noteAppuntamento: note,
+          noteAppuntamento: composedNote,
           createdById: fallbackCreatedBy.id,
           stato: "PRENOTATO",
           trattamentiSelezionati: {
@@ -225,7 +233,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
         dogRazza,
         dogTaglia,
         dogTipoPelo,
-        note,
+        note: composedNote,
         estimatedDurationMin: durationMin,
         requestedStartAt: matchedSlot.startAt,
         requestedEndAt: matchedSlot.endAt,

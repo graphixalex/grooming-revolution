@@ -79,6 +79,8 @@ export function MessagesClient() {
       {rows.length === 0 ? <Card>Nessuna richiesta booking online.</Card> : null}
       {rows.map((row) => {
         const start = new Date(row.requestedStartAt);
+        const nodiMatch = (row.note || "").match(/Nodi:\s*([^\n\r]+)/i);
+        const nodiLabel = nodiMatch?.[1]?.trim() || "-";
         return (
           <Card key={row.id} className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">
@@ -91,6 +93,7 @@ export function MessagesClient() {
             <p className="text-sm">
               Cane: {row.dogNome} ({row.dogRazza || "-"}, {row.dogTaglia}{row.dogTipoPelo ? `, pelo ${row.dogTipoPelo}` : ""})
             </p>
+            <p className="text-sm">Nodi dichiarati: {nodiLabel}</p>
             <p className="text-sm">
               Servizio: {row.treatment.nome} - {row.estimatedDurationMin} min
             </p>
@@ -111,4 +114,3 @@ export function MessagesClient() {
     </div>
   );
 }
-
