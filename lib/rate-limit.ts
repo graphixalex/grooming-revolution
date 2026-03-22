@@ -1,5 +1,6 @@
 const loginAttempts = new Map<string, { count: number; firstTs: number }>();
 const registerAttempts = new Map<string, { count: number; firstTs: number }>();
+const forgotPasswordAttempts = new Map<string, { count: number; firstTs: number }>();
 const MAX_TRACKED_KEYS = 5000;
 
 function normalizeEntry(key: string, now: number, windowMs: number) {
@@ -115,5 +116,26 @@ export function recordRegisterAttempt(key: string, max = 5, windowMs = 30 * 60 *
 
 export function clearRegisterRateLimit(key: string) {
   registerAttempts.delete(key);
+}
+
+export function isForgotPasswordRateLimited(key: string, max = 5, windowMs = 30 * 60 * 1000) {
+  const now = Date.now();
+  const entry = normalizeEntryForStore(forgotPasswordAttempts, key, now, windowMs);
+  return Boolean(entry && entry.count >= max);
+}
+
+export function recordForgotPasswordAttempt(key: string, max = 5, windowMs = 30 * 60 * 1000) {
+  const now = Date.now();
+  const entry = normalizeEntryForStore(forgotPasswordAttempts, key, now, windowMs);
+  if (!entry) {
+    forgotPasswordAttempts.set(key, { count: 1, firstTs: now });
+    pruneAttemptsForStore(forgotPasswordAttempts, now, windowMs);
+    return 1 <= max;
+  }
+
+  entry.count += 1;
+  forgotPasswordAttempts.set(key, entry);
+  pruneAttemptsForStore(forgotPasswordAttempts, now, windowMs);
+  return entry.count <= max;
 }
 

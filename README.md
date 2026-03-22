@@ -114,6 +114,7 @@ UPSTASH_REDIS_REST_URL=""
 UPSTASH_REDIS_REST_TOKEN=""
 RESEND_API_KEY=""
 EMAIL_FROM="Grooming Revolution <onboarding@resend.dev>"
+SUPPORT_EMAIL="support@grooming-revolution.com"
 ```
 
 ### 3) Prisma migrate + generate
@@ -164,6 +165,8 @@ npm run db:push
 - `POST/GET/PATCH /api/pricing-rules`
 - `POST /api/active-salon`
 - `POST /api/stripe/webhook`
+- `POST /api/auth/forgot-password`
+- `POST /api/auth/reset-password`
 
 ## Billing Note
 
@@ -175,10 +178,12 @@ EN: Trial up to 100 clients, then FULL at 20 EUR/month + VAT (Stripe automatic b
 - Provider consigliato (free tier): Resend
 - Eventi coperti:
   - Registrazione completata
-  - Cambio password account staff
+  - Cambio password account (owner/staff)
+  - Recupero password con token via email
 - Variabili richieste:
   - `RESEND_API_KEY`
   - `EMAIL_FROM`
+  - `SUPPORT_EMAIL` (opzionale, default interno)
 
 ## Legal Note
 

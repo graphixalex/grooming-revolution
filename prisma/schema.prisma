@@ -170,9 +170,24 @@ model User {
   revokedClientConsents ClientConsent[] @relation("ClientConsentRevokedBy")
   whatsappCampaignsCreated WhatsAppCampaign[]
   reviewedBookingRequests BookingRequest[] @relation("BookingRequestReviewedBy")
+  passwordResetTokens PasswordResetToken[]
 
   @@unique([salonId, email])
   @@index([salonId])
+}
+
+model PasswordResetToken {
+  id            String   @id @default(cuid())
+  userId        String
+  tokenHash     String   @unique
+  expiresAt     DateTime
+  usedAt        DateTime?
+  createdAt     DateTime @default(now())
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@index([expiresAt, usedAt])
 }
 
 model Client {

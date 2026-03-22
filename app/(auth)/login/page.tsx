@@ -66,6 +66,11 @@ export default function LoginPage() {
       <form className="space-y-3" onSubmit={onSubmit}>
         <Input name="email" type="email" placeholder="Email" required />
         <Input name="password" type="password" placeholder="Password" required />
+        <div className="text-right">
+          <Link href="/forgot-password" className="text-xs text-zinc-700 underline">
+            Password dimenticata?
+          </Link>
+        </div>
         {error ? <p className="text-sm text-red-600">{error}</p> : null}
         <Button type="submit" className="w-full" disabled={loading}>
           {loading ? "Accesso in corso..." : "Entra"}

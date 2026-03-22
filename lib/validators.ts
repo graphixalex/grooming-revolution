@@ -8,6 +8,21 @@ const strongPasswordSchema = z
   .regex(/[0-9]/, "La password deve contenere un numero")
   .regex(/[^A-Za-z0-9]/, "La password deve contenere un simbolo");
 
+export const forgotPasswordSchema = z.object({
+  email: z.string().email(),
+});
+
+export const resetPasswordSchema = z
+  .object({
+    token: z.string().min(20),
+    newPassword: strongPasswordSchema,
+    confirmNewPassword: z.string().min(1),
+  })
+  .refine((v) => v.newPassword === v.confirmNewPassword, {
+    message: "La conferma password non coincide",
+    path: ["confirmNewPassword"],
+  });
+
 export const registerSchema = z.object({
   nomeAttivita: z.string().min(2),
   nomeSede: z.string().min(2),
