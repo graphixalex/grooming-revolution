@@ -1,5 +1,13 @@
 import { z } from "zod";
 
+const strongPasswordSchema = z
+  .string()
+  .min(10, "La password deve contenere almeno 10 caratteri")
+  .regex(/[a-z]/, "La password deve contenere una lettera minuscola")
+  .regex(/[A-Z]/, "La password deve contenere una lettera maiuscola")
+  .regex(/[0-9]/, "La password deve contenere un numero")
+  .regex(/[^A-Za-z0-9]/, "La password deve contenere un simbolo");
+
 export const registerSchema = z.object({
   nomeAttivita: z.string().min(2),
   nomeSede: z.string().min(2),
@@ -8,7 +16,7 @@ export const registerSchema = z.object({
   valuta: z.string().length(3).optional(),
   timezone: z.string().min(2),
   email: z.string().email(),
-  password: z.string().min(8),
+  password: strongPasswordSchema,
 });
 
 export const clientSchema = z.object({
@@ -72,7 +80,7 @@ export const closeCashSessionSchema = z.object({
 
 export const createStaffSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(8),
+  password: strongPasswordSchema,
   role: z.enum(["MANAGER", "STAFF"]).optional().default("STAFF"),
   salonId: z.string().min(1).optional(),
 });

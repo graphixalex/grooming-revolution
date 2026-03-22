@@ -80,7 +80,18 @@ export default async function SettingsPage() {
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-semibold">Impostazioni</h1>
-      <SettingsClient initial={{ salon, tags, treatments, staff, operators, assignableSalons, role: session.user.role }} />
+      <SettingsClient
+        initial={{
+          salon,
+          tags,
+          treatments,
+          staff,
+          operators,
+          assignableSalons,
+          role: session.user.role,
+          currentUserEmail: session.user.email,
+        }}
+      />
     </div>
   );
 }

@@ -88,7 +88,7 @@ export function RegisterForm() {
       </div>
 
       <Input name="email" type="email" placeholder="Email" required />
-      <Input name="password" type="password" placeholder="Password (min 8)" required />
+      <Input name="password" type="password" placeholder="Password (min 10, Aa1!)" required />
 
       <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-zinc-700">
         Piano trial: fino a 50 clienti. Poi piano FULL a 20 EUR/mese + IVA con addebito automatico.

@@ -112,6 +112,8 @@ STRIPE_WEBHOOK_SECRET="whsec_xxx"
 STRIPE_PRICE_ID_PRO="price_xxx"
 UPSTASH_REDIS_REST_URL=""
 UPSTASH_REDIS_REST_TOKEN=""
+RESEND_API_KEY=""
+EMAIL_FROM="Grooming Revolution <onboarding@resend.dev>"
 ```
 
 ### 3) Prisma migrate + generate
@@ -167,6 +169,16 @@ npm run db:push
 
 IT: Trial fino a 100 clienti, poi FULL a 20 EUR/mese + IVA (addebito automatico Stripe previsto).
 EN: Trial up to 100 clients, then FULL at 20 EUR/month + VAT (Stripe automatic billing flow intended).
+
+## Transactional Emails
+
+- Provider consigliato (free tier): Resend
+- Eventi coperti:
+  - Registrazione completata
+  - Cambio password account staff
+- Variabili richieste:
+  - `RESEND_API_KEY`
+  - `EMAIL_FROM`
 
 ## Legal Note
 

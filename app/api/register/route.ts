@@ -4,6 +4,9 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { registerSchema } from "@/lib/validators";
 import { getCountryMeta } from "@/lib/geo";
+import { getClientIp } from "@/lib/request";
+import { clearRegisterRateLimit, isRegisterRateLimited, recordRegisterAttempt } from "@/lib/rate-limit";
+import { sendRegistrationWelcomeEmail } from "@/lib/email";
 
 const defaultTreatments = [
   "Bagno",
@@ -28,21 +31,26 @@ export async function POST(req: NextRequest) {
 
     const { nomeAttivita, nomeSede, indirizzo, paese, timezone, email, password } = parsed.data;
     const countryMeta = getCountryMeta(paese);
-    const normalizedEmail = email.toLowerCase();
+    const normalizedEmail = email.toLowerCase().trim();
+    const limiterKey = `${getClientIp(req)}:${normalizedEmail}`;
+
+    if (isRegisterRateLimited(limiterKey)) {
+      return NextResponse.json({ error: "Troppi tentativi di registrazione. Riprova piu tardi." }, { status: 429 });
+    }
+    recordRegisterAttempt(limiterKey);
 
     const existing = await prisma.user.findFirst({ where: { email: normalizedEmail } });
     if (existing) {
-      return NextResponse.json({ error: "Email gia registrata" }, { status: 400 });
+      return NextResponse.json({ error: "Registrazione non disponibile con questi dati" }, { status: 400 });
     }
 
     const passwordHash = await bcrypt.hash(password, 12);
-
-    await prisma.salon.create({
+    const createdSalon = await prisma.salon.create({
       data: {
         salonGroup: {
-          create: { nome: `${nomeAttivita} Group` },
+          create: { nome: `${nomeAttivita.trim()} Group` },
         },
-        nomeAttivita,
+        nomeAttivita: nomeAttivita.trim(),
         nomeSede: nomeSede.trim(),
         indirizzo: indirizzo.trim(),
         paese: countryMeta.code,
@@ -74,6 +82,14 @@ export async function POST(req: NextRequest) {
         emailTemplate:
           "Gentile %nome_cliente%,\nricordiamo l'appuntamento di %nome_pet% in data %data_appuntamento% alle %orario_appuntamento%.\n%nome_attivita%",
       },
+      select: { nomeAttivita: true, nomeSede: true },
+    });
+
+    clearRegisterRateLimit(limiterKey);
+    await sendRegistrationWelcomeEmail({
+      to: normalizedEmail,
+      businessName: createdSalon.nomeAttivita,
+      branchName: createdSalon.nomeSede || "Sede principale",
     });
 
     return NextResponse.json({ ok: true });
@@ -82,7 +98,7 @@ export async function POST(req: NextRequest) {
 
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       if (error.code === "P2002") {
-        return NextResponse.json({ error: "Email gia registrata" }, { status: 400 });
+        return NextResponse.json({ error: "Registrazione non disponibile con questi dati" }, { status: 400 });
       }
       if (error.code === "P2021" || error.code === "P2022") {
         return NextResponse.json(

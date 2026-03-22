@@ -7,6 +7,7 @@ import { Prisma } from "@prisma/client";
 import { canManageSettings } from "@/lib/rbac";
 import { createStaffSchema } from "@/lib/validators";
 import { slugifyBooking } from "@/lib/booking";
+import { sendPasswordChangedEmail } from "@/lib/email";
 
 export async function GET() {
   const auth = await requireApiSession();
@@ -87,6 +88,63 @@ export async function PATCH(req: NextRequest) {
   const managerSections = new Set(["salon", "templates", "workingHours", "tags", "treatments", "operators"]);
   if (managerSections.has(String(body.section)) && !canManageSettings(role as any)) {
     return NextResponse.json({ error: "Non autorizzato" }, { status: 403 });
+  }
+
+  if (body.section === "ownerPassword") {
+    if (auth.session.user.role !== "OWNER") {
+      return NextResponse.json({ error: "Non autorizzato" }, { status: 403 });
+    }
+
+    const currentPassword = String(body.currentPassword || "");
+    const newPassword = String(body.newPassword || "");
+    const confirmNewPassword = String(body.confirmNewPassword || "");
+    if (!currentPassword || !newPassword || !confirmNewPassword) {
+      return NextResponse.json({ error: "Campi password obbligatori" }, { status: 400 });
+    }
+    if (newPassword !== confirmNewPassword) {
+      return NextResponse.json({ error: "Conferma password non valida" }, { status: 400 });
+    }
+    if (
+      newPassword.length < 10 ||
+      !/[a-z]/.test(newPassword) ||
+      !/[A-Z]/.test(newPassword) ||
+      !/[0-9]/.test(newPassword) ||
+      !/[^A-Za-z0-9]/.test(newPassword)
+    ) {
+      return NextResponse.json(
+        { error: "Password non valida: min 10 caratteri con maiuscola, minuscola, numero e simbolo" },
+        { status: 400 },
+      );
+    }
+
+    const owner = await prisma.user.findUnique({
+      where: { id: auth.session.user.id },
+      select: { id: true, email: true, ruolo: true, passwordHash: true },
+    });
+    if (!owner || owner.ruolo !== "OWNER") {
+      return NextResponse.json({ error: "Non autorizzato" }, { status: 403 });
+    }
+
+    const matchesCurrent = await bcrypt.compare(currentPassword, owner.passwordHash);
+    if (!matchesCurrent) {
+      return NextResponse.json({ error: "Password attuale non corretta" }, { status: 400 });
+    }
+    const sameAsCurrent = await bcrypt.compare(newPassword, owner.passwordHash);
+    if (sameAsCurrent) {
+      return NextResponse.json({ error: "La nuova password deve essere diversa da quella attuale" }, { status: 400 });
+    }
+
+    await prisma.user.update({
+      where: { id: owner.id },
+      data: { passwordHash: await bcrypt.hash(newPassword, 12) },
+    });
+
+    await sendPasswordChangedEmail({
+      to: owner.email,
+      changedByEmail: auth.session.user.email || null,
+    });
+
+    return NextResponse.json({ ok: true });
   }
 
   if (body.section === "salon") {
@@ -298,8 +356,17 @@ export async function PATCH(req: NextRequest) {
       salon: { connect: { id: requestedSalonId } },
     };
     if (rawPassword.trim().length > 0) {
-      if (rawPassword.length < 8) {
-        return NextResponse.json({ error: "Password minima 8 caratteri" }, { status: 400 });
+      if (
+        rawPassword.length < 10 ||
+        !/[a-z]/.test(rawPassword) ||
+        !/[A-Z]/.test(rawPassword) ||
+        !/[0-9]/.test(rawPassword) ||
+        !/[^A-Za-z0-9]/.test(rawPassword)
+      ) {
+        return NextResponse.json(
+          { error: "Password non valida: min 10 caratteri con maiuscola, minuscola, numero e simbolo" },
+          { status: 400 },
+        );
       }
       data.passwordHash = await bcrypt.hash(rawPassword, 12);
     }
@@ -309,6 +376,12 @@ export async function PATCH(req: NextRequest) {
       data,
       select: { id: true, email: true, ruolo: true, salon: { select: { id: true, nomeSede: true } } },
     });
+    if (rawPassword.trim().length > 0) {
+      await sendPasswordChangedEmail({
+        to: updated.email,
+        changedByEmail: auth.session.user.email || null,
+      });
+    }
     return NextResponse.json(updated);
   }
 

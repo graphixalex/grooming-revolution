@@ -114,6 +114,10 @@ export function SettingsClient({ initial }: { initial: any }) {
   const [campaignPreviewCount, setCampaignPreviewCount] = useState<number | null>(null);
   const [campaignPreviewLoading, setCampaignPreviewLoading] = useState(false);
   const [bookingLinkCopied, setBookingLinkCopied] = useState(false);
+  const [ownerCurrentPassword, setOwnerCurrentPassword] = useState("");
+  const [ownerNewPassword, setOwnerNewPassword] = useState("");
+  const [ownerConfirmPassword, setOwnerConfirmPassword] = useState("");
+  const [ownerPasswordSaving, setOwnerPasswordSaving] = useState(false);
 
   const loadCampaigns = async () => {
     const res = await fetch("/api/whatsapp/campaigns");
@@ -155,6 +159,33 @@ export function SettingsClient({ initial }: { initial: any }) {
     setStaff((prev: any[]) => [...prev, { ...created, password: "" }]);
     setStaffEmail("");
     setStaffPassword("Password123!");
+  }
+
+  async function updateOwnerPassword() {
+    if (initial.role !== "OWNER") return;
+    if (!ownerCurrentPassword || !ownerNewPassword || !ownerConfirmPassword) {
+      alert("Compila tutti i campi password");
+      return;
+    }
+    if (ownerNewPassword !== ownerConfirmPassword) {
+      alert("La conferma password non coincide");
+      return;
+    }
+
+    setOwnerPasswordSaving(true);
+    try {
+      const saved = await saveSection("ownerPassword", {
+        currentPassword: ownerCurrentPassword,
+        newPassword: ownerNewPassword,
+        confirmNewPassword: ownerConfirmPassword,
+      });
+      if (!saved) return;
+      setOwnerCurrentPassword("");
+      setOwnerNewPassword("");
+      setOwnerConfirmPassword("");
+    } finally {
+      setOwnerPasswordSaving(false);
+    }
   }
 
   async function saveTeamUser(row: any) {
@@ -1017,6 +1048,36 @@ export function SettingsClient({ initial }: { initial: any }) {
           ))}
         </div>
       </Card>
+
+      {initial.role === "OWNER" ? (
+        <Card className="space-y-3">
+          <h2 className="font-semibold">Sicurezza account owner</h2>
+          <p className="text-sm text-zinc-600">Account: {initial.currentUserEmail || "-"}</p>
+          <div className="grid gap-2 md:grid-cols-3">
+            <Input
+              type="password"
+              value={ownerCurrentPassword}
+              onChange={(e) => setOwnerCurrentPassword(e.target.value)}
+              placeholder="Password attuale"
+            />
+            <Input
+              type="password"
+              value={ownerNewPassword}
+              onChange={(e) => setOwnerNewPassword(e.target.value)}
+              placeholder="Nuova password (min 10, Aa1!)"
+            />
+            <Input
+              type="password"
+              value={ownerConfirmPassword}
+              onChange={(e) => setOwnerConfirmPassword(e.target.value)}
+              placeholder="Conferma nuova password"
+            />
+          </div>
+          <Button onClick={updateOwnerPassword} disabled={ownerPasswordSaving}>
+            {ownerPasswordSaving ? "Salvataggio..." : "Aggiorna password owner"}
+          </Button>
+        </Card>
+      ) : null}
     </div>
   );
 }
