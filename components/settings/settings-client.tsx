@@ -120,6 +120,8 @@ export function SettingsClient({ initial }: { initial: any }) {
   const [campaignPreviewCount, setCampaignPreviewCount] = useState<number | null>(null);
   const [campaignPreviewLoading, setCampaignPreviewLoading] = useState(false);
   const [bookingLinkCopied, setBookingLinkCopied] = useState(false);
+  const [deleteConfirmWord, setDeleteConfirmWord] = useState("");
+  const [deleteRequestLoading, setDeleteRequestLoading] = useState(false);
 
   const loadCampaigns = async () => {
     const res = await fetch("/api/whatsapp/campaigns");
@@ -304,6 +306,41 @@ export function SettingsClient({ initial }: { initial: any }) {
       window.setTimeout(() => setBookingLinkCopied(false), 1800);
     } catch {
       alert("Impossibile copiare il link. Copialo manualmente.");
+    }
+  }
+
+  async function requestAccountDeletion() {
+    if (initial.role !== "OWNER") return;
+    if (deleteConfirmWord.trim().toUpperCase() !== "ELIMINA") {
+      alert("Per confermare inserisci ELIMINA");
+      return;
+    }
+    if (
+      !confirm(
+        "Confermi invio richiesta eliminazione account? L'operazione finale sara irreversibile dopo conferma del team.",
+      )
+    ) {
+      return;
+    }
+    setDeleteRequestLoading(true);
+    try {
+      const res = await fetch("/api/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          section: "accountDeletionRequest",
+          confirmWord: deleteConfirmWord,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Errore invio richiesta");
+        return;
+      }
+      alert(data.message || "Richiesta inviata");
+      setDeleteConfirmWord("");
+    } finally {
+      setDeleteRequestLoading(false);
     }
   }
 
@@ -1136,6 +1173,30 @@ export function SettingsClient({ initial }: { initial: any }) {
           ))}
         </div>
       </Card>
+
+      {initial.role === "OWNER" ? (
+        <Card className="space-y-3 border-red-200 bg-red-50/40">
+          <h2 className="font-semibold text-red-800">Richiedi eliminazione account</h2>
+          <p className="text-sm text-red-800">
+            Prima di procedere proteggi la tua lista clienti scaricandola dalla sezione dedicata:
+            <strong> Esporta clienti CSV</strong>.
+          </p>
+          <p className="text-sm text-red-700">
+            L&apos;eliminazione account e irreversibile. Il team ti dara conferma a breve prima della chiusura definitiva.
+          </p>
+          <div className="max-w-sm space-y-2">
+            <p className="text-xs font-medium text-red-800">Digita ELIMINA per confermare la richiesta</p>
+            <Input
+              value={deleteConfirmWord}
+              onChange={(e) => setDeleteConfirmWord(e.target.value)}
+              placeholder="ELIMINA"
+            />
+          </div>
+          <Button variant="destructive" onClick={requestAccountDeletion} disabled={deleteRequestLoading}>
+            {deleteRequestLoading ? "Invio richiesta..." : "Richiedi eliminazione account"}
+          </Button>
+        </Card>
+      ) : null}
     </div>
   );
 }

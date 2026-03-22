@@ -86,11 +86,18 @@ export async function POST(req: NextRequest) {
     });
 
     clearRegisterRateLimit(limiterKey);
-    await sendRegistrationWelcomeEmail({
+    const emailResult = await sendRegistrationWelcomeEmail({
       to: normalizedEmail,
       businessName: createdSalon.nomeAttivita,
       branchName: createdSalon.nomeSede || "Sede principale",
     });
+    if (!emailResult.ok) {
+      console.error("registration_welcome_email_failed", {
+        to: normalizedEmail,
+        reason: emailResult.reason,
+        detail: emailResult.detail,
+      });
+    }
 
     return NextResponse.json({ ok: true });
   } catch (error: unknown) {

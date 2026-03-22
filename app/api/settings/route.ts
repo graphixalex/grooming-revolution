@@ -7,7 +7,7 @@ import { Prisma } from "@prisma/client";
 import { canManageSettings } from "@/lib/rbac";
 import { createStaffSchema } from "@/lib/validators";
 import { slugifyBooking } from "@/lib/booking";
-import { sendPasswordChangedEmail } from "@/lib/email";
+import { sendAccountDeletionRequestEmails, sendPasswordChangedEmail } from "@/lib/email";
 
 export async function GET() {
   const auth = await requireApiSession();
@@ -145,6 +145,52 @@ export async function PATCH(req: NextRequest) {
     });
 
     return NextResponse.json({ ok: true });
+  }
+
+  if (body.section === "accountDeletionRequest") {
+    if (auth.session.user.role !== "OWNER") {
+      return NextResponse.json({ error: "Solo owner puo richiedere eliminazione account" }, { status: 403 });
+    }
+
+    const confirmWord = String(body.confirmWord || "").trim().toUpperCase();
+    if (confirmWord !== "ELIMINA") {
+      return NextResponse.json({ error: "Conferma non valida: inserisci ELIMINA" }, { status: 400 });
+    }
+
+    const salon = await prisma.salon.findUnique({
+      where: { id: salonId },
+      select: { id: true, nomeAttivita: true, nomeSede: true },
+    });
+    if (!salon) {
+      return NextResponse.json({ error: "Sede non trovata" }, { status: 404 });
+    }
+
+    const ownerEmail = auth.session.user.email || "";
+    if (!ownerEmail) {
+      return NextResponse.json({ error: "Email owner non disponibile" }, { status: 400 });
+    }
+
+    const mailResult = await sendAccountDeletionRequestEmails({
+      ownerEmail,
+      businessName: salon.nomeAttivita,
+      branchName: salon.nomeSede || "Sede principale",
+      salonId: salon.id,
+    });
+    if (!mailResult.ok) {
+      return NextResponse.json(
+        {
+          error:
+            "Richiesta non inviata. Controlla configurazione email (RESEND_API_KEY, EMAIL_FROM, SUPPORT_EMAIL).",
+        },
+        { status: 500 },
+      );
+    }
+
+    return NextResponse.json({
+      ok: true,
+      message:
+        "Richiesta inviata. Prima di procedere esporta i clienti in CSV: l'eliminazione account e irreversibile.",
+    });
   }
 
   if (body.section === "salon") {

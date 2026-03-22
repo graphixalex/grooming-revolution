@@ -80,7 +80,7 @@ async function sendEmail(input: {
   html: string;
 }) {
   const client = getResendClient();
-  if (!client) return { ok: false as const, reason: "email_not_configured" };
+  if (!client) return { ok: false as const, reason: "email_not_configured", detail: "RESEND_API_KEY non configurata" };
 
   try {
     await client.emails.send({
@@ -91,9 +91,10 @@ async function sendEmail(input: {
       html: input.html,
     });
     return { ok: true as const };
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("email_send_failed", error);
-    return { ok: false as const, reason: "email_send_failed" };
+    const detail = error instanceof Error ? error.message : String(error);
+    return { ok: false as const, reason: "email_send_failed", detail };
   }
 }
 
@@ -275,3 +276,64 @@ export async function sendPasswordChangedEmail(input: {
   return sendEmail({ to: input.to, subject, text, html });
 }
 
+export async function sendAccountDeletionRequestEmails(input: {
+  ownerEmail: string;
+  businessName: string;
+  branchName: string;
+  salonId: string;
+}) {
+  const supportEmail = getSupportEmail();
+  const supportSubject = "Richiesta eliminazione account SaaS";
+  const supportHtml = renderShell({
+    title: "Nuova richiesta eliminazione account",
+    subtitle: "Intervento manuale richiesto",
+    bodyHtml: `
+      <p style="margin:0 0 10px 0;font-size:14px;">Un owner ha richiesto l'eliminazione irreversibile dell'account.</p>
+      <p style="margin:0 0 4px 0;font-size:14px;"><strong>Email owner:</strong> ${escapeHtml(input.ownerEmail)}</p>
+      <p style="margin:0 0 4px 0;font-size:14px;"><strong>Attivita:</strong> ${escapeHtml(input.businessName)}</p>
+      <p style="margin:0 0 4px 0;font-size:14px;"><strong>Sede:</strong> ${escapeHtml(input.branchName || "Sede principale")}</p>
+      <p style="margin:0;font-size:14px;"><strong>Salon ID:</strong> ${escapeHtml(input.salonId)}</p>
+    `,
+  });
+  const supportText =
+    `Richiesta eliminazione account.\n` +
+    `Owner: ${input.ownerEmail}\n` +
+    `Attivita: ${input.businessName}\n` +
+    `Sede: ${input.branchName || "Sede principale"}\n` +
+    `Salon ID: ${input.salonId}\n`;
+  const supportRes = await sendEmail({
+    to: supportEmail,
+    subject: supportSubject,
+    text: supportText,
+    html: supportHtml,
+  });
+
+  const ownerSubject = "Richiesta eliminazione account ricevuta";
+  const ownerHtml = renderShell({
+    title: "Richiesta ricevuta",
+    subtitle: "Il team ti confermera la presa in carico a breve",
+    bodyHtml: `
+      <p style="margin:0 0 10px 0;font-size:14px;">
+        Abbiamo ricevuto la tua richiesta di eliminazione account per ${escapeHtml(input.businessName)}.
+      </p>
+      <p style="margin:0 0 10px 0;font-size:14px;">
+        Prima della chiusura definitiva, esporta la tua lista clienti in CSV da Impostazioni.
+      </p>
+      <p style="margin:0;font-size:14px;">
+        L'eliminazione e irreversibile. Il team supporto ti contattera a breve per conferma.
+      </p>
+    `,
+  });
+  const ownerText =
+    `Richiesta eliminazione account ricevuta.\n` +
+    `Attivita: ${input.businessName}\n` +
+    `Prima di procedere esporta la lista clienti in CSV: l'eliminazione e irreversibile.\n`;
+  const ownerRes = await sendEmail({
+    to: input.ownerEmail,
+    subject: ownerSubject,
+    text: ownerText,
+    html: ownerHtml,
+  });
+
+  return { ok: supportRes.ok && ownerRes.ok, supportRes, ownerRes };
+}
