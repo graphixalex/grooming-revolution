@@ -367,6 +367,13 @@ export function PlannerClient({
   const [editTime, setEditTime] = useState("");
   const [pendingMoveAppointmentId, setPendingMoveAppointmentId] = useState<string | null>(null);
   const [copiedAppointmentId, setCopiedAppointmentId] = useState<string | null>(null);
+  const [resizeDrag, setResizeDrag] = useState<{
+    appointmentId: string;
+    direction: "start" | "end";
+    originY: number;
+    baseStartMs: number;
+    baseEndMs: number;
+  } | null>(null);
 
   const [newClientForm, setNewClientForm] = useState({ nome: "", cognome: "", telefono: "", email: "", noteCliente: "", consensoPromemoria: true });
   const [newDogForm, setNewDogForm] = useState({ nome: "", razza: "", taglia: "M", noteCane: "", tagRapidiIds: [] as string[] });
@@ -801,6 +808,64 @@ export function PlannerClient({
     setIncassoNote("");
   }
 
+  useEffect(() => {
+    if (!resizeDrag) return;
+    const slotPixelHeight = 36;
+    let draftStartMs = resizeDrag.baseStartMs;
+    let draftDuration = Math.max(15, Math.round((resizeDrag.baseEndMs - resizeDrag.baseStartMs) / 60000));
+    let changed = false;
+
+    const onPointerMove = (event: PointerEvent) => {
+      const deltaSlots = Math.round((event.clientY - resizeDrag.originY) / slotPixelHeight);
+      const deltaMinutes = deltaSlots * 30;
+      const baseDuration = Math.max(15, Math.round((resizeDrag.baseEndMs - resizeDrag.baseStartMs) / 60000));
+      if (resizeDrag.direction === "end") {
+        draftStartMs = resizeDrag.baseStartMs;
+        draftDuration = Math.max(15, Math.min(300, baseDuration + deltaMinutes));
+      } else {
+        const minStart = resizeDrag.baseEndMs - 300 * 60000;
+        const maxStart = resizeDrag.baseEndMs - 15 * 60000;
+        draftStartMs = Math.max(minStart, Math.min(maxStart, resizeDrag.baseStartMs + deltaMinutes * 60000));
+        draftDuration = Math.max(15, Math.min(300, Math.round((resizeDrag.baseEndMs - draftStartMs) / 60000)));
+      }
+      changed = draftStartMs !== resizeDrag.baseStartMs || draftDuration !== baseDuration;
+    };
+
+    const onPointerUp = () => {
+      const current = resizeDrag;
+      setResizeDrag(null);
+      if (!changed) return;
+      void (async () => {
+        const res = await fetch("/api/appointments", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            appointmentId: current.appointmentId,
+            startAt: new Date(draftStartMs).toISOString(),
+            durataMinuti: draftDuration,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          alert(data.error || "Errore modifica durata appuntamento");
+          return;
+        }
+        if (visibleRange) {
+          await loadAppointments(visibleRange.from, visibleRange.to);
+        } else {
+          await loadAppointments();
+        }
+      })();
+    };
+
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", onPointerUp, { once: true });
+    return () => {
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", onPointerUp);
+    };
+  }, [loadAppointments, resizeDrag, visibleRange]);
+
   const desktopVisibleDayKeys = useMemo<DayKey[]>(() => {
     const ordered: DayKey[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
     const enabled = ordered.filter((key) => Boolean(workingHoursJson?.[key]?.enabled));
@@ -1007,6 +1072,9 @@ export function PlannerClient({
                             return slotTime >= aStart && slotTime < aEnd;
                           });
                           const apptStartsHere = appt ? new Date(appt.startAt).getTime() === slotStart.getTime() : false;
+                          const slotEndMs = slotStart.getTime() + 30 * 60 * 1000;
+                          const apptContinuesBefore = appt ? new Date(appt.startAt).getTime() < slotStart.getTime() : false;
+                          const apptContinuesAfter = appt ? new Date(appt.endAt).getTime() > slotEndMs : false;
                           const row = day.operators.find((o) => o.id === op.id);
                           const inShift = row ? slotMin >= toMinutes(row.start) && slotMin < toMinutes(row.end) : false;
                           const apptBgColor = appt ? getAppointmentBgColor(appt) : undefined;
@@ -1014,17 +1082,25 @@ export function PlannerClient({
                             <button
                               type="button"
                               key={`${day.date.toISOString()}-${op.id}-${slotMin}`}
-                              draggable={Boolean(appt)}
+                              draggable={Boolean(appt && apptStartsHere)}
                               className={`h-9 w-full rounded px-1.5 text-left transition ${
                                 appt
-                                  ? "border border-transparent font-semibold text-white shadow-sm ring-1 ring-black/5"
+                                  ? `relative border border-transparent px-2 text-white shadow-sm ring-1 ring-black/5 ${
+                                      apptContinuesBefore && apptContinuesAfter
+                                        ? "-mb-px -mt-px rounded-none"
+                                        : apptContinuesBefore
+                                          ? "-mt-px rounded-b-md rounded-t-none"
+                                          : apptContinuesAfter
+                                            ? "-mb-px rounded-b-none rounded-t-md"
+                                            : "rounded-md"
+                                    }`
                                   : inShift
                                     ? "border border-zinc-200 bg-white hover:bg-[#f2f5fb]"
                                     : "border border-zinc-100 bg-zinc-50 text-zinc-300"
                               }`}
                               style={appt ? { backgroundColor: apptBgColor, color: "#ffffff" } : undefined}
                               onDragStart={(event) => {
-                                if (!appt) return;
+                                if (!appt || !apptStartsHere) return;
                                 event.dataTransfer.setData("text/plain", appt.id);
                                 event.dataTransfer.effectAllowed = "move";
                               }}
@@ -1041,6 +1117,7 @@ export function PlannerClient({
                                 await moveAppointmentToSlot(draggedAppointmentId, slotStart, op.id || null);
                               }}
                               onClick={() => {
+                                if (resizeDrag) return;
                                 if ((!inShift && !appt) || op.id === "none") return;
                                 if (pendingMoveAppointmentId) {
                                   void moveAppointmentToSlot(pendingMoveAppointmentId, slotStart, op.id || null);
@@ -1072,9 +1149,48 @@ export function PlannerClient({
                               }}
                             >
                               {appt && apptStartsHere ? (
-                                <span className="block truncate text-[11px] font-bold">
-                                  {isPersonalNoteAppointment(appt) ? `Nota: ${appt.noteAppuntamento || ""}` : `${appt.cane.nome} / ${appt.cliente.nome}`}
-                                </span>
+                                <>
+                                  <span className="block truncate text-[13px] font-bold leading-tight">
+                                    {isPersonalNoteAppointment(appt) ? `Nota: ${appt.noteAppuntamento || ""}` : `${appt.cane.nome} / ${appt.cliente.nome}`}
+                                  </span>
+                                  <span className="block truncate text-[11px] font-medium leading-tight text-white/90">
+                                    {format(new Date(appt.startAt), "HH:mm")} - {format(new Date(appt.endAt), "HH:mm")}
+                                  </span>
+                                  <span
+                                    role="button"
+                                    aria-label="Ridimensiona inizio appuntamento"
+                                    className="absolute inset-x-2 top-0 h-1 cursor-ns-resize rounded-t-md bg-white/60"
+                                    onPointerDown={(event) => {
+                                      event.preventDefault();
+                                      event.stopPropagation();
+                                      setResizeDrag({
+                                        appointmentId: appt.id,
+                                        direction: "start",
+                                        originY: event.clientY,
+                                        baseStartMs: new Date(appt.startAt).getTime(),
+                                        baseEndMs: new Date(appt.endAt).getTime(),
+                                      });
+                                    }}
+                                  />
+                                </>
+                              ) : null}
+                              {appt && ((!apptStartsHere && !apptContinuesAfter) || (apptStartsHere && !apptContinuesAfter)) ? (
+                                <span
+                                  role="button"
+                                  aria-label="Ridimensiona fine appuntamento"
+                                  className="absolute inset-x-2 bottom-0 h-1 cursor-ns-resize rounded-b-md bg-white/60"
+                                  onPointerDown={(event) => {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    setResizeDrag({
+                                      appointmentId: appt.id,
+                                      direction: "end",
+                                      originY: event.clientY,
+                                      baseStartMs: new Date(appt.startAt).getTime(),
+                                      baseEndMs: new Date(appt.endAt).getTime(),
+                                    });
+                                  }}
+                                />
                               ) : null}
                             </button>
                           );
