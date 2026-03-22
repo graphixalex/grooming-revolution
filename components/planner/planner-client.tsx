@@ -391,10 +391,11 @@ export function PlannerClient({
       .replaceAll("%indirizzo_attivita%", whatsappConfig.indirizzoAttivita || "");
 
     if (!confirm("Appuntamento salvato. Vuoi inviare WhatsApp adesso?")) return;
-    void sendWhatsappMessage(args.clientPhone, base);
+    const popup = window.open("", "_blank");
+    void sendWhatsappMessage(args.clientPhone, base, popup);
   }
 
-  async function sendWhatsappMessage(phone: string, text: string) {
+  async function sendWhatsappMessage(phone: string, text: string, popup: Window | null = null) {
     const res = await fetch("/api/whatsapp/send", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -402,10 +403,12 @@ export function PlannerClient({
     });
     const data = await res.json();
     if (!res.ok) {
+      popup?.close();
       alert(data.error || "Errore invio WhatsApp");
       return;
     }
     if (data.mode === "api") {
+      popup?.close();
       alert("Messaggio inviato via WhatsApp API");
       return;
     }
@@ -413,8 +416,15 @@ export function PlannerClient({
       alert(data.warning);
     }
     if (data.url) {
+      if (popup && !popup.closed) {
+        popup.location.href = data.url;
+        popup.focus();
+        return;
+      }
       window.open(data.url, "_blank");
+      return;
     }
+    popup?.close();
   }
 
   async function sendWhatsappFromEditModal() {
@@ -429,7 +439,8 @@ export function PlannerClient({
       .replaceAll("%orario_appuntamento%", format(startAt, "HH:mm"))
       .replaceAll("%nome_attivita%", whatsappConfig.nomeAttivita || "")
       .replaceAll("%indirizzo_attivita%", whatsappConfig.indirizzoAttivita || "");
-    await sendWhatsappMessage(selectedAppointment.cliente.telefono, text);
+    const popup = window.open("", "_blank");
+    await sendWhatsappMessage(selectedAppointment.cliente.telefono, text, popup);
   }
 
   async function switchSalon(nextSalonId: string) {
@@ -790,16 +801,24 @@ export function PlannerClient({
     setIncassoNote("");
   }
 
+  const desktopVisibleDayKeys = useMemo<DayKey[]>(() => {
+    const ordered: DayKey[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+    const enabled = ordered.filter((key) => Boolean(workingHoursJson?.[key]?.enabled));
+    if (enabled.length > 0) return enabled;
+    return ["mon", "tue", "wed", "thu", "fri", "sat"];
+  }, [workingHoursJson]);
   const matrixDays = useMemo(() => {
-    const base = isMobile ? mobileDay : desktopWeekStart;
-    const count = isMobile ? 1 : 5;
-    return Array.from({ length: count }, (_, i) => {
-      const date = new Date(base);
-      date.setDate(base.getDate() + i);
-      const dayKey = indexToDayKey[date.getDay()];
+    if (isMobile) {
+      const dayKey = indexToDayKey[mobileDay.getDay()];
+      return [{ date: mobileDay, dayKey }];
+    }
+    return desktopVisibleDayKeys.map((dayKey) => {
+      const date = new Date(desktopWeekStart);
+      const offset = (dayKeyToIndex[dayKey] + 6) % 7;
+      date.setDate(desktopWeekStart.getDate() + offset);
       return { date, dayKey };
     });
-  }, [desktopWeekStart, isMobile, mobileDay]);
+  }, [desktopVisibleDayKeys, desktopWeekStart, isMobile, mobileDay]);
   const matrixColumns = useMemo(() => {
     return matrixDays.map((d) => ({
       ...d,
@@ -982,9 +1001,12 @@ export function PlannerClient({
                           slotStart.setHours(Math.floor(slotMin / 60), slotMin % 60, 0, 0);
                           const appt = appointments.find((a) => {
                             if (a.operator?.id !== op.id) return false;
-                            const aStart = new Date(a.startAt);
-                            return aStart.getTime() === slotStart.getTime();
+                            const aStart = new Date(a.startAt).getTime();
+                            const aEnd = new Date(a.endAt).getTime();
+                            const slotTime = slotStart.getTime();
+                            return slotTime >= aStart && slotTime < aEnd;
                           });
+                          const apptStartsHere = appt ? new Date(appt.startAt).getTime() === slotStart.getTime() : false;
                           const row = day.operators.find((o) => o.id === op.id);
                           const inShift = row ? slotMin >= toMinutes(row.start) && slotMin < toMinutes(row.end) : false;
                           const apptBgColor = appt ? getAppointmentBgColor(appt) : undefined;
@@ -1019,7 +1041,7 @@ export function PlannerClient({
                                 await moveAppointmentToSlot(draggedAppointmentId, slotStart, op.id || null);
                               }}
                               onClick={() => {
-                                if (!inShift || op.id === "none") return;
+                                if ((!inShift && !appt) || op.id === "none") return;
                                 if (pendingMoveAppointmentId) {
                                   void moveAppointmentToSlot(pendingMoveAppointmentId, slotStart, op.id || null);
                                   setPendingMoveAppointmentId(null);
@@ -1049,7 +1071,7 @@ export function PlannerClient({
                                 setShowModal(true);
                               }}
                             >
-                              {appt ? (
+                              {appt && apptStartsHere ? (
                                 <span className="block truncate text-[11px] font-bold">
                                   {isPersonalNoteAppointment(appt) ? `Nota: ${appt.noteAppuntamento || ""}` : `${appt.cane.nome} / ${appt.cliente.nome}`}
                                 </span>
