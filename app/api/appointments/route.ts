@@ -94,8 +94,12 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const activeOperatorsCount = await prisma.operator.count({ where: { salonId, attivo: true } });
 
-  const salon = await prisma.salon.findUnique({ where: { id: salonId }, select: { overlapAllowed: true, workingHoursJson: true } });
+  const salon = await prisma.salon.findUnique({
+    where: { id: salonId },
+    select: { overlapAllowed: true, workingHoursJson: true, timezone: true },
+  });
   if (!salon) return NextResponse.json({ error: "Salone non trovato" }, { status: 404 });
+  const salonTimeZone = salon.timezone || "Europe/Zurich";
 
   if (body.modalita === "NOTE") {
     const startAt = new Date(String(body.startAt || ""));
@@ -121,10 +125,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Operatore non valido" }, { status: 400 });
     }
 
-    if (!isInsideWorkingHours(salon.workingHoursJson, startAt, endAt)) {
+    if (!isInsideWorkingHours(salon.workingHoursJson, startAt, endAt, salonTimeZone)) {
       return NextResponse.json({ error: "Orario fuori fascia lavorativa" }, { status: 400 });
     }
-    if (operator?.workingHoursJson && !isInsideWorkingHours(operator.workingHoursJson, startAt, endAt)) {
+    if (operator?.workingHoursJson && !isInsideWorkingHours(operator.workingHoursJson, startAt, endAt, salonTimeZone)) {
       return NextResponse.json({ error: "Orario fuori disponibilita operatore" }, { status: 400 });
     }
 
@@ -171,10 +175,10 @@ export async function POST(req: NextRequest) {
   const startAt = new Date(parsed.data.startAt);
   const endAt = computeEndAt(startAt, parsed.data.durataMinuti);
 
-  if (!isInsideWorkingHours(salon.workingHoursJson, startAt, endAt)) {
+  if (!isInsideWorkingHours(salon.workingHoursJson, startAt, endAt, salonTimeZone)) {
     return NextResponse.json({ error: "Orario fuori fascia lavorativa" }, { status: 400 });
   }
-  if (operator?.workingHoursJson && !isInsideWorkingHours(operator.workingHoursJson, startAt, endAt)) {
+  if (operator?.workingHoursJson && !isInsideWorkingHours(operator.workingHoursJson, startAt, endAt, salonTimeZone)) {
     return NextResponse.json({ error: "Orario fuori disponibilita operatore" }, { status: 400 });
   }
 
@@ -247,6 +251,14 @@ export async function PATCH(req: NextRequest) {
         : null;
 
     const tx = await prisma.$transaction(async (trx) => {
+      const alreadyPaid = await trx.transaction.findFirst({
+        where: { salonId, appointmentId },
+        select: { id: true },
+      });
+      if (alreadyPaid) {
+        throw new Error("APPOINTMENT_ALREADY_PAID");
+      }
+
       const created = await trx.transaction.create({
         data: {
           salonId,
@@ -271,7 +283,22 @@ export async function PATCH(req: NextRequest) {
       });
 
       return created;
+    }, {
+      isolationLevel: "Serializable",
+    }).catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : String(error);
+      if (message.includes("APPOINTMENT_ALREADY_PAID")) {
+        return null;
+      }
+      if (message.includes("P2034") || message.toLowerCase().includes("serialize")) {
+        return null;
+      }
+      throw error;
     });
+
+    if (!tx) {
+      return NextResponse.json({ error: "Incasso gia registrato per questo appuntamento" }, { status: 409 });
+    }
 
     return NextResponse.json(tx);
   }
@@ -306,8 +333,12 @@ export async function PATCH(req: NextRequest) {
   const endAt = computeEndAt(startAt, durata);
 
   if (needsAvailabilityChecks) {
-    const salon = await prisma.salon.findUnique({ where: { id: salonId }, select: { overlapAllowed: true, workingHoursJson: true } });
+    const salon = await prisma.salon.findUnique({
+      where: { id: salonId },
+      select: { overlapAllowed: true, workingHoursJson: true, timezone: true },
+    });
     if (!salon) return NextResponse.json({ error: "Salone non trovato" }, { status: 404 });
+    const salonTimeZone = salon.timezone || "Europe/Zurich";
 
     const candidateOperatorId =
       typeof body.operatorId !== "undefined" ? (body.operatorId || null) : appointment.operatorId;
@@ -321,10 +352,13 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Operatore non valido" }, { status: 400 });
     }
 
-    if (!isInsideWorkingHours(salon.workingHoursJson, startAt, endAt)) {
+    if (!isInsideWorkingHours(salon.workingHoursJson, startAt, endAt, salonTimeZone)) {
       return NextResponse.json({ error: "Orario fuori fascia lavorativa" }, { status: 400 });
     }
-    if (candidateOperator?.workingHoursJson && !isInsideWorkingHours(candidateOperator.workingHoursJson, startAt, endAt)) {
+    if (
+      candidateOperator?.workingHoursJson &&
+      !isInsideWorkingHours(candidateOperator.workingHoursJson, startAt, endAt, salonTimeZone)
+    ) {
       return NextResponse.json({ error: "Orario fuori disponibilita operatore" }, { status: 400 });
     }
 

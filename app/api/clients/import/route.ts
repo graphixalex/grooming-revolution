@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/api-auth";
 
@@ -116,8 +116,12 @@ function parseVcf(text: string): ImportRow[] {
 
 function truthy(v: string | undefined) {
   if (!v) return false;
-  const value = v.trim().toLowerCase();
-  return ["1", "true", "si", "sì", "yes", "y"].includes(value);
+  const value = v
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  return ["1", "true", "si", "yes", "y"].includes(value);
 }
 
 function toImportRowsFromCsv(text: string): { rows: ImportRow[]; error?: string } {
@@ -224,3 +228,5 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ created, skipped, errors: errors.slice(0, 20) });
 }
+
+

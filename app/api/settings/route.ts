@@ -283,11 +283,11 @@ export async function PATCH(req: NextRequest) {
     const email = String(body.email || "").toLowerCase().trim();
     if (!email) return NextResponse.json({ error: "Email obbligatoria" }, { status: 400 });
     const existsEmail = await prisma.user.findFirst({
-      where: { salonId: requestedSalonId, email, id: { not: userId } },
+      where: { email, id: { not: userId } },
       select: { id: true },
     });
     if (existsEmail) {
-      return NextResponse.json({ error: "Email gia in uso nella sede selezionata" }, { status: 400 });
+      return NextResponse.json({ error: "Email gia in uso. Inserisci una email diversa." }, { status: 400 });
     }
 
     const nextRole = body.role === "MANAGER" ? "MANAGER" : "STAFF";

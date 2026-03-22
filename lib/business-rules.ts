@@ -1,11 +1,37 @@
 import { addMinutes } from "date-fns";
 import { prisma } from "@/lib/prisma";
 
-const days = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
-
 function parseTime(time: string) {
   const [h, m] = time.split(":").map(Number);
   return { h, m };
+}
+
+function getPartsInTimeZone(date: Date, timeZone: string) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    weekday: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(date);
+  const weekday = parts.find((p) => p.type === "weekday")?.value || "Mon";
+  const hour = Number(parts.find((p) => p.type === "hour")?.value || 0);
+  const minute = Number(parts.find((p) => p.type === "minute")?.value || 0);
+
+  const dayMap: Record<string, "sun" | "mon" | "tue" | "wed" | "thu" | "fri" | "sat"> = {
+    Sun: "sun",
+    Mon: "mon",
+    Tue: "tue",
+    Wed: "wed",
+    Thu: "thu",
+    Fri: "fri",
+    Sat: "sat",
+  };
+
+  return {
+    day: dayMap[weekday] ?? "mon",
+    minutes: hour * 60 + minute,
+  };
 }
 
 export async function canCreateClient(salonId: string) {
@@ -27,17 +53,20 @@ export function computeEndAt(startAt: Date, durataMinuti: number) {
   return addMinutes(startAt, durataMinuti);
 }
 
-export function isInsideWorkingHours(workingHoursJson: any, startAt: Date, endAt: Date) {
+export function isInsideWorkingHours(workingHoursJson: any, startAt: Date, endAt: Date, timeZone = "Europe/Zurich") {
   if (!workingHoursJson) return true;
-  const day = days[startAt.getDay()];
-  const config = workingHoursJson[day];
+  const startParts = getPartsInTimeZone(startAt, timeZone);
+  const endParts = getPartsInTimeZone(endAt, timeZone);
+  if (startParts.day !== endParts.day) return false;
+
+  const config = workingHoursJson[startParts.day];
   if (!config?.enabled) return false;
 
   const { h: sh, m: sm } = parseTime(config.start);
   const { h: eh, m: em } = parseTime(config.end);
 
-  const slotStart = startAt.getHours() * 60 + startAt.getMinutes();
-  const slotEnd = endAt.getHours() * 60 + endAt.getMinutes();
+  const slotStart = startParts.minutes;
+  const slotEnd = endParts.minutes;
   const workStart = sh * 60 + sm;
   const workEnd = eh * 60 + em;
 

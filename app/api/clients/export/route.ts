@@ -3,8 +3,10 @@ import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/api-auth";
 
 function toCsvValue(value: string | null | undefined) {
-  const s = (value ?? "").replaceAll('"', '""');
-  return `"${s}"`;
+  const raw = (value ?? "").trimStart();
+  const safe = /^[=+\-@]/.test(raw) ? `'${value ?? ""}` : (value ?? "");
+  const escaped = safe.replaceAll('"', '""');
+  return `"${escaped}"`;
 }
 
 export async function GET() {

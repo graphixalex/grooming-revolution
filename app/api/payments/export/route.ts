@@ -4,8 +4,10 @@ import { requireApiSession } from "@/lib/api-auth";
 import { getAccountingScope } from "@/lib/accounting-scope";
 
 function q(v: string | null | undefined) {
-  const s = (v ?? "").replaceAll('"', '""');
-  return `"${s}"`;
+  const raw = (v ?? "").trimStart();
+  const safe = /^[=+\-@]/.test(raw) ? `'${v ?? ""}` : (v ?? "");
+  const escaped = safe.replaceAll('"', '""');
+  return `"${escaped}"`;
 }
 
 export async function GET(req: Request) {
