@@ -90,6 +90,12 @@ export function SettingsClient({ initial }: { initial: any }) {
     (initial.staff || []).map((s: any) => ({
       ...s,
       password: "",
+      currentPassword: "",
+      newPassword: "",
+      confirmNewPassword: "",
+      showCurrentPassword: false,
+      showNewPassword: false,
+      showConfirmPassword: false,
     })),
   );
   const [workingHours, setWorkingHours] = useState<WorkingHoursState>(normalizeWorkingHours(initial.salon?.workingHoursJson));
@@ -114,10 +120,6 @@ export function SettingsClient({ initial }: { initial: any }) {
   const [campaignPreviewCount, setCampaignPreviewCount] = useState<number | null>(null);
   const [campaignPreviewLoading, setCampaignPreviewLoading] = useState(false);
   const [bookingLinkCopied, setBookingLinkCopied] = useState(false);
-  const [ownerCurrentPassword, setOwnerCurrentPassword] = useState("");
-  const [ownerNewPassword, setOwnerNewPassword] = useState("");
-  const [ownerConfirmPassword, setOwnerConfirmPassword] = useState("");
-  const [ownerPasswordSaving, setOwnerPasswordSaving] = useState(false);
 
   const loadCampaigns = async () => {
     const res = await fetch("/api/whatsapp/campaigns");
@@ -156,39 +158,53 @@ export function SettingsClient({ initial }: { initial: any }) {
       salonId: staffSalonId,
     });
     if (!created) return;
-    setStaff((prev: any[]) => [...prev, { ...created, password: "" }]);
+    setStaff((prev: any[]) => [
+      ...prev,
+      {
+        ...created,
+        password: "",
+        currentPassword: "",
+        newPassword: "",
+        confirmNewPassword: "",
+        showCurrentPassword: false,
+        showNewPassword: false,
+        showConfirmPassword: false,
+      },
+    ]);
     setStaffEmail("");
     setStaffPassword("Password123!");
   }
 
-  async function updateOwnerPassword() {
-    if (initial.role !== "OWNER") return;
-    if (!ownerCurrentPassword || !ownerNewPassword || !ownerConfirmPassword) {
-      alert("Compila tutti i campi password");
-      return;
-    }
-    if (ownerNewPassword !== ownerConfirmPassword) {
-      alert("La conferma password non coincide");
-      return;
-    }
-
-    setOwnerPasswordSaving(true);
-    try {
-      const saved = await saveSection("ownerPassword", {
-        currentPassword: ownerCurrentPassword,
-        newPassword: ownerNewPassword,
-        confirmNewPassword: ownerConfirmPassword,
-      });
-      if (!saved) return;
-      setOwnerCurrentPassword("");
-      setOwnerNewPassword("");
-      setOwnerConfirmPassword("");
-    } finally {
-      setOwnerPasswordSaving(false);
-    }
-  }
-
   async function saveTeamUser(row: any) {
+    const isOwnerSelf = row.ruolo === "OWNER" && row.id === initial.currentUserId;
+    if (isOwnerSelf) {
+      const currentPassword = String(row.currentPassword || "");
+      const newPassword = String(row.newPassword || "");
+      const confirmNewPassword = String(row.confirmNewPassword || "");
+      if (!currentPassword || !newPassword || !confirmNewPassword) {
+        alert("Compila vecchia password, nuova password e conferma");
+        return;
+      }
+      if (newPassword !== confirmNewPassword) {
+        alert("La conferma password non coincide");
+        return;
+      }
+      const updated = await saveSection("ownerPassword", {
+        currentPassword,
+        newPassword,
+        confirmNewPassword,
+      });
+      if (!updated) return;
+      setStaff((prev: any[]) =>
+        prev.map((x) =>
+          x.id === row.id
+            ? { ...x, currentPassword: "", newPassword: "", confirmNewPassword: "", showCurrentPassword: false, showNewPassword: false, showConfirmPassword: false }
+            : x,
+        ),
+      );
+      return;
+    }
+
     const updated = await saveSection("staffUpdate", {
       userId: row.id,
       email: row.email,
@@ -978,18 +994,23 @@ export function SettingsClient({ initial }: { initial: any }) {
         ) : null}
         <div className="space-y-2">
           {staff.map((s: any) => (
-            <div key={s.id} className="grid gap-2 rounded-md border border-zinc-200 p-3 md:grid-cols-6">
+            <div key={s.id} className="grid gap-2 rounded-md border border-zinc-200 p-3 md:grid-cols-7">
+              {(() => {
+                const isOwnerSelf = s.ruolo === "OWNER" && s.id === initial.currentUserId;
+                const ownerProtected = s.ruolo === "OWNER" && !isOwnerSelf;
+                return (
+                  <>
               <Input
                 value={s.email}
                 onChange={(e) => setStaff((prev: any[]) => prev.map((x) => (x.id === s.id ? { ...x, email: e.target.value } : x)))}
                 placeholder="Email"
-                disabled={s.ruolo === "OWNER" || initial.role !== "OWNER"}
+                disabled={ownerProtected || isOwnerSelf || initial.role !== "OWNER"}
               />
               <select
                 className="h-10 rounded-md border border-zinc-300 px-3 text-sm"
                 value={s.ruolo}
                 onChange={(e) => setStaff((prev: any[]) => prev.map((x) => (x.id === s.id ? { ...x, ruolo: e.target.value } : x)))}
-                disabled={s.ruolo === "OWNER" || initial.role !== "OWNER"}
+                disabled={ownerProtected || isOwnerSelf || initial.role !== "OWNER"}
               >
                 <option value="MANAGER">Manager</option>
                 <option value="STAFF">Staff</option>
@@ -1015,7 +1036,7 @@ export function SettingsClient({ initial }: { initial: any }) {
                     ),
                   )
                 }
-                disabled={s.ruolo === "OWNER" || initial.role !== "OWNER"}
+                disabled={ownerProtected || isOwnerSelf || initial.role !== "OWNER"}
               >
                 {(initial.assignableSalons || []).map((row: any) => (
                   <option key={row.id} value={row.id}>
@@ -1023,17 +1044,81 @@ export function SettingsClient({ initial }: { initial: any }) {
                   </option>
                 ))}
               </select>
-              <Input
-                type="password"
-                value={s.password || ""}
-                onChange={(e) => setStaff((prev: any[]) => prev.map((x) => (x.id === s.id ? { ...x, password: e.target.value } : x)))}
-                placeholder="Nuova password (opzionale)"
-                disabled={s.ruolo === "OWNER" || initial.role !== "OWNER"}
-              />
+              {isOwnerSelf ? (
+                <div className="space-y-2 md:col-span-2">
+                  <p className="text-xs text-zinc-600">
+                    Cambio password owner: min 10 caratteri con maiuscola, minuscola, numero e simbolo.
+                  </p>
+                  <div className="grid gap-2 md:grid-cols-3">
+                    <div className="relative">
+                      <Input
+                        type={s.showCurrentPassword ? "text" : "password"}
+                        value={s.currentPassword || ""}
+                        onChange={(e) => setStaff((prev: any[]) => prev.map((x) => (x.id === s.id ? { ...x, currentPassword: e.target.value } : x)))}
+                        placeholder="Vecchia password"
+                        disabled={initial.role !== "OWNER"}
+                        className="pr-20"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="absolute right-1 top-1 h-8 px-2 text-xs"
+                        onClick={() => setStaff((prev: any[]) => prev.map((x) => (x.id === s.id ? { ...x, showCurrentPassword: !x.showCurrentPassword } : x)))}
+                      >
+                        {s.showCurrentPassword ? "Nascondi" : "Mostra"}
+                      </Button>
+                    </div>
+                    <div className="relative">
+                      <Input
+                        type={s.showNewPassword ? "text" : "password"}
+                        value={s.newPassword || ""}
+                        onChange={(e) => setStaff((prev: any[]) => prev.map((x) => (x.id === s.id ? { ...x, newPassword: e.target.value } : x)))}
+                        placeholder="Nuova password"
+                        disabled={initial.role !== "OWNER"}
+                        className="pr-20"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="absolute right-1 top-1 h-8 px-2 text-xs"
+                        onClick={() => setStaff((prev: any[]) => prev.map((x) => (x.id === s.id ? { ...x, showNewPassword: !x.showNewPassword } : x)))}
+                      >
+                        {s.showNewPassword ? "Nascondi" : "Mostra"}
+                      </Button>
+                    </div>
+                    <div className="relative">
+                      <Input
+                        type={s.showConfirmPassword ? "text" : "password"}
+                        value={s.confirmNewPassword || ""}
+                        onChange={(e) => setStaff((prev: any[]) => prev.map((x) => (x.id === s.id ? { ...x, confirmNewPassword: e.target.value } : x)))}
+                        placeholder="Conferma nuova"
+                        disabled={initial.role !== "OWNER"}
+                        className="pr-20"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="absolute right-1 top-1 h-8 px-2 text-xs"
+                        onClick={() => setStaff((prev: any[]) => prev.map((x) => (x.id === s.id ? { ...x, showConfirmPassword: !x.showConfirmPassword } : x)))}
+                      >
+                        {s.showConfirmPassword ? "Nascondi" : "Mostra"}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <Input
+                  type="password"
+                  value={s.password || ""}
+                  onChange={(e) => setStaff((prev: any[]) => prev.map((x) => (x.id === s.id ? { ...x, password: e.target.value } : x)))}
+                  placeholder="Nuova password (opzionale)"
+                  disabled={initial.role !== "OWNER"}
+                />
+              )}
               <Button
                 variant="outline"
                 onClick={() => saveTeamUser(s)}
-                disabled={s.ruolo === "OWNER" || initial.role !== "OWNER"}
+                disabled={initial.role !== "OWNER" || (ownerProtected && s.ruolo === "OWNER")}
               >
                 Salva
               </Button>
@@ -1044,40 +1129,13 @@ export function SettingsClient({ initial }: { initial: any }) {
               >
                 Elimina
               </Button>
+                  </>
+                );
+              })()}
             </div>
           ))}
         </div>
       </Card>
-
-      {initial.role === "OWNER" ? (
-        <Card className="space-y-3">
-          <h2 className="font-semibold">Sicurezza account owner</h2>
-          <p className="text-sm text-zinc-600">Account: {initial.currentUserEmail || "-"}</p>
-          <div className="grid gap-2 md:grid-cols-3">
-            <Input
-              type="password"
-              value={ownerCurrentPassword}
-              onChange={(e) => setOwnerCurrentPassword(e.target.value)}
-              placeholder="Password attuale"
-            />
-            <Input
-              type="password"
-              value={ownerNewPassword}
-              onChange={(e) => setOwnerNewPassword(e.target.value)}
-              placeholder="Nuova password (min 10, Aa1!)"
-            />
-            <Input
-              type="password"
-              value={ownerConfirmPassword}
-              onChange={(e) => setOwnerConfirmPassword(e.target.value)}
-              placeholder="Conferma nuova password"
-            />
-          </div>
-          <Button onClick={updateOwnerPassword} disabled={ownerPasswordSaving}>
-            {ownerPasswordSaving ? "Salvataggio..." : "Aggiorna password owner"}
-          </Button>
-        </Card>
-      ) : null}
     </div>
   );
 }

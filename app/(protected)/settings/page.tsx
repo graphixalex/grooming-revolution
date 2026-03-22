@@ -89,6 +89,7 @@ export default async function SettingsPage() {
           operators,
           assignableSalons,
           role: session.user.role,
+          currentUserId: session.user.id,
           currentUserEmail: session.user.email,
         }}
       />
