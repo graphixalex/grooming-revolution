@@ -159,7 +159,16 @@ export async function PATCH(req: NextRequest) {
 
     const salon = await prisma.salon.findUnique({
       where: { id: salonId },
-      select: { id: true, nomeAttivita: true, nomeSede: true },
+      select: {
+        id: true,
+        nomeAttivita: true,
+        nomeSede: true,
+        telefono: true,
+        indirizzo: true,
+        email: true,
+        paese: true,
+        timezone: true,
+      },
     });
     if (!salon) {
       return NextResponse.json({ error: "Sede non trovata" }, { status: 404 });
@@ -175,6 +184,11 @@ export async function PATCH(req: NextRequest) {
       businessName: salon.nomeAttivita,
       branchName: salon.nomeSede || "Sede principale",
       salonId: salon.id,
+      salonPhone: salon.telefono,
+      salonAddress: salon.indirizzo,
+      salonEmail: salon.email,
+      country: salon.paese,
+      timezone: salon.timezone,
     });
     if (!mailResult.ok) {
       return NextResponse.json(

@@ -15,7 +15,7 @@ function getAppUrl() {
 }
 
 function getSupportEmail() {
-  return process.env.SUPPORT_EMAIL || "support@grooming-revolution.com";
+  return process.env.SUPPORT_EMAIL || "alecostantini87@gmail.com";
 }
 
 function escapeHtml(value: string) {
@@ -281,6 +281,11 @@ export async function sendAccountDeletionRequestEmails(input: {
   businessName: string;
   branchName: string;
   salonId: string;
+  salonPhone?: string | null;
+  salonAddress?: string | null;
+  salonEmail?: string | null;
+  country?: string | null;
+  timezone?: string | null;
 }) {
   const supportEmail = getSupportEmail();
   const supportSubject = "Richiesta eliminazione account SaaS";
@@ -290,6 +295,11 @@ export async function sendAccountDeletionRequestEmails(input: {
     bodyHtml: `
       <p style="margin:0 0 10px 0;font-size:14px;">Un owner ha richiesto l'eliminazione irreversibile dell'account.</p>
       <p style="margin:0 0 4px 0;font-size:14px;"><strong>Email owner:</strong> ${escapeHtml(input.ownerEmail)}</p>
+      <p style="margin:0 0 4px 0;font-size:14px;"><strong>Email account:</strong> ${escapeHtml(input.salonEmail || "-")}</p>
+      <p style="margin:0 0 4px 0;font-size:14px;"><strong>Telefono:</strong> ${escapeHtml(input.salonPhone || "-")}</p>
+      <p style="margin:0 0 4px 0;font-size:14px;"><strong>Indirizzo:</strong> ${escapeHtml(input.salonAddress || "-")}</p>
+      <p style="margin:0 0 4px 0;font-size:14px;"><strong>Paese:</strong> ${escapeHtml(input.country || "-")}</p>
+      <p style="margin:0 0 4px 0;font-size:14px;"><strong>Timezone:</strong> ${escapeHtml(input.timezone || "-")}</p>
       <p style="margin:0 0 4px 0;font-size:14px;"><strong>Attivita:</strong> ${escapeHtml(input.businessName)}</p>
       <p style="margin:0 0 4px 0;font-size:14px;"><strong>Sede:</strong> ${escapeHtml(input.branchName || "Sede principale")}</p>
       <p style="margin:0;font-size:14px;"><strong>Salon ID:</strong> ${escapeHtml(input.salonId)}</p>
@@ -298,6 +308,11 @@ export async function sendAccountDeletionRequestEmails(input: {
   const supportText =
     `Richiesta eliminazione account.\n` +
     `Owner: ${input.ownerEmail}\n` +
+    `Email account: ${input.salonEmail || "-"}\n` +
+    `Telefono: ${input.salonPhone || "-"}\n` +
+    `Indirizzo: ${input.salonAddress || "-"}\n` +
+    `Paese: ${input.country || "-"}\n` +
+    `Timezone: ${input.timezone || "-"}\n` +
     `Attivita: ${input.businessName}\n` +
     `Sede: ${input.branchName || "Sede principale"}\n` +
     `Salon ID: ${input.salonId}\n`;
