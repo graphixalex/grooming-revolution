@@ -1057,10 +1057,10 @@ export function PlannerClient({
                   {matrixColumns.map((day, dayIndex) => (
                     <td
                       key={`${day.date.toISOString()}-${slotMin}`}
-                      className="border border-zinc-200 p-1 align-top"
+                      className="border-x border-zinc-200 p-0 align-top"
                       style={{ minWidth: `${matrixDayMinWidths[dayIndex]}px` }}
                     >
-                      <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${Math.max(1, day.operators.length)}, minmax(0, 1fr))` }}>
+                      <div className="grid gap-0" style={{ gridTemplateColumns: `repeat(${Math.max(1, day.operators.length)}, minmax(0, 1fr))` }}>
                         {(day.operators.length ? day.operators : [{ id: "none", nome: "Nessuno", start: "--:--", end: "--:--" }]).map((op) => {
                           const slotStart = new Date(day.date);
                           slotStart.setHours(Math.floor(slotMin / 60), slotMin % 60, 0, 0);
@@ -1083,16 +1083,16 @@ export function PlannerClient({
                               type="button"
                               key={`${day.date.toISOString()}-${op.id}-${slotMin}`}
                               draggable={Boolean(appt && apptStartsHere)}
-                              className={`h-9 w-full rounded px-1.5 text-left transition ${
+                              className={`h-9 w-full px-1.5 text-left transition ${
                                 appt
-                                  ? `relative border border-transparent px-2 text-white shadow-sm ring-1 ring-black/5 ${
+                                  ? `relative z-10 border-0 px-2 text-white ${
                                       apptContinuesBefore && apptContinuesAfter
                                         ? "-mb-px -mt-px rounded-none"
                                         : apptContinuesBefore
-                                          ? "-mt-px rounded-b-md rounded-t-none"
+                                          ? "-mt-px rounded-b-sm rounded-t-none"
                                           : apptContinuesAfter
-                                            ? "-mb-px rounded-b-none rounded-t-md"
-                                            : "rounded-md"
+                                            ? "-mb-px rounded-b-none rounded-t-sm"
+                                            : "rounded-sm"
                                     }`
                                   : inShift
                                     ? "border border-zinc-200 bg-white hover:bg-[#f2f5fb]"
@@ -1150,7 +1150,7 @@ export function PlannerClient({
                             >
                               {appt && apptStartsHere ? (
                                 <>
-                                  <span className="block truncate text-[13px] font-bold leading-tight">
+                                  <span className="block truncate pt-0.5 text-[14px] font-bold leading-tight">
                                     {isPersonalNoteAppointment(appt) ? `Nota: ${appt.noteAppuntamento || ""}` : `${appt.cane.nome} / ${appt.cliente.nome}`}
                                   </span>
                                   <span className="block truncate text-[11px] font-medium leading-tight text-white/90">
@@ -1159,7 +1159,7 @@ export function PlannerClient({
                                   <span
                                     role="button"
                                     aria-label="Ridimensiona inizio appuntamento"
-                                    className="absolute inset-x-2 top-0 h-1 cursor-ns-resize rounded-t-md bg-white/60"
+                                    className="absolute inset-x-2 top-0 h-1 cursor-ns-resize rounded-t-sm bg-white/70 opacity-0 transition-opacity hover:opacity-100"
                                     onPointerDown={(event) => {
                                       event.preventDefault();
                                       event.stopPropagation();
@@ -1178,7 +1178,7 @@ export function PlannerClient({
                                 <span
                                   role="button"
                                   aria-label="Ridimensiona fine appuntamento"
-                                  className="absolute inset-x-2 bottom-0 h-1 cursor-ns-resize rounded-b-md bg-white/60"
+                                  className="absolute inset-x-2 bottom-0 h-1 cursor-ns-resize rounded-b-sm bg-white/70 opacity-0 transition-opacity hover:opacity-100"
                                   onPointerDown={(event) => {
                                     event.preventDefault();
                                     event.stopPropagation();

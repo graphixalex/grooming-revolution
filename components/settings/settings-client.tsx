@@ -98,7 +98,6 @@ export function SettingsClient({ initial }: { initial: any }) {
       showConfirmPassword: false,
     })),
   );
-  const [workingHours, setWorkingHours] = useState<WorkingHoursState>(normalizeWorkingHours(initial.salon?.workingHoursJson));
   const [operators, setOperators] = useState(
     (initial.operators || []).map((o: any, idx: number) => ({
       id: o.id,
@@ -430,101 +429,14 @@ export function SettingsClient({ initial }: { initial: any }) {
       </Card>
 
       <Card className="space-y-3">
-        <h2 className="font-semibold">Orari di lavoro</h2>
-        <p className="text-sm text-zinc-600">Configura gli orari per ogni giorno. La pausa e opzionale.</p>
-        <div className="space-y-2">
-          {dayOrder.map((day) => (
-            <div key={day} className="grid gap-2 rounded-md border border-zinc-200 p-3 md:grid-cols-7">
-              <label className="flex items-center gap-2 text-sm md:col-span-1">
-                <input
-                  type="checkbox"
-                  checked={workingHours[day].enabled}
-                  onChange={(e) => setWorkingHours((prev) => ({ ...prev, [day]: { ...prev[day], enabled: e.target.checked } }))}
-                />
-                {dayLabel[day]}
-              </label>
-              <div className="md:col-span-1">
-                <p className="text-xs text-zinc-500">Inizio</p>
-                <Input
-                  type="time"
-                  value={workingHours[day].start}
-                  onChange={(e) => setWorkingHours((prev) => ({ ...prev, [day]: { ...prev[day], start: e.target.value } }))}
-                  disabled={!workingHours[day].enabled}
-                />
-              </div>
-              <div className="md:col-span-1">
-                <p className="text-xs text-zinc-500">Fine</p>
-                <Input
-                  type="time"
-                  value={workingHours[day].end}
-                  onChange={(e) => setWorkingHours((prev) => ({ ...prev, [day]: { ...prev[day], end: e.target.value } }))}
-                  disabled={!workingHours[day].enabled}
-                />
-              </div>
-              <div className="md:col-span-1">
-                <p className="text-xs text-zinc-500">Pausa</p>
-                <label className="flex h-10 items-center gap-2 rounded-md border border-zinc-300 px-3 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={workingHours[day].hasBreak}
-                    onChange={(e) =>
-                      setWorkingHours((prev) => ({
-                        ...prev,
-                        [day]: {
-                          ...prev[day],
-                          hasBreak: e.target.checked,
-                          breakStart: e.target.checked ? prev[day].breakStart : "",
-                          breakEnd: e.target.checked ? prev[day].breakEnd : "",
-                        },
-                      }))
-                    }
-                    disabled={!workingHours[day].enabled}
-                  />
-                  Pausa attiva
-                </label>
-              </div>
-              <div className="md:col-span-1">
-                <p className="text-xs text-zinc-500">Pausa da</p>
-                <Input
-                  type="time"
-                  value={workingHours[day].breakStart}
-                  onChange={(e) => setWorkingHours((prev) => ({ ...prev, [day]: { ...prev[day], breakStart: e.target.value } }))}
-                  disabled={!workingHours[day].enabled || !workingHours[day].hasBreak}
-                />
-              </div>
-              <div className="md:col-span-1">
-                <p className="text-xs text-zinc-500">Pausa a</p>
-                <Input
-                  type="time"
-                  value={workingHours[day].breakEnd}
-                  onChange={(e) => setWorkingHours((prev) => ({ ...prev, [day]: { ...prev[day], breakEnd: e.target.value } }))}
-                  disabled={!workingHours[day].enabled || !workingHours[day].hasBreak}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={Boolean(salon.overlapAllowed)} onChange={(e) => setSalon({ ...salon, overlapAllowed: e.target.checked })} />
-          Consenti sovrapposizioni appuntamenti
-        </label>
-        <Button
-          onClick={() =>
-            saveSection("workingHours", {
-              workingHoursJson: toWorkingHoursJson(workingHours),
-              overlapAllowed: salon.overlapAllowed,
-            })
-          }
-        >
-          Salva orari
-        </Button>
-      </Card>
-
-      <Card className="space-y-3">
         <h2 className="font-semibold">Operatori e KPI</h2>
         <p className="text-sm text-zinc-600">
           Crea gli operatori della sede, definisci i loro orari e imposta target KPI mensili.
         </p>
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={Boolean(salon.overlapAllowed)} onChange={(e) => setSalon({ ...salon, overlapAllowed: e.target.checked })} />
+          Consenti sovrapposizioni appuntamenti
+        </label>
         {operators.map((op: any, opIndex: number) => (
           <div key={op.id || opIndex} className="space-y-3 rounded-md border border-zinc-200 p-3">
             <div className="grid gap-2 md:grid-cols-6">
@@ -720,7 +632,7 @@ export function SettingsClient({ initial }: { initial: any }) {
                 color: "#2563eb",
                 kpiTargetRevenue: "",
                 kpiTargetAppointments: "",
-                workingHours: normalizeWorkingHours(salon?.workingHoursJson),
+                workingHours: normalizeWorkingHours(operators[0]?.workingHours ? toWorkingHoursJson(operators[0].workingHours) : undefined),
               },
             ])
           }
@@ -740,6 +652,7 @@ export function SettingsClient({ initial }: { initial: any }) {
                 kpiTargetAppointments: o.kpiTargetAppointments === "" ? null : Number(o.kpiTargetAppointments),
                 workingHoursJson: toWorkingHoursJson(o.workingHours),
               })),
+              overlapAllowed: Boolean(salon.overlapAllowed),
             })
           }
         >

@@ -547,6 +547,13 @@ export async function PATCH(req: NextRequest) {
       }
     }
 
+    if (typeof body.overlapAllowed !== "undefined") {
+      await prisma.salon.update({
+        where: { id: salonId },
+        data: { overlapAllowed: Boolean(body.overlapAllowed) },
+      });
+    }
+
     return NextResponse.json({ ok: true });
   }
 
