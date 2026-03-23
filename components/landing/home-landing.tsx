@@ -239,7 +239,7 @@ export function HomeLanding() {
   }, []);
 
   return (
-    <main className={`${bodyFont.className} relative min-h-screen overflow-x-clip bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-white`}>
+    <main className={`${bodyFont.className} relative min-h-screen overflow-x-clip bg-gradient-to-b from-[#f8fbff] via-[#f5f8fd] to-[#f6f8fc] text-zinc-900`}>
       <motion.div
         className="fixed left-0 right-0 top-0 z-[60] h-[2px] origin-left bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400"
         style={{ scaleX: smoothScrollYProgress }}
@@ -248,7 +248,7 @@ export function HomeLanding() {
       <div className="pointer-events-none fixed inset-0 -z-10">
         {/* Gradient radiali multipli */}
         <motion.div
-          className="absolute left-[-10%] top-[5%] h-[600px] w-[600px] rounded-full bg-cyan-500/30 blur-[120px]"
+          className="absolute left-[-10%] top-[5%] h-[600px] w-[600px] rounded-full bg-cyan-300/35 blur-[120px]"
           animate={{
             scale: [1, 1.2, 1],
             opacity: [0.3, 0.5, 0.3],
@@ -260,7 +260,7 @@ export function HomeLanding() {
           }}
         />
         <motion.div
-          className="absolute bottom-[10%] right-[-5%] h-[700px] w-[700px] rounded-full bg-purple-500/25 blur-[120px]"
+          className="absolute bottom-[10%] right-[-5%] h-[700px] w-[700px] rounded-full bg-orange-300/30 blur-[120px]"
           animate={{
             scale: [1, 1.3, 1],
             opacity: [0.25, 0.4, 0.25],
@@ -272,7 +272,7 @@ export function HomeLanding() {
           }}
         />
         <motion.div
-          className="absolute left-1/2 top-1/3 h-[500px] w-[500px] -translate-x-1/2 rounded-full bg-orange-400/20 blur-[100px]"
+          className="absolute left-1/2 top-1/3 h-[500px] w-[500px] -translate-x-1/2 rounded-full bg-violet-300/20 blur-[100px]"
           animate={{
             scale: [1, 1.4, 1],
             opacity: [0.2, 0.35, 0.2],
@@ -286,7 +286,7 @@ export function HomeLanding() {
         
         {/* Grid animato */}
         <div 
-          className="absolute inset-0 bg-[linear-gradient(to_right,#4f4f4f12_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f12_1px,transparent_1px)] bg-[size:64px_64px] opacity-20"
+          className="absolute inset-0 bg-[linear-gradient(to_right,#0f172a0f_1px,transparent_1px),linear-gradient(to_bottom,#0f172a0f_1px,transparent_1px)] bg-[size:64px_64px] opacity-35"
           style={{
             transform: `perspective(1000px) rotateX(60deg) translateY(-50%)`,
             transformOrigin: "center top",
@@ -298,7 +298,7 @@ export function HomeLanding() {
         
         {/* Effetto mouse glow */}
         <motion.div
-          className="absolute h-96 w-96 rounded-full bg-cyan-500/10 blur-3xl"
+          className="absolute h-96 w-96 rounded-full bg-cyan-300/30 blur-3xl"
           animate={{
             x: mousePosition.x - 200,
             y: mousePosition.y - 200,
@@ -318,16 +318,20 @@ export function HomeLanding() {
         transition={{ duration: 0.6, ease: "easeOut" }}
         className={`fixed left-4 right-4 top-4 z-50 rounded-3xl border px-4 py-3 backdrop-blur-2xl sm:left-6 sm:right-6 lg:left-8 lg:right-8 transition-all duration-300 ${
           isScrolled
-            ? "border-white/20 bg-slate-900/80 shadow-[0_20px_80px_rgba(0,0,0,0.5)]"
-            : "border-white/10 bg-slate-900/50"
+            ? "border-zinc-200 bg-white/95 shadow-[0_20px_80px_rgba(15,23,42,0.14)]"
+            : "border-white/60 bg-white/85"
         }`}
       >
-        <div className="mx-auto flex w-full max-w-[1400px] items-center justify-between gap-4">
-          <motion.div 
-            className="flex min-w-0 items-center gap-4"
-            whileHover={{ scale: 1.02 }}
-          >
-            <div className="relative h-12 w-40 overflow-hidden rounded-xl border border-white/20 bg-white/10 p-2 backdrop-blur-sm sm:h-14 sm:w-48">
+        <div className="mx-auto grid w-full max-w-[1400px] grid-cols-[1fr_auto_1fr] items-center gap-4">
+          <div className="hidden items-center md:flex">
+            <span className="inline-flex rounded-full border border-cyan-200 bg-cyan-50 px-4 py-1.5 text-[11px] font-bold tracking-wide text-cyan-700">
+              <Zap className="mr-1.5 h-3.5 w-3.5" />
+              SOFTWARE PROFESSIONALE NEXT-GEN
+            </span>
+          </div>
+
+          <motion.div className="mx-auto" whileHover={{ scale: 1.02 }}>
+            <div className="relative h-14 w-56 overflow-hidden rounded-xl border border-zinc-200 bg-white p-2 shadow sm:h-16 sm:w-64">
               <Image
                 src="/img/logo-grooming-revolution.png"
                 alt="Grooming Revolution"
@@ -336,30 +340,13 @@ export function HomeLanding() {
                 className="h-full w-full object-contain object-center"
                 priority
               />
-              <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 to-purple-500/10" />
             </div>
-            <motion.span 
-              className="hidden rounded-full border border-cyan-400/30 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 px-4 py-1.5 text-[11px] font-bold tracking-wide text-cyan-300 backdrop-blur-sm md:inline-flex"
-              animate={{
-                boxShadow: [
-                  "0 0 20px rgba(34, 211, 238, 0.3)",
-                  "0 0 40px rgba(34, 211, 238, 0.5)",
-                  "0 0 20px rgba(34, 211, 238, 0.3)",
-                ],
-              }}
-              transition={{
-                duration: 2,
-                repeat: Infinity,
-              }}
-            >
-              <Zap className="mr-1.5 h-3.5 w-3.5" />
-              SOFTWARE PROFESSIONALE NEXT-GEN
-            </motion.span>
           </motion.div>
-          <div className="flex items-center gap-3">
+
+          <div className="ml-auto flex items-center gap-3">
             <Link
               href="/login"
-              className="rounded-xl border border-white/20 bg-white/5 px-4 py-2.5 text-sm font-semibold text-white backdrop-blur-sm transition-all hover:bg-white/10 hover:scale-105"
+              className="rounded-xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 transition-all hover:scale-105 hover:bg-zinc-50"
             >
               Accedi
             </Link>
@@ -369,18 +356,12 @@ export function HomeLanding() {
             >
               <Link
                 href="/register"
-                className="relative overflow-hidden rounded-xl bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500 px-5 py-2.5 text-sm font-bold text-white shadow-[0_0_40px_rgba(34,211,238,0.5)] transition-all hover:shadow-[0_0_60px_rgba(34,211,238,0.7)]"
+                className="rounded-xl bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500 px-5 py-2.5 text-sm font-bold text-white shadow-[0_10px_30px_rgba(14,165,233,0.35)] transition-all hover:shadow-[0_14px_35px_rgba(14,165,233,0.45)]"
               >
-                <span className="relative z-10 flex items-center gap-2">
+                <span className="flex items-center gap-2">
                   <Rocket className="h-4 w-4" />
                   Inizia GRATIS
                 </span>
-                <motion.div
-                  className="absolute inset-0 bg-gradient-to-r from-purple-500 via-pink-500 to-cyan-500"
-                  initial={{ x: "-100%" }}
-                  whileHover={{ x: "100%" }}
-                  transition={{ duration: 0.5 }}
-                />
               </Link>
             </motion.div>
           </div>
@@ -482,13 +463,13 @@ export function HomeLanding() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.4 }}
-            className="mx-auto mt-10 max-w-3xl text-center text-lg leading-relaxed text-slate-300 sm:text-xl lg:text-2xl"
+            className="mx-auto mt-10 max-w-3xl text-center text-lg leading-relaxed text-zinc-700 sm:text-xl lg:text-2xl"
           >
             <span className="font-bold text-cyan-400">Agenda intelligente</span>, team sincronizzato,{" "}
             <span className="font-bold text-purple-400">WhatsApp automatico</span> e{" "}
             <span className="font-bold text-orange-400">KPI in tempo reale</span>.
             <br />
-            <span className="text-slate-400">Meno caos. Più controllo. Più guadagno.</span>
+            <span className="text-zinc-600">Meno caos. Piu controllo. Piu guadagno.</span>
           </motion.p>
 
           {/* CTA Buttons ULTRA */}
@@ -504,17 +485,11 @@ export function HomeLanding() {
             >
               <Link
                 href="/register"
-                className="group relative inline-flex items-center gap-3 overflow-hidden rounded-2xl bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500 px-10 py-5 text-lg font-black text-white shadow-[0_0_60px_rgba(34,211,238,0.6)] transition-all hover:shadow-[0_0_90px_rgba(34,211,238,0.9)]"
+                className="group relative inline-flex items-center gap-3 overflow-hidden rounded-2xl bg-zinc-950 px-10 py-5 text-lg font-black text-white shadow-[0_18px_35px_rgba(15,23,42,0.2)] transition-all hover:bg-zinc-800"
               >
                 <Rocket className="h-6 w-6 transition-transform group-hover:rotate-12" />
                 <span className="relative z-10">INIZIA GRATIS ORA</span>
                 <ArrowRight className="h-6 w-6 transition-transform group-hover:translate-x-1" />
-                <motion.div
-                  className="absolute inset-0 bg-gradient-to-r from-purple-500 via-pink-500 to-cyan-500 opacity-0 transition-opacity group-hover:opacity-100"
-                  initial={{ x: "-100%" }}
-                  whileHover={{ x: "100%" }}
-                  transition={{ duration: 0.6 }}
-                />
               </Link>
             </motion.div>
 
@@ -526,7 +501,7 @@ export function HomeLanding() {
                 href="https://wa.me/41784104391?text=Ciao%2C%20voglio%20una%20demo%20di%20Grooming%20Revolution!"
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-3 rounded-2xl border-2 border-emerald-400/50 bg-emerald-500/10 px-10 py-5 text-lg font-bold text-emerald-300 backdrop-blur-xl transition-all hover:border-emerald-400 hover:bg-emerald-500/20 hover:shadow-[0_0_40px_rgba(16,185,129,0.4)]"
+                className="inline-flex items-center gap-3 rounded-2xl border-2 border-emerald-300 bg-emerald-50 px-10 py-5 text-lg font-bold text-emerald-700 transition-all hover:border-emerald-400 hover:bg-emerald-100"
               >
                 <MessageCircle className="h-6 w-6" />
                 Demo WhatsApp
@@ -539,7 +514,7 @@ export function HomeLanding() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.8 }}
-            className="mt-12 flex flex-wrap justify-center gap-6 text-sm text-slate-400"
+            className="mt-12 flex flex-wrap justify-center gap-6 text-sm text-zinc-600"
           >
             <div className="flex items-center gap-2">
               <Shield className="h-5 w-5 text-cyan-400" />
@@ -566,7 +541,7 @@ export function HomeLanding() {
             }}
           >
             <motion.div
-              className="relative rounded-3xl border border-white/20 bg-gradient-to-br from-slate-800/50 to-slate-900/50 p-4 backdrop-blur-2xl shadow-[0_30px_100px_rgba(0,0,0,0.7)]"
+              className="relative rounded-3xl border border-zinc-200 bg-white p-4 shadow-[0_30px_80px_rgba(15,23,42,0.14)]"
               whileHover={{
                 rotateY: 2,
                 rotateX: -2,
@@ -579,19 +554,19 @@ export function HomeLanding() {
               }}
             >
               {/* Top bar mockup */}
-              <div className="mb-4 flex items-center justify-between rounded-t-2xl border-b border-white/10 pb-3">
+              <div className="mb-4 flex items-center justify-between rounded-t-2xl border-b border-zinc-200 pb-3">
                 <div className="flex items-center gap-3">
                   <div className="flex gap-2">
                     <div className="h-3 w-3 rounded-full bg-red-500" />
                     <div className="h-3 w-3 rounded-full bg-yellow-500" />
                     <div className="h-3 w-3 rounded-full bg-green-500" />
                   </div>
-                  <span className="text-xs font-semibold uppercase tracking-widest text-slate-400">
+                  <span className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
                     Dashboard Live • Operativo
                   </span>
                 </div>
                 <motion.span 
-                  className="rounded-full bg-emerald-500/20 px-3 py-1 text-[10px] font-bold text-emerald-400 ring-1 ring-emerald-500/40"
+                  className="rounded-full bg-emerald-100 px-3 py-1 text-[10px] font-bold text-emerald-700 ring-1 ring-emerald-200"
                   animate={{
                     boxShadow: [
                       "0 0 10px rgba(16, 185, 129, 0.3)",
@@ -609,7 +584,7 @@ export function HomeLanding() {
               </div>
 
               {/* Screenshot */}
-              <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-slate-950">
+              <div className="relative overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-100">
                 <Image
                   src="/img/homepage.png"
                   alt="Preview Grooming Revolution"
@@ -620,28 +595,28 @@ export function HomeLanding() {
                 />
                 
                 {/* Overlay gradient */}
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent pointer-events-none" />
+                <div className="absolute inset-0 bg-gradient-to-t from-zinc-900/45 via-transparent to-transparent pointer-events-none" />
                 
                 {/* Floating stats */}
                 <motion.div
-                  className="absolute bottom-6 left-6 rounded-2xl border border-cyan-400/30 bg-slate-900/80 p-4 backdrop-blur-xl"
+                  className="absolute bottom-6 left-6 rounded-2xl border border-cyan-200 bg-white/90 p-4 backdrop-blur-xl"
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 1.5 }}
                 >
-                  <div className="text-xs text-slate-400">No-show ridotti</div>
+                  <div className="text-xs text-zinc-600">No-show ridotti</div>
                   <div className="text-3xl font-black text-cyan-400">
                     <AnimatedCounter value="-37%" />
                   </div>
                 </motion.div>
 
                 <motion.div
-                  className="absolute bottom-6 right-6 rounded-2xl border border-purple-400/30 bg-slate-900/80 p-4 backdrop-blur-xl"
+                  className="absolute bottom-6 right-6 rounded-2xl border border-violet-200 bg-white/90 p-4 backdrop-blur-xl"
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 1.7 }}
                 >
-                  <div className="text-xs text-slate-400">Tempo risparmiato</div>
+                  <div className="text-xs text-zinc-600">Tempo risparmiato</div>
                   <div className="text-3xl font-black text-purple-400">+5h/sett</div>
                 </motion.div>
               </div>
@@ -655,9 +630,9 @@ export function HomeLanding() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 1.2 + idx * 0.1 }}
                     whileHover={{ scale: 1.05, y: -2 }}
-                    className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm"
+                    className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 backdrop-blur-sm"
                   >
-                    <div className="text-[10px] uppercase tracking-wider text-slate-400">{stat.label}</div>
+                    <div className="text-[10px] uppercase tracking-wider text-zinc-500">{stat.label}</div>
                     <div className="mt-1 text-2xl font-black bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
                       <AnimatedCounter value={stat.value} />
                     </div>
@@ -695,12 +670,12 @@ export function HomeLanding() {
               <Layers3 className="h-4 w-4" />
               Funzionalità Complete
             </p>
-            <h2 className={`${headingFont.className} mt-6 text-4xl font-black text-white sm:text-5xl lg:text-6xl`}>
+            <h2 className={`${headingFont.className} mt-6 text-4xl font-black text-zinc-900 sm:text-5xl lg:text-6xl`}>
               <span className="bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
                 Tutto in un solo sistema.
               </span>
               <br />
-              <span className="text-slate-300">Nessun compromesso.</span>
+              <span className="text-zinc-700">Nessun compromesso.</span>
             </h2>
           </motion.div>
 
@@ -719,7 +694,7 @@ export function HomeLanding() {
                     rotateY: 5,
                     rotateX: 5,
                   }}
-                  className="group relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-slate-800/50 to-slate-900/50 p-8 backdrop-blur-xl"
+                  className="group relative overflow-hidden rounded-3xl border border-white/10 bg-white p-8 shadow-[0_12px_35px_rgba(15,23,42,0.08)]"
                   style={{
                     perspective: "1000px",
                   }}
@@ -747,10 +722,10 @@ export function HomeLanding() {
                       <Icon className="h-7 w-7 text-white drop-shadow-lg" />
                     </motion.div>
 
-                    <h3 className={`${headingFont.className} mt-6 text-2xl font-bold text-white`}>
+                    <h3 className={`${headingFont.className} mt-6 text-2xl font-bold text-zinc-900`}>
                       {item.title}
                     </h3>
-                    <p className="mt-3 text-base leading-relaxed text-slate-400">
+                    <p className="mt-3 text-base leading-relaxed text-zinc-600">
                       {item.text}
                     </p>
 
@@ -773,7 +748,7 @@ export function HomeLanding() {
 
       {/* Setup/Onboarding Section */}
       <section className="relative px-4 py-32 sm:px-6 lg:px-8">
-        <div className="mx-auto grid w-full max-w-[1400px] gap-12 rounded-4xl border border-white/10 bg-gradient-to-br from-slate-800/30 to-slate-900/30 p-10 backdrop-blur-2xl lg:grid-cols-[1fr_1.2fr] lg:p-16">
+        <div className="mx-auto grid w-full max-w-[1400px] gap-12 rounded-[2rem] border border-zinc-200 bg-white p-10 shadow-[0_16px_45px_rgba(15,23,42,0.1)] lg:grid-cols-[1fr_1.2fr] lg:p-16">
           <motion.div
             initial={{ opacity: 0, x: -40 }}
             whileInView={{ opacity: 1, x: 0 }}
@@ -784,26 +759,26 @@ export function HomeLanding() {
               <Zap className="h-4 w-4" />
               Setup Lampo
             </p>
-            <h2 className={`${headingFont.className} mt-6 text-4xl font-black text-white sm:text-5xl`}>
+            <h2 className={`${headingFont.className} mt-6 text-4xl font-black text-zinc-900 sm:text-5xl`}>
               Da zero a operativo
               <br />
               <span className="bg-gradient-to-r from-orange-400 to-pink-400 bg-clip-text text-transparent">
                 in 10 minuti.
               </span>
             </h2>
-            <p className="mt-6 text-lg leading-relaxed text-slate-300">
+            <p className="mt-6 text-lg leading-relaxed text-zinc-700">
               Non serve essere esperti. Il sistema ti guida passo-passo:
               listino, team, turni e sei pronto a ricevere prenotazioni.
             </p>
 
             <motion.div
-              className="mt-8 inline-flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-6 py-4 backdrop-blur-xl"
+              className="mt-8 inline-flex items-center gap-3 rounded-2xl border border-zinc-200 bg-zinc-50 px-6 py-4"
               whileHover={{ scale: 1.05 }}
             >
               <Clock3 className="h-8 w-8 text-cyan-400" />
               <div>
-                <div className="text-sm text-slate-400">Tempo medio setup</div>
-                <div className="text-2xl font-black text-white">10 min</div>
+                <div className="text-sm text-zinc-600">Tempo medio setup</div>
+                <div className="text-2xl font-black text-zinc-900">10 min</div>
               </div>
             </motion.div>
           </motion.div>
@@ -826,7 +801,7 @@ export function HomeLanding() {
                   scale: 1.02,
                   x: 10,
                 }}
-                className="flex items-start gap-4 rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl transition-all hover:border-cyan-400/30 hover:bg-white/10"
+                className="flex items-start gap-4 rounded-2xl border border-zinc-200 bg-zinc-50 p-5 transition-all hover:border-cyan-300 hover:bg-white"
               >
                 <motion.span
                   className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 text-lg font-black text-white shadow-lg"
@@ -840,7 +815,7 @@ export function HomeLanding() {
                 >
                   {idx + 1}
                 </motion.span>
-                <p className="pt-1 text-base leading-relaxed text-slate-300">{step}</p>
+                <p className="pt-1 text-base leading-relaxed text-zinc-700">{step}</p>
               </motion.div>
             ))}
           </motion.div>
@@ -860,12 +835,12 @@ export function HomeLanding() {
               <Star className="h-4 w-4 fill-emerald-400" />
               Testimonianze
             </p>
-            <h2 className={`${headingFont.className} mt-6 text-4xl font-black text-white sm:text-5xl lg:text-6xl`}>
+            <h2 className={`${headingFont.className} mt-6 text-4xl font-black text-zinc-900 sm:text-5xl lg:text-6xl`}>
               <span className="bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 bg-clip-text text-transparent">
                 Risultati reali.
               </span>
               <br />
-              <span className="text-slate-300">Clienti soddisfatti.</span>
+              <span className="text-zinc-700">Clienti soddisfatti.</span>
             </h2>
           </motion.div>
 
@@ -881,7 +856,7 @@ export function HomeLanding() {
                   y: -12,
                   scale: 1.03,
                 }}
-                className="group relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-slate-800/50 to-slate-900/50 p-8 backdrop-blur-xl"
+                className="group relative overflow-hidden rounded-3xl border border-zinc-200 bg-white p-8 shadow-[0_12px_35px_rgba(15,23,42,0.08)]"
               >
                 {/* Stars */}
                 <div className="mb-6 flex gap-1">
@@ -897,11 +872,11 @@ export function HomeLanding() {
                   ))}
                 </div>
 
-                <p className="text-lg leading-relaxed text-slate-300">&ldquo;{item.quote}&rdquo;</p>
+                <p className="text-lg leading-relaxed text-zinc-700">&ldquo;{item.quote}&rdquo;</p>
 
                 <div className="mt-6 flex items-center justify-between">
                   <div>
-                    <p className="font-bold text-white">{item.name}</p>
+                    <p className="font-bold text-zinc-900">{item.name}</p>
                   </div>
                   <motion.span
                     className="rounded-full bg-gradient-to-r from-emerald-500/20 to-teal-500/20 px-4 py-2 text-xs font-bold text-emerald-400 ring-1 ring-emerald-500/40"
@@ -928,7 +903,7 @@ export function HomeLanding() {
             viewport={{ once: true }}
             className="mb-12"
           >
-            <h2 className={`${headingFont.className} text-4xl font-black text-white sm:text-5xl`}>
+            <h2 className={`${headingFont.className} text-4xl font-black text-zinc-900 sm:text-5xl`}>
               <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
                 Domande frequenti
               </span>
@@ -944,10 +919,10 @@ export function HomeLanding() {
                 viewport={{ once: true }}
                 transition={{ delay: idx * 0.1 }}
                 whileHover={{ scale: 1.02, y: -4 }}
-                className="rounded-3xl border border-white/10 bg-white/5 p-8 backdrop-blur-xl transition-all hover:border-white/20 hover:bg-white/10"
+                className="rounded-3xl border border-zinc-200 bg-white p-8 transition-all hover:border-cyan-300 hover:bg-cyan-50/30"
               >
-                <h3 className="text-xl font-bold text-white">{item.q}</h3>
-                <p className="mt-4 text-base leading-relaxed text-slate-300">{item.a}</p>
+                <h3 className="text-xl font-bold text-zinc-900">{item.q}</h3>
+                <p className="mt-4 text-base leading-relaxed text-zinc-700">{item.a}</p>
               </motion.article>
             ))}
           </div>
@@ -986,7 +961,7 @@ export function HomeLanding() {
               Ultima chiamata
             </motion.p>
 
-            <h2 className={`${headingFont.className} mt-8 text-5xl font-black text-white sm:text-6xl lg:text-7xl`}>
+            <h2 className={`${headingFont.className} mt-8 text-5xl font-black text-zinc-900 sm:text-6xl lg:text-7xl`}>
               Pronto a dominare
               <br />
               <span className="bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
@@ -994,10 +969,10 @@ export function HomeLanding() {
               </span>
             </h2>
 
-            <p className="mx-auto mt-8 max-w-3xl text-xl leading-relaxed text-slate-300 sm:text-2xl">
+            <p className="mx-auto mt-8 max-w-3xl text-xl leading-relaxed text-zinc-700 sm:text-2xl">
               Unisciti a centinaia di saloni che hanno trasformato il loro business.
               <br />
-              <strong className="text-white">Inizia gratis oggi. Nessuna carta richiesta.</strong>
+              <strong className="text-zinc-900">Inizia gratis oggi. Nessuna carta richiesta.</strong>
             </p>
 
             <div className="mt-12 flex flex-wrap justify-center gap-5">
@@ -1027,14 +1002,14 @@ export function HomeLanding() {
               >
                 <Link
                   href="/login"
-                  className="inline-flex items-center gap-3 rounded-2xl border-2 border-white/30 bg-white/10 px-12 py-6 text-xl font-bold text-white backdrop-blur-xl transition-all hover:border-white/50 hover:bg-white/20"
+                  className="inline-flex items-center gap-3 rounded-2xl border-2 border-zinc-300 bg-white px-12 py-6 text-xl font-bold text-zinc-900 transition-all hover:border-zinc-400 hover:bg-zinc-50"
                 >
                   Accedi
                 </Link>
               </motion.div>
             </div>
 
-            <div className="mt-12 flex flex-wrap justify-center gap-8 text-sm text-slate-400">
+            <div className="mt-12 flex flex-wrap justify-center gap-8 text-sm text-zinc-600">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="h-5 w-5 text-emerald-400" />
                 <span>Setup immediato</span>
@@ -1065,10 +1040,10 @@ export function HomeLanding() {
       </section>
 
       {/* Footer minimale ma elegante */}
-      <footer className="relative border-t border-white/10 px-4 py-16 sm:px-6 lg:px-8">
+      <footer className="relative border-t border-zinc-200 bg-white/70 px-4 py-16 sm:px-6 lg:px-8">
         <div className="mx-auto grid w-full max-w-[1400px] gap-10 md:grid-cols-3">
           <div>
-            <div className="h-12 w-40 overflow-hidden rounded-xl border border-white/20 bg-white/10 p-2">
+            <div className="h-12 w-40 overflow-hidden rounded-xl border border-zinc-200 bg-white p-2">
               <Image
                 src="/img/logo-grooming-revolution.png"
                 alt="Grooming Revolution"
@@ -1077,7 +1052,7 @@ export function HomeLanding() {
                 className="h-full w-full object-contain"
               />
             </div>
-            <p className="mt-4 text-sm text-slate-400">
+            <p className="mt-4 text-sm text-zinc-600">
               Il gestionale SaaS professionale
               <br />
               per toelettature moderne.
@@ -1085,8 +1060,8 @@ export function HomeLanding() {
           </div>
 
           <div>
-            <p className="font-bold text-white">Navigazione</p>
-            <div className="mt-4 flex flex-col gap-2 text-sm text-slate-400">
+            <p className="font-bold text-zinc-900">Navigazione</p>
+            <div className="mt-4 flex flex-col gap-2 text-sm text-zinc-600">
               <Link href="/login" className="transition-colors hover:text-cyan-400">
                 Accedi
               </Link>
@@ -1097,8 +1072,8 @@ export function HomeLanding() {
           </div>
 
           <div>
-            <p className="font-bold text-white">Legale</p>
-            <div className="mt-4 flex flex-col gap-2 text-sm text-slate-400">
+            <p className="font-bold text-zinc-900">Legale</p>
+            <div className="mt-4 flex flex-col gap-2 text-sm text-zinc-600">
               <Link href="/legal/privacy" className="transition-colors hover:text-cyan-400">
                 Privacy Policy
               </Link>
@@ -1119,3 +1094,4 @@ export function HomeLanding() {
     </main>
   );
 }
+
