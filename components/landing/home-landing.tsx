@@ -1099,9 +1099,9 @@ export function HomeLanding() {
               />
             </div>
             <p className="mt-4 text-sm text-zinc-600">
-              Il gestionale SaaS professionale
+              Grooming Revolution e un prodotto sviluppato e curato da Cecilia Luxury Grooming.
               <br />
-              per toelettature moderne.
+              Sede legale: Via Ernesto Bosia 4, 6900 Paradiso (CH).
             </p>
           </div>
 
