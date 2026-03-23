@@ -346,24 +346,16 @@ export function HomeLanding() {
           <div className="flex items-center gap-3 justify-self-end">
             <Link
               href="/login"
-              className="rounded-xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 transition-all hover:scale-105 hover:bg-zinc-50"
+              className="whitespace-nowrap rounded-xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 transition-all hover:scale-105 hover:bg-zinc-50"
             >
               Accedi
             </Link>
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+            <Link
+              href="/register"
+              className="whitespace-nowrap rounded-xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 transition-all hover:scale-105 hover:bg-zinc-50"
             >
-              <Link
-                href="/register"
-                className="rounded-xl bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500 px-5 py-2.5 text-sm font-bold text-white shadow-[0_10px_30px_rgba(14,165,233,0.35)] transition-all hover:shadow-[0_14px_35px_rgba(14,165,233,0.45)]"
-              >
-                <span className="flex items-center gap-2">
-                  <Rocket className="h-4 w-4" />
-                  Registrati
-                </span>
-              </Link>
-            </motion.div>
+              Registrati
+            </Link>
           </div>
         </div>
       </motion.header>
@@ -819,6 +811,60 @@ export function HomeLanding() {
               </motion.div>
             ))}
           </motion.div>
+        </div>
+      </section>
+
+      {/* Booking online clienti */}
+      <section className="relative px-4 py-24 sm:px-6 lg:px-8">
+        <div className="mx-auto grid w-full max-w-[1400px] gap-6 rounded-[2rem] border border-zinc-200 bg-white p-8 shadow-[0_16px_45px_rgba(15,23,42,0.1)] lg:grid-cols-2 lg:p-10">
+          <motion.article
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="rounded-3xl border border-cyan-200 bg-gradient-to-br from-cyan-50 to-blue-50 p-6"
+          >
+            <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-cyan-700">
+              <CalendarDays className="h-4 w-4" />
+              Booking online
+            </p>
+            <h3 className={`${headingFont.className} mt-3 text-3xl font-bold text-zinc-900`}>
+              Prenotazioni clienti sicure e sotto controllo
+            </h3>
+            <p className="mt-3 text-base leading-relaxed text-zinc-700">
+              Ogni prenotazione passa da regole reali: durata servizio, taglia, disponibilita operatore,
+              sede attiva e orari consentiti. Niente slot incoerenti, niente overbooking nascosto.
+            </p>
+            <ul className="mt-5 space-y-2 text-sm text-zinc-700">
+              <li className="inline-flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-600" />Slot filtrati per sede e operatore</li>
+              <li className="inline-flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-600" />Durate prese dal listino reale</li>
+              <li className="inline-flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-600" />Conferme WhatsApp automatiche post-prenotazione</li>
+            </ul>
+          </motion.article>
+
+          <motion.article
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.08 }}
+            className="rounded-3xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50 p-6"
+          >
+            <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-emerald-700">
+              <Shield className="h-4 w-4" />
+              Logica protetta
+            </p>
+            <h3 className={`${headingFont.className} mt-3 text-3xl font-bold text-zinc-900`}>
+              Flusso anti-errori per prenotazioni da clienti
+            </h3>
+            <p className="mt-3 text-base leading-relaxed text-zinc-700">
+              Il booking evita collisioni con orari non validi e tutela il calendario operativo. Se hai
+              gia una base clienti, il team puo importarla per partire senza reinserimenti manuali.
+            </p>
+            <ul className="mt-5 space-y-2 text-sm text-zinc-700">
+              <li className="inline-flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-600" />Blocchi non prenotabili fuori orario</li>
+              <li className="inline-flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-600" />Allineamento con agenda interna in tempo reale</li>
+              <li className="inline-flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-600" />Reminder automatici prima dell&apos;appuntamento</li>
+            </ul>
+          </motion.article>
         </div>
       </section>
 
