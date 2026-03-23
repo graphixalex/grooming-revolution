@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -41,6 +42,16 @@ export default function ForgotPasswordPage() {
 
   return (
     <Card className="w-full p-6">
+      <div className="mx-auto mb-3 h-14 w-full max-w-[320px] overflow-hidden rounded-lg border border-zinc-200 bg-white p-1.5">
+        <Image
+          src="/img/logo-grooming-revolution.png"
+          alt="Grooming Revolution"
+          width={640}
+          height={180}
+          className="h-full w-full object-contain object-center"
+          priority
+        />
+      </div>
       <h1 className="text-2xl font-semibold">Recupera password</h1>
       <p className="mb-4 text-sm text-zinc-600">Inserisci la tua email e ti invieremo il link di reset.</p>
       <form className="space-y-3" onSubmit={onSubmit}>
@@ -67,4 +78,3 @@ export default function ForgotPasswordPage() {
     </Card>
   );
 }
-

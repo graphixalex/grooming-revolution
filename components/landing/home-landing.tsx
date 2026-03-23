@@ -156,7 +156,7 @@ export function HomeLanding() {
 
           <motion.div
             style={{ opacity: heroOpacity, scale: heroScale }}
-            className="grid items-center gap-6 py-24 lg:grid-cols-[1.08fr_0.92fr] lg:py-24"
+            className="grid items-center gap-6 py-16 lg:grid-cols-[1.08fr_0.92fr] lg:py-16"
           >
             <motion.div
               initial={{ opacity: 0, y: 26 }}

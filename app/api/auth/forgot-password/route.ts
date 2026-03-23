@@ -27,10 +27,11 @@ export async function POST(req: NextRequest) {
 
   const email = parsed.data.email.toLowerCase().trim();
   const limiterKey = `${getClientIp(req)}:${email}`;
-  if (isForgotPasswordRateLimited(limiterKey)) {
+  if (isForgotPasswordRateLimited(limiterKey, 10, 15 * 60 * 1000)) {
+    console.warn("forgot_password_rate_limited", { email, ip: getClientIp(req) });
     return NextResponse.json({ ok: true, message: GENERIC_MESSAGE });
   }
-  recordForgotPasswordAttempt(limiterKey);
+  recordForgotPasswordAttempt(limiterKey, 10, 15 * 60 * 1000);
 
   const users = await prisma.user.findMany({
     where: { email },
@@ -38,6 +39,7 @@ export async function POST(req: NextRequest) {
     take: 2,
   });
   if (users.length !== 1) {
+    console.warn("forgot_password_user_not_unique", { email, matches: users.length });
     return NextResponse.json({ ok: true, message: GENERIC_MESSAGE });
   }
   const user = users[0];

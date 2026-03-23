@@ -51,13 +51,13 @@ export function Sidebar({ role }: { role: Role }) {
   return (
     <>
       <div className="border-b border-zinc-200 bg-white p-3 md:hidden">
-        <div className="mb-2 flex h-24 items-center justify-center overflow-hidden rounded-xl border border-rose-300 bg-gradient-to-r from-rose-100 via-rose-100 to-pink-200 px-2 py-2 text-sm font-bold text-[#0f1f3d] shadow-sm">
+        <div className="mb-2 flex h-24 items-center justify-center overflow-hidden rounded-xl border border-zinc-200 bg-white px-2 py-2 text-sm font-bold text-[#0f1f3d] shadow-sm">
           <Image
             src="/img/logo-grooming-revolution.png"
             alt="Grooming Revolution"
             width={640}
             height={180}
-            className="h-full w-full origin-center object-contain object-center scale-[3] translate-y-[7px]"
+            className="h-full w-full object-contain object-center"
             priority
           />
         </div>
@@ -86,13 +86,13 @@ export function Sidebar({ role }: { role: Role }) {
       </div>
 
       <aside className="hidden w-64 border-r border-zinc-200 bg-white/95 p-4 backdrop-blur-sm md:block">
-        <div className="mb-6 flex h-24 items-center justify-center overflow-hidden rounded-xl border border-rose-300 bg-gradient-to-r from-rose-100 via-rose-100 to-pink-200 p-2 font-bold tracking-wide text-[#0f1f3d] shadow-sm">
+        <div className="mb-6 flex h-24 items-center justify-center overflow-hidden rounded-xl border border-zinc-200 bg-white p-2 font-bold tracking-wide text-[#0f1f3d] shadow-sm">
           <Image
             src="/img/logo-grooming-revolution.png"
             alt="Grooming Revolution"
             width={640}
             height={180}
-            className="h-full w-full origin-center object-contain object-center scale-[3] translate-y-[7px]"
+            className="h-full w-full object-contain object-center"
           />
         </div>
         <nav className="space-y-1">
