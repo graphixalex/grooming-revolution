@@ -57,9 +57,8 @@ body {
 .landing-shell {
   position: relative;
   background:
-    radial-gradient(circle at 12% 10%, rgba(20, 184, 166, 0.14) 0%, rgba(20, 184, 166, 0) 38%),
-    radial-gradient(circle at 86% 0%, rgba(255, 122, 24, 0.18) 0%, rgba(255, 122, 24, 0) 32%),
-    linear-gradient(180deg, #f4f8ff 0%, #f7fafc 55%, #f7f8fb 100%);
+    radial-gradient(circle at 90% 0%, rgba(255, 122, 24, 0.1) 0%, rgba(255, 122, 24, 0) 34%),
+    linear-gradient(180deg, #f5f8fd 0%, #f7f9fc 55%, #f7f8fb 100%);
 }
 
 .landing-noise {
@@ -69,6 +68,13 @@ body {
   background-image: radial-gradient(rgba(17, 24, 39, 0.05) 0.6px, transparent 0.6px);
   background-size: 6px 6px;
   mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.24), rgba(0, 0, 0, 0.05));
+}
+
+.landing-card {
+  border: 1px solid #e4e8ef;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(5px);
 }
 
 .landing-glass {
