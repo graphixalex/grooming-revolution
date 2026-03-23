@@ -54,3 +54,86 @@ body {
   }
 }
 
+.landing-shell {
+  position: relative;
+  background:
+    radial-gradient(circle at 12% 10%, rgba(20, 184, 166, 0.14) 0%, rgba(20, 184, 166, 0) 38%),
+    radial-gradient(circle at 86% 0%, rgba(255, 122, 24, 0.18) 0%, rgba(255, 122, 24, 0) 32%),
+    linear-gradient(180deg, #f4f8ff 0%, #f7fafc 55%, #f7f8fb 100%);
+}
+
+.landing-noise {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(17, 24, 39, 0.05) 0.6px, transparent 0.6px);
+  background-size: 6px 6px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.24), rgba(0, 0, 0, 0.05));
+}
+
+.landing-glass {
+  backdrop-filter: blur(10px);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.88), rgba(255, 255, 255, 0.7));
+  border: 1px solid rgba(255, 255, 255, 0.64);
+  box-shadow: 0 14px 45px rgba(15, 23, 42, 0.09);
+}
+
+.landing-panel {
+  border: 1px solid #e4e8ef;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(247, 250, 255, 0.86));
+  box-shadow: 0 10px 30px rgba(24, 38, 64, 0.08);
+}
+
+.landing-orb {
+  pointer-events: none;
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(36px);
+  opacity: 0.65;
+}
+
+.landing-orb-a {
+  height: 210px;
+  width: 210px;
+  right: -50px;
+  top: -40px;
+  background: #22d3ee;
+}
+
+.landing-orb-b {
+  height: 180px;
+  width: 180px;
+  left: 52%;
+  bottom: -70px;
+  background: #f97316;
+}
+
+.landing-float {
+  animation: landingFloat 7s ease-in-out infinite;
+}
+
+.landing-reveal {
+  animation: landingReveal 550ms ease-out both;
+}
+
+@keyframes landingFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes landingReveal {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
