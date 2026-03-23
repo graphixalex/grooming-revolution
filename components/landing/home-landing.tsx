@@ -130,13 +130,13 @@ export function HomeLanding() {
             }`}
           >
             <div className="flex items-center gap-3">
-              <div className="h-11 w-28 overflow-hidden rounded-lg border border-zinc-200 bg-white p-1 md:w-36">
+              <div className="h-14 w-44 overflow-hidden rounded-lg border border-zinc-200 bg-white p-1 md:h-16 md:w-56">
                 <Image
                   src="/img/logo-grooming-revolution.png"
                   alt="Grooming Revolution"
                   width={640}
                   height={180}
-                  className="h-full w-full scale-[2.75] object-contain object-center"
+                  className="h-full w-full object-contain object-center"
                   priority
                 />
               </div>
@@ -156,7 +156,7 @@ export function HomeLanding() {
 
           <motion.div
             style={{ opacity: heroOpacity, scale: heroScale }}
-            className="grid flex-1 items-center gap-8 py-28 lg:grid-cols-[1.08fr_0.92fr] lg:py-36"
+            className="grid flex-1 items-center gap-6 py-24 lg:grid-cols-[1.08fr_0.92fr] lg:py-28"
           >
             <motion.div
               initial={{ opacity: 0, y: 26 }}
@@ -249,7 +249,7 @@ export function HomeLanding() {
         </div>
       </section>
 
-      <section className="px-4 py-10 sm:px-6 md:px-10 md:py-14">
+      <section className="px-4 py-6 sm:px-6 md:px-10 md:py-8">
         <div className="mx-auto w-full max-w-[1360px]">
           <motion.div
             initial={{ opacity: 0, y: 24 }}
@@ -281,7 +281,7 @@ export function HomeLanding() {
         </div>
       </section>
 
-      <section className="px-4 py-12 sm:px-6 md:px-10 md:py-16">
+      <section className="px-4 py-10 sm:px-6 md:px-10 md:py-12">
         <div className="mx-auto w-full max-w-[1360px]">
           <div className="mb-6 flex items-end justify-between gap-4">
             <div>
@@ -316,7 +316,7 @@ export function HomeLanding() {
         </div>
       </section>
 
-      <section className="w-full bg-zinc-950 px-4 py-12 text-zinc-100 sm:px-6 md:px-10 md:py-16">
+      <section className="w-full bg-zinc-950 px-4 py-10 text-zinc-100 sm:px-6 md:px-10 md:py-12">
         <div className="mx-auto grid w-full max-w-[1360px] gap-6 lg:grid-cols-[1.1fr_0.9fr]">
           <div>
             <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400">Workflow operativo</p>
@@ -345,7 +345,7 @@ export function HomeLanding() {
         </div>
       </section>
 
-      <section className="px-4 py-12 sm:px-6 md:px-10 md:py-16">
+      <section className="px-4 py-10 sm:px-6 md:px-10 md:py-12">
         <div className="mx-auto grid w-full max-w-[1360px] gap-4 lg:grid-cols-2">
           <motion.article initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="rounded-3xl border border-cyan-200 bg-gradient-to-br from-cyan-50 to-white p-5 md:p-7">
             <p className="text-xs font-semibold uppercase tracking-widest text-cyan-700">WhatsApp + no-show</p>
@@ -372,7 +372,7 @@ export function HomeLanding() {
         </div>
       </section>
 
-      <section className="w-full bg-white px-4 py-12 sm:px-6 md:px-10 md:py-16">
+      <section className="w-full bg-white px-4 py-10 sm:px-6 md:px-10 md:py-12">
         <div className="mx-auto w-full max-w-[1360px]">
           <h2 className={`${headingFont.className} text-3xl font-bold text-zinc-900 md:text-5xl`}>
             Pensato per saloni che vogliono standard pro.
@@ -394,7 +394,7 @@ export function HomeLanding() {
         </div>
       </section>
 
-      <section className="px-4 py-12 sm:px-6 md:px-10 md:py-16">
+      <section className="px-4 py-10 sm:px-6 md:px-10 md:py-12">
         <div className="mx-auto w-full max-w-[1360px] rounded-3xl border border-zinc-200 bg-white p-5 md:p-8">
           <p className="text-xs font-semibold uppercase tracking-widest text-zinc-500">Proof</p>
           <h2 className={`${headingFont.className} mt-2 text-3xl font-bold text-zinc-900 md:text-4xl`}>
@@ -420,7 +420,7 @@ export function HomeLanding() {
         </div>
       </section>
 
-      <section className="px-4 py-12 sm:px-6 md:px-10 md:py-16">
+      <section className="px-4 py-10 sm:px-6 md:px-10 md:py-12">
         <div className="mx-auto w-full max-w-[1360px] rounded-3xl border border-zinc-200 bg-white p-5 md:p-8">
           <div className="mb-4 flex items-center gap-2">
             <Layers3 className="h-5 w-5 text-zinc-700" />
@@ -444,7 +444,7 @@ export function HomeLanding() {
         </div>
       </section>
 
-      <section className="w-full bg-gradient-to-r from-orange-50 via-amber-50 to-orange-100 px-4 py-12 sm:px-6 md:px-10 md:py-16">
+      <section className="w-full bg-gradient-to-r from-orange-50 via-amber-50 to-orange-100 px-4 py-10 sm:px-6 md:px-10 md:py-12">
         <div className="mx-auto flex w-full max-w-[1360px] flex-wrap items-end justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-widest text-orange-700">Pricing semplice</p>
@@ -498,4 +498,3 @@ export function HomeLanding() {
     </main>
   );
 }
-
