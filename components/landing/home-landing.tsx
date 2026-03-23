@@ -322,15 +322,15 @@ export function HomeLanding() {
             : "border-white/60 bg-white/85"
         }`}
       >
-        <div className="mx-auto grid w-full max-w-[1400px] grid-cols-[1fr_auto_1fr] items-center gap-4">
-          <div className="hidden items-center md:flex">
+        <div className="mx-auto grid w-full max-w-[1400px] grid-cols-[auto_1fr_auto] items-center gap-4">
+          <div className="hidden items-center xl:flex">
             <span className="inline-flex rounded-full border border-cyan-200 bg-cyan-50 px-4 py-1.5 text-[11px] font-bold tracking-wide text-cyan-700">
               <Zap className="mr-1.5 h-3.5 w-3.5" />
               SOFTWARE PROFESSIONALE NEXT-GEN
             </span>
           </div>
 
-          <motion.div className="mx-auto" whileHover={{ scale: 1.02 }}>
+          <motion.div className="justify-self-center" whileHover={{ scale: 1.02 }}>
             <div className="relative h-14 w-56 overflow-hidden rounded-xl border border-zinc-200 bg-white p-2 shadow sm:h-16 sm:w-64">
               <Image
                 src="/img/logo-grooming-revolution.png"
@@ -343,7 +343,7 @@ export function HomeLanding() {
             </div>
           </motion.div>
 
-          <div className="ml-auto flex items-center gap-3">
+          <div className="flex items-center gap-3 justify-self-end">
             <Link
               href="/login"
               className="rounded-xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 transition-all hover:scale-105 hover:bg-zinc-50"
@@ -397,7 +397,7 @@ export function HomeLanding() {
             >
               <Sparkles className="h-4 w-4 text-cyan-400" />
               <span className="bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-xs font-extrabold tracking-wide text-transparent">
-                🚀 RIVOLUZIONE GESTIONALE 2026
+                🚀 GROOMING REVOLUTION 2026
               </span>
               <Star className="h-4 w-4 text-purple-400" />
             </motion.div>
@@ -1094,4 +1094,3 @@ export function HomeLanding() {
     </main>
   );
 }
-
