@@ -360,7 +360,7 @@ export function HomeLanding() {
               >
                 <span className="flex items-center gap-2">
                   <Rocket className="h-4 w-4" />
-                  Inizia GRATIS
+                  Registrati
                 </span>
               </Link>
             </motion.div>
@@ -397,7 +397,7 @@ export function HomeLanding() {
             >
               <Sparkles className="h-4 w-4 text-cyan-400" />
               <span className="bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-xs font-extrabold tracking-wide text-transparent">
-                🚀 RIVOLUZIONE GESTIONALE SaaS 2026
+                🚀 RIVOLUZIONE GESTIONALE 2026
               </span>
               <Star className="h-4 w-4 text-purple-400" />
             </motion.div>
