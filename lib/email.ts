@@ -83,16 +83,26 @@ async function sendEmail(input: {
   if (!client) return { ok: false as const, reason: "email_not_configured", detail: "RESEND_API_KEY non configurata" };
 
   try {
-    await client.emails.send({
+    const response = await client.emails.send({
       from: getFromAddress(),
       to: input.to,
       subject: input.subject,
       text: input.text,
       html: input.html,
     });
+    if ((response as { error?: unknown } | null)?.error) {
+      const detail = String((response as { error?: unknown }).error);
+      console.error("email_send_failed_response", { to: input.to, subject: input.subject, detail });
+      return { ok: false as const, reason: "email_send_failed", detail };
+    }
     return { ok: true as const };
   } catch (error: unknown) {
-    console.error("email_send_failed", error);
+    console.error("email_send_failed", {
+      to: input.to,
+      subject: input.subject,
+      from: getFromAddress(),
+      error,
+    });
     const detail = error instanceof Error ? error.message : String(error);
     return { ok: false as const, reason: "email_send_failed", detail };
   }
@@ -207,8 +217,9 @@ export async function sendPasswordResetEmail(input: {
   to: string;
   rawToken: string;
   expiresInMinutes: number;
+  appUrlOverride?: string;
 }) {
-  const appUrl = getAppUrl();
+  const appUrl = (input.appUrlOverride || getAppUrl()).replace(/\/+$/, "");
   const resetUrl = `${appUrl}/reset-password?token=${encodeURIComponent(input.rawToken)}`;
   const subject = "Reimposta la password - Grooming Revolution";
 

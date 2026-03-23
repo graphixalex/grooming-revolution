@@ -62,12 +62,23 @@ export async function POST(req: NextRequest) {
     });
   });
 
-  await sendPasswordResetEmail({
+  const mailResult = await sendPasswordResetEmail({
     to: user.email,
     rawToken,
     expiresInMinutes: 30,
+    appUrlOverride: req.nextUrl.origin,
   });
+  if (!mailResult.ok) {
+    console.error("forgot_password_email_failed", {
+      email: user.email,
+      reason: mailResult.reason,
+      detail: mailResult.detail,
+      hasResendKey: Boolean(process.env.RESEND_API_KEY),
+      emailFrom: process.env.EMAIL_FROM || null,
+      nextAuthUrl: process.env.NEXTAUTH_URL || null,
+      origin: req.nextUrl.origin,
+    });
+  }
 
   return NextResponse.json({ ok: true, message: GENERIC_MESSAGE });
 }
-

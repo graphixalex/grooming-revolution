@@ -114,7 +114,7 @@ export function HomeLanding() {
 
   return (
     <main className={`${bodyFont.className} pro-landing min-h-screen`}>
-      <section className="pro-hero relative isolate min-h-[100svh] overflow-hidden px-4 pb-12 pt-4 sm:px-6 md:px-10">
+      <section className="pro-hero relative isolate overflow-hidden px-4 pb-8 pt-4 sm:px-6 md:px-10">
         <div className="pro-bg-grid" />
         <div className="pro-blob pro-blob-a" />
         <div className="pro-blob pro-blob-b" />
@@ -156,7 +156,7 @@ export function HomeLanding() {
 
           <motion.div
             style={{ opacity: heroOpacity, scale: heroScale }}
-            className="grid flex-1 items-center gap-6 py-24 lg:grid-cols-[1.08fr_0.92fr] lg:py-28"
+            className="grid items-center gap-6 py-24 lg:grid-cols-[1.08fr_0.92fr] lg:py-24"
           >
             <motion.div
               initial={{ opacity: 0, y: 26 }}
