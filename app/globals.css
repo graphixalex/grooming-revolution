@@ -77,6 +77,85 @@ body {
   backdrop-filter: blur(5px);
 }
 
+.pro-landing {
+  background: linear-gradient(180deg, #f5f8fd 0%, #f8fafc 60%, #f7f8fb 100%);
+}
+
+.pro-hero {
+  background:
+    radial-gradient(circle at 8% 16%, rgba(6, 182, 212, 0.15) 0%, rgba(6, 182, 212, 0) 30%),
+    radial-gradient(circle at 95% 0%, rgba(255, 122, 24, 0.2) 0%, rgba(255, 122, 24, 0) 36%),
+    linear-gradient(180deg, #f7fbff 0%, #f3f7fd 100%);
+}
+
+.pro-bg-grid {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(15, 23, 42, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.06) 1px, transparent 1px);
+  background-size: 34px 34px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.22), rgba(0, 0, 0, 0));
+}
+
+.pro-blob {
+  pointer-events: none;
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(48px);
+  opacity: 0.55;
+}
+
+.pro-blob-a {
+  height: 260px;
+  width: 260px;
+  right: 2%;
+  top: 12%;
+  background: #22d3ee;
+  animation: proFloatA 8s ease-in-out infinite;
+}
+
+.pro-blob-b {
+  height: 220px;
+  width: 220px;
+  left: -4%;
+  bottom: 8%;
+  background: #fb923c;
+  animation: proFloatB 9s ease-in-out infinite;
+}
+
+.pro-device {
+  border: 1px solid #d8e1ec;
+  border-radius: 22px;
+  padding: 1rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(245, 249, 255, 0.94));
+  box-shadow:
+    0 20px 45px rgba(15, 23, 42, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+@keyframes proFloatA {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
+}
+
+@keyframes proFloatB {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(10px);
+  }
+}
+
 .landing-glass {
   backdrop-filter: blur(10px);
   background: linear-gradient(145deg, rgba(255, 255, 255, 0.88), rgba(255, 255, 255, 0.7));
