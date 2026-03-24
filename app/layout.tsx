@@ -31,9 +31,13 @@ export const metadata: Metadata = {
     canonical: "/",
   },
   icons: {
-    icon: [{ url: "/img/logo-grooming-revolution.png", type: "image/png" }],
-    shortcut: ["/img/logo-grooming-revolution.png"],
-    apple: ["/img/logo-grooming-revolution.png"],
+    icon: [
+      { url: "/img/favicon.ico" },
+      { url: "/img/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/img/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+    ],
+    shortcut: ["/img/favicon.ico"],
+    apple: [{ url: "/img/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
   },
   openGraph: {
     type: "website",
@@ -44,16 +48,18 @@ export const metadata: Metadata = {
     url: "/",
     images: [
       {
-        url: "/img/logo-grooming-revolution.png",
-        alt: "Logo Grooming Revolution",
+        url: "/img/per-homepage.png?v=20260324",
+        width: 1200,
+        height: 630,
+        alt: "Grooming Revolution - Dashboard preview",
       },
     ],
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: socialTitle,
     description: socialDescription,
-    images: ["/img/logo-grooming-revolution.png"],
+    images: ["/img/per-homepage.png?v=20260324"],
   },
 };
 
