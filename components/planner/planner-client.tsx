@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { addMinutes, format } from "date-fns";
 import { it as dateFnsIt } from "date-fns/locale";
+import { Circle, Scissors, StickyNote } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -361,6 +362,7 @@ export function PlannerClient({
   });
   const [switchingSalonId, setSwitchingSalonId] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
   const [incassoAmount, setIncassoAmount] = useState<string>("");
   const [incassoTipAmount, setIncassoTipAmount] = useState<string>("");
   const [incassoMethod, setIncassoMethod] = useState<"POS" | "CASH">("POS");
@@ -384,9 +386,22 @@ export function PlannerClient({
     startMs: number;
     endMs: number;
   } | null>(null);
+  const [previewAppointment, setPreviewAppointment] = useState<{
+    appointment: Appointment;
+    fallbackOperatorId: string;
+  } | null>(null);
 
   const [newClientForm, setNewClientForm] = useState({ nome: "", cognome: "", telefono: "", email: "", noteCliente: "", consensoPromemoria: true });
   const [newDogForm, setNewDogForm] = useState({ nome: "", razza: "", taglia: "M", noteCane: "", tagRapidiIds: [] as string[] });
+  const [lastTap, setLastTap] = useState<{ appointmentId: string; at: number } | null>(null);
+
+  function humanAppointmentStatus(status: string) {
+    if (status === "PRENOTATO") return "Prenotato";
+    if (status === "COMPLETATO") return "Completato";
+    if (status === "NO_SHOW") return "No-show";
+    if (status === "CANCELLATO") return "Cancellato";
+    return status;
+  }
 
   function resetAppointmentModalState() {
     setIsNewClient(null);
@@ -428,6 +443,22 @@ export function PlannerClient({
     setEditDate(toDateInputValue(currentStart));
     setEditTime(toTimeInputValue(currentStart));
     setShowEdit(true);
+  }
+
+  function handleAppointmentTap(appt: Appointment, fallbackOperatorId: string) {
+    if (!isTouchDevice) {
+      openAppointmentEditor(appt, fallbackOperatorId);
+      return;
+    }
+    const now = Date.now();
+    if (lastTap && lastTap.appointmentId === appt.id && now - lastTap.at <= 300) {
+      setLastTap(null);
+      setPreviewAppointment(null);
+      openAppointmentEditor(appt, fallbackOperatorId);
+      return;
+    }
+    setLastTap({ appointmentId: appt.id, at: now });
+    setPreviewAppointment({ appointment: appt, fallbackOperatorId });
   }
 
   function maybeOpenWhatsappReminder(args: {
@@ -548,6 +579,19 @@ export function PlannerClient({
 
   useEffect(() => {
     const update = () => setIsMobile(window.innerWidth < 768);
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
+  useEffect(() => {
+    const update = () => {
+      setIsTouchDevice(
+        window.matchMedia("(pointer: coarse)").matches ||
+          window.matchMedia("(hover: none)").matches ||
+          navigator.maxTouchPoints > 0,
+      );
+    };
     update();
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
@@ -1093,6 +1137,23 @@ export function PlannerClient({
         <div className="w-full text-sm font-semibold md:ml-auto md:w-auto">{title}</div>
       </div>
       <div className="overflow-hidden">
+        <div className="mb-2 rounded-md border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs text-zinc-700">
+          {isTouchDevice ? (
+            <>
+              <p className="font-semibold text-zinc-900">Uso touch (tablet/smartphone)</p>
+              <p>Tocco singolo: anteprima rapida appuntamento.</p>
+              <p>Doppio tocco: modifica completa appuntamento.</p>
+              <p>Pressione lunga e trascina: sposta appuntamento in agenda.</p>
+            </>
+          ) : (
+            <>
+              <p className="font-semibold text-zinc-900">Uso desktop</p>
+              <p>Click su appuntamento: modifica completa.</p>
+              <p>Passa col mouse: anteprima dettagli (trattamenti, note, stato).</p>
+              <p>Trascina bordi sopra/sotto: cambia durata con anteprima live.</p>
+            </>
+          )}
+        </div>
         {(pendingMoveAppointmentId || copiedAppointmentId) ? (
           <div className="mb-2 flex flex-wrap items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-zinc-700">
             {pendingMoveAppointmentId ? <span>Sposta attiva: tocca lo slot destinazione.</span> : null}
@@ -1277,7 +1338,7 @@ export function PlannerClient({
                                     }}
                                     onClick={(event) => {
                                       event.stopPropagation();
-                                      openAppointmentEditor(appt, op.id);
+                                      handleAppointmentTap(appt, op.id);
                                     }}
                                     title={hoverPreviewText}
                                   >
@@ -1289,15 +1350,18 @@ export function PlannerClient({
                                         <span className="block truncate text-[11px] font-medium leading-tight text-white/90">
                                           {format(new Date(apptStartMs), "HH:mm")} - {format(new Date(apptEndMs), "HH:mm")}
                                         </span>
-                                        {!isPersonalNoteAppointment(appt) && treatmentsText ? (
-                                          <span className="block truncate text-[11px] leading-tight text-white/85">{treatmentsText}</span>
-                                        ) : null}
-                                        {noteText ? (
-                                          <span className="block truncate text-[11px] italic leading-tight text-white/80">{noteText}</span>
-                                        ) : null}
-                                        {apptEndMs > slotEndMs ? (
-                                          <span className="block pt-0.5 text-[11px] font-semibold leading-tight text-white/70">in corso</span>
-                                        ) : null}
+                                        <span className="mt-0.5 flex items-center gap-1.5">
+                                          {!isPersonalNoteAppointment(appt) && treatmentsText ? (
+                                            <Scissors className="h-3.5 w-3.5 text-white/85" />
+                                          ) : null}
+                                          {noteText ? (
+                                            <StickyNote className="h-3.5 w-3.5 text-white/85" />
+                                          ) : null}
+                                          <Circle className="h-3 w-3 fill-white/80 text-white/80" />
+                                          <span className="truncate text-[11px] font-semibold leading-tight text-white/80">
+                                            {humanAppointmentStatus(appt.stato)}
+                                          </span>
+                                        </span>
                                       </>
                                     ) : null}
                                     {resizePreview?.appointmentId === appt.id ? (
@@ -1367,6 +1431,64 @@ export function PlannerClient({
         </div>
         </div>
       </div>
+
+      {previewAppointment ? (
+        <div
+          className="fixed inset-0 z-40 bg-black/35 p-3 md:p-4"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setPreviewAppointment(null);
+          }}
+        >
+          <Card className="fixed bottom-2 left-2 right-2 z-50 max-h-[80dvh] overflow-y-auto rounded-2xl p-4 md:left-auto md:right-4 md:w-[440px]">
+            <div className="space-y-2 text-sm">
+              <h3 className="text-base font-semibold">Anteprima appuntamento</h3>
+              <p className="text-zinc-900">
+                <span className="font-semibold">
+                  {isPersonalNoteAppointment(previewAppointment.appointment)
+                    ? "Nota personale"
+                    : `${previewAppointment.appointment.cane.nome} / ${previewAppointment.appointment.cliente.nome} ${previewAppointment.appointment.cliente.cognome}`}
+                </span>
+              </p>
+              <p className="text-zinc-700">
+                Orario: {format(new Date(previewAppointment.appointment.startAt), "dd/MM/yyyy HH:mm")} -{" "}
+                {format(new Date(previewAppointment.appointment.endAt), "HH:mm")}
+              </p>
+              <p className="text-zinc-700">
+                Operatore:{" "}
+                {previewAppointment.appointment.operator?.nome ||
+                  operators.find((op) => op.id === previewAppointment.fallbackOperatorId)?.nome ||
+                  "-"}
+              </p>
+              <p className="text-zinc-700">Stato: {humanAppointmentStatus(previewAppointment.appointment.stato)}</p>
+              {!isPersonalNoteAppointment(previewAppointment.appointment) ? (
+                <p className="text-zinc-700">
+                  Trattamenti:{" "}
+                  {previewAppointment.appointment.trattamentiSelezionati.length
+                    ? previewAppointment.appointment.trattamentiSelezionati.map((row) => row.treatment.nome).join(", ")
+                    : "-"}
+                </p>
+              ) : null}
+              <p className="whitespace-pre-wrap text-zinc-700">
+                Note: {previewAppointment.appointment.noteAppuntamento?.trim() || "-"}
+              </p>
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setPreviewAppointment(null)}>
+                Chiudi
+              </Button>
+              <Button
+                onClick={() => {
+                  const { appointment, fallbackOperatorId } = previewAppointment;
+                  setPreviewAppointment(null);
+                  openAppointmentEditor(appointment, fallbackOperatorId);
+                }}
+              >
+                Modifica
+              </Button>
+            </div>
+          </Card>
+        </div>
+      ) : null}
 
       {showModal ? (
         <div
