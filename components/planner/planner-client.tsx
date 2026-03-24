@@ -1244,7 +1244,7 @@ export function PlannerClient({
                                     type="button"
                                     key={appt.id}
                                     draggable={Boolean(apptStartsHere)}
-                                    className={`absolute top-0 z-20 overflow-hidden px-1 text-left text-white transition ${
+                                    className={`absolute top-0 z-20 overflow-hidden px-1.5 text-left text-white transition ${
                                       apptContinuesBefore && apptContinuesAfter
                                         ? "-mb-px -mt-px rounded-none"
                                         : apptContinuesBefore
@@ -1272,20 +1272,20 @@ export function PlannerClient({
                                   >
                                     {apptStartsHere ? (
                                       <>
-                                        <span className="block truncate pt-0.5 text-[11px] font-bold leading-tight">
+                                        <span className="block truncate pt-0.5 text-xs font-bold leading-tight">
                                           {isPersonalNoteAppointment(appt) ? "Nota" : `${appt.cane.nome} / ${appt.cliente.nome}`}
                                         </span>
-                                        <span className="block truncate text-[10px] font-medium leading-tight text-white/90">
+                                        <span className="block truncate text-[11px] font-medium leading-tight text-white/90">
                                           {format(new Date(apptStartMs), "HH:mm")} - {format(new Date(apptEndMs), "HH:mm")}
                                         </span>
                                         {!isPersonalNoteAppointment(appt) && treatmentsText ? (
-                                          <span className="block truncate text-[10px] leading-tight text-white/85">{treatmentsText}</span>
+                                          <span className="block truncate text-[11px] leading-tight text-white/85">{treatmentsText}</span>
                                         ) : null}
                                         {noteText ? (
-                                          <span className="block truncate text-[10px] italic leading-tight text-white/80">{noteText}</span>
+                                          <span className="block truncate text-[11px] italic leading-tight text-white/80">{noteText}</span>
                                         ) : null}
                                         {apptEndMs > slotEndMs ? (
-                                          <span className="block pt-0.5 text-[10px] font-semibold leading-tight text-white/70">in corso</span>
+                                          <span className="block pt-0.5 text-[11px] font-semibold leading-tight text-white/70">in corso</span>
                                         ) : null}
                                       </>
                                     ) : null}
@@ -1317,7 +1317,7 @@ export function PlannerClient({
                                         }}
                                       />
                                     ) : null}
-                                    {((!apptStartsHere && !apptContinuesAfter) || (apptStartsHere && !apptContinuesAfter)) ? (
+                                    {apptStartsHere ? (
                                       <span
                                         role="button"
                                         aria-label="Ridimensiona fine appuntamento"
