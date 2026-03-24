@@ -15,7 +15,7 @@ function getAppUrl() {
 }
 
 function getSupportEmail() {
-  return process.env.SUPPORT_EMAIL || "alecostantini87@gmail.com";
+  return process.env.SUPPORT_EMAIL || "servizioclienti@grooming-revolution.com";
 }
 
 function escapeHtml(value: string) {
