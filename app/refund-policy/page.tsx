@@ -5,40 +5,50 @@ export default function RefundPolicyPage() {
     <LegalShell title="Politica di rimborso" updatedAt="24 marzo 2026">
       <div className="space-y-4">
         <p>
-          La presente politica definisce le regole di rimborso applicate agli acquisti del servizio SaaS Grooming Revolution,
-          erogato da <strong>Cecilia Luxury Grooming</strong>.
+          La presente Politica di Rimborso disciplina i rimborsi relativi al servizio SaaS Grooming Revolution,
+          fornito da <strong>Cecilia Luxury Grooming</strong>.
         </p>
 
-        <h2 className="text-lg font-semibold">1. Provider pagamenti e policy applicabile</h2>
+        <h2 className="text-lg font-semibold">1. Ambito e riferimento pagamenti</h2>
         <p>
-          I pagamenti sono elaborati da Paddle in qualita di merchant of record. Per rimborsi, cancellazioni e diritti del consumatore
-          si applica la Refund Policy ufficiale Paddle, oltre agli eventuali diritti inderogabili previsti dalla legge locale.
-        </p>
-        <p>
-          Riferimento: <a className="underline" href="https://www.paddle.com/legal/refund-policy" target="_blank" rel="noreferrer">https://www.paddle.com/legal/refund-policy</a>.
+          I pagamenti sono gestiti tramite Paddle, che opera come merchant of record.
+          Le richieste di rimborso sono valutate nel rispetto delle regole del circuito di pagamento
+          e delle norme imperative applicabili al Paese del cliente.
         </p>
 
-        <h2 className="text-lg font-semibold">2. Termine per richiesta rimborso</h2>
+        <h2 className="text-lg font-semibold">2. Termine per richiedere il rimborso</h2>
         <p>
-          Per clienti in UE/SEE/Svizzera/Regno Unito, il termine standard per esercitare il diritto di recesso ove applicabile e di
-          <strong> 14 giorni di calendario</strong> dalla data della transazione (o dal primo pagamento di abbonamento, secondo la policy Paddle).
+          Salvo diritti inderogabili eventualmente piu favorevoli previsti dalla legge locale,
+          il cliente puo richiedere il rimborso entro <strong>14 giorni di calendario</strong> dalla data della transazione
+          (o dal primo pagamento dell&apos;abbonamento, quando applicabile).
         </p>
         <p>
-          Per altri Paesi si applicano i termini specifici indicati nella policy Paddle e nelle norme locali obbligatorie.
-        </p>
-
-        <h2 className="text-lg font-semibold">3. Come richiedere il rimborso</h2>
-        <p>
-          La richiesta puo essere inviata tramite ricevuta Paddle (link “View receipt” o “Manage subscription”) oppure tramite supporto Paddle:
-          <a className="underline" href="https://paddle.net" target="_blank" rel="noreferrer"> https://paddle.net</a>.
+          Decorso tale termine, il rimborso non e normalmente previsto, salvo errori di addebito o obblighi di legge.
         </p>
 
-        <h2 className="text-lg font-semibold">4. Cancellazione abbonamento</h2>
+        <h2 className="text-lg font-semibold">3. Casi in cui il rimborso puo essere riconosciuto</h2>
         <p>
-          La cancellazione dell&apos;abbonamento interrompe i rinnovi futuri. Eventuali rimborsi sono valutati secondo la policy Paddle e i diritti di legge applicabili.
+          Il rimborso puo essere riconosciuto, a titolo esemplificativo, nei seguenti casi:
+        </p>
+        <ul className="list-disc space-y-1 pl-5">
+          <li>addebito duplicato o importo errato;</li>
+          <li>pagamento non autorizzato, previa verifica;</li>
+          <li>casi in cui la normativa applicabile impone il rimborso.</li>
+        </ul>
+
+        <h2 className="text-lg font-semibold">4. Come richiedere il rimborso</h2>
+        <p>
+          La richiesta puo essere inviata tramite i link presenti nella ricevuta di pagamento
+          (es. gestione acquisto/abbonamento) oppure contattando l&apos;assistenza amministrativa indicata sotto.
         </p>
 
-        <h2 className="text-lg font-semibold">5. Supporto amministrativo</h2>
+        <h2 className="text-lg font-semibold">5. Cancellazione abbonamento</h2>
+        <p>
+          La cancellazione interrompe i rinnovi futuri. L&apos;accesso resta attivo fino alla fine del periodo gia pagato,
+          salvo diversa disposizione di legge.
+        </p>
+
+        <h2 className="text-lg font-semibold">6. Supporto amministrativo</h2>
         <p>
           Per supporto amministrativo sul servizio: servizioclienti@grooming-revolution.com.
         </p>
