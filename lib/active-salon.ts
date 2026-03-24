@@ -1,14 +1,14 @@
 import { prisma } from "@/lib/prisma";
 
 export async function resolveActiveSalonId(
-  user: { salonId: string; role: "OWNER" | "MANAGER" | "STAFF" },
+  user: { salonId: string; role: "OWNER" | "MANAGER" | "STAFF"; canAccessGroupSalons?: boolean },
   requestedSalonId?: string | null,
 ) {
   if (!requestedSalonId || requestedSalonId === user.salonId) {
     return user.salonId;
   }
 
-  if (user.role !== "OWNER") {
+  if (user.role !== "OWNER" && !user.canAccessGroupSalons) {
     return user.salonId;
   }
 

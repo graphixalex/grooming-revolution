@@ -132,6 +132,7 @@ export const createStaffSchema = z.object({
   password: strongPasswordSchema,
   role: z.enum(["MANAGER", "STAFF"]).optional().default("STAFF"),
   salonId: z.string().min(1).optional(),
+  canAccessGroupSalons: z.boolean().optional().default(false),
 });
 
 export const signClientConsentsSchema = z.object({

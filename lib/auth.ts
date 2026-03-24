@@ -40,7 +40,13 @@ export const authOptions: NextAuthOptions = {
 
         clearLoginRateLimit(email);
 
-        return { id: user.id, email: user.email, role: user.ruolo, salonId: user.salonId };
+        return {
+          id: user.id,
+          email: user.email,
+          role: user.ruolo,
+          salonId: user.salonId,
+          canAccessGroupSalons: Boolean(user.canAccessGroupSalons),
+        };
       },
     }),
   ],
@@ -49,6 +55,7 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.role = (user as { role: "OWNER" | "MANAGER" | "STAFF" }).role;
         token.salonId = (user as { salonId: string }).salonId;
+        token.canAccessGroupSalons = Boolean((user as { canAccessGroupSalons?: boolean }).canAccessGroupSalons);
       }
       return token;
     },
@@ -57,6 +64,7 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.sub as string;
         session.user.role = token.role as "OWNER" | "MANAGER" | "STAFF";
         session.user.salonId = token.salonId as string;
+        session.user.canAccessGroupSalons = Boolean(token.canAccessGroupSalons);
       }
       return session;
     },

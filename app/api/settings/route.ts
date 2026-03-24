@@ -57,7 +57,7 @@ export async function GET() {
     prisma.user.findMany({
       where: { salonId },
       orderBy: { createdAt: "asc" },
-      select: { id: true, email: true, ruolo: true, salon: { select: { id: true, nomeSede: true } } },
+      select: { id: true, email: true, ruolo: true, canAccessGroupSalons: true, salon: { select: { id: true, nomeSede: true } } },
     }),
     prisma.operator.findMany({ where: { salonId }, orderBy: { ordine: "asc" } }),
   ]);
@@ -340,7 +340,7 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Dati staff non validi" }, { status: 400 });
     }
 
-    const { email, password, role, salonId: requestedSalonIdRaw } = parsed.data;
+    const { email, password, role, salonId: requestedSalonIdRaw, canAccessGroupSalons } = parsed.data;
     const requestedSalonId = requestedSalonIdRaw && requestedSalonIdRaw.length > 0 ? requestedSalonIdRaw : salonId;
     const [currentSalon, targetSalon] = await Promise.all([
       prisma.salon.findUnique({ where: { id: salonId }, select: { salonGroupId: true } }),
@@ -366,8 +366,9 @@ export async function PATCH(req: NextRequest) {
         email: normalizedEmail,
         passwordHash,
         ruolo: role,
+        canAccessGroupSalons: Boolean(canAccessGroupSalons),
       },
-      select: { id: true, email: true, ruolo: true, salon: { select: { id: true, nomeSede: true } } },
+      select: { id: true, email: true, ruolo: true, canAccessGroupSalons: true, salon: { select: { id: true, nomeSede: true } } },
     });
     return NextResponse.json(created);
   }
@@ -414,6 +415,7 @@ export async function PATCH(req: NextRequest) {
       email,
       ruolo: nextRole,
       salon: { connect: { id: requestedSalonId } },
+      canAccessGroupSalons: Boolean(body.canAccessGroupSalons),
     };
     if (rawPassword.trim().length > 0) {
       if (
@@ -434,7 +436,7 @@ export async function PATCH(req: NextRequest) {
     const updated = await prisma.user.update({
       where: { id: userId },
       data,
-      select: { id: true, email: true, ruolo: true, salon: { select: { id: true, nomeSede: true } } },
+      select: { id: true, email: true, ruolo: true, canAccessGroupSalons: true, salon: { select: { id: true, nomeSede: true } } },
     });
     if (rawPassword.trim().length > 0) {
       await sendPasswordChangedEmail({

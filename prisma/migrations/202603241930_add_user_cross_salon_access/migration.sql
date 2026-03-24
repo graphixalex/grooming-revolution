@@ -1,0 +1,2 @@
+ALTER TABLE "User"
+ADD COLUMN "canAccessGroupSalons" BOOLEAN NOT NULL DEFAULT false;

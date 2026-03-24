@@ -140,6 +140,7 @@ export function SettingsClient({ initial }: { initial: any }) {
   const [staff, setStaff] = useState(
     (initial.staff || []).map((s: any) => ({
       ...s,
+      canAccessGroupSalons: Boolean(s.canAccessGroupSalons),
       password: "",
       currentPassword: "",
       newPassword: "",
@@ -205,17 +206,20 @@ export function SettingsClient({ initial }: { initial: any }) {
   }
 
   async function createTeamUser() {
+    const allGroupSalons = staffSalonId === "__ALL__";
     const created = await saveSection("staff", {
       email: staffEmail,
       password: staffPassword,
       role: staffRole,
-      salonId: staffSalonId,
+      salonId: allGroupSalons ? (initial.salon?.id || initial.assignableSalons?.[0]?.id || "") : staffSalonId,
+      canAccessGroupSalons: allGroupSalons,
     });
     if (!created) return;
     setStaff((prev: any[]) => [
       ...prev,
       {
         ...created,
+        canAccessGroupSalons: Boolean(created.canAccessGroupSalons),
         password: "",
         currentPassword: "",
         newPassword: "",
@@ -264,10 +268,11 @@ export function SettingsClient({ initial }: { initial: any }) {
       email: row.email,
       role: row.ruolo,
       salonId: row.salon?.id,
+      canAccessGroupSalons: Boolean(row.canAccessGroupSalons),
       password: row.password || "",
     });
     if (!updated) return;
-    setStaff((prev: any[]) => prev.map((x) => (x.id === row.id ? { ...updated, password: "" } : x)));
+    setStaff((prev: any[]) => prev.map((x) => (x.id === row.id ? { ...updated, canAccessGroupSalons: Boolean(updated.canAccessGroupSalons), password: "" } : x)));
   }
 
   async function deleteTeamUser(row: any) {
@@ -1215,11 +1220,19 @@ export function SettingsClient({ initial }: { initial: any }) {
                 {s.nomeSede || "Sede principale"}
               </option>
             ))}
+            {(initial.assignableSalons || []).length > 1 ? (
+              <option value="__ALL__">Entrambe le sedi (gruppo)</option>
+            ) : null}
           </select>
         </div>
         <Button onClick={createTeamUser} disabled={initial.role !== "OWNER"}>
           Crea utente team
         </Button>
+        {(initial.assignableSalons || []).length > 1 ? (
+          <p className="text-xs text-zinc-500">
+            Se scegli &quot;Entrambe le sedi&quot;, l&apos;utente potra cambiare sede dal selettore in alto.
+          </p>
+        ) : null}
         {initial.role !== "OWNER" ? (
           <p className="text-xs text-zinc-500">Solo l&apos;owner puo creare/modificare/eliminare membri team.</p>
         ) : null}
@@ -1249,20 +1262,23 @@ export function SettingsClient({ initial }: { initial: any }) {
               </select>
               <select
                 className="h-10 rounded-md border border-zinc-300 px-3 text-sm"
-                value={s.salon?.id || ""}
+                value={s.canAccessGroupSalons ? "__ALL__" : (s.salon?.id || "")}
                 onChange={(e) =>
                   setStaff((prev: any[]) =>
                     prev.map((x) =>
                       x.id === s.id
-                        ? {
-                            ...x,
-                            salon: {
-                              id: e.target.value,
-                              nomeSede:
-                                (initial.assignableSalons || []).find((row: any) => row.id === e.target.value)?.nomeSede ||
-                                "Sede principale",
-                            },
-                          }
+                        ? e.target.value === "__ALL__"
+                          ? { ...x, canAccessGroupSalons: true }
+                          : {
+                              ...x,
+                              canAccessGroupSalons: false,
+                              salon: {
+                                id: e.target.value,
+                                nomeSede:
+                                  (initial.assignableSalons || []).find((row: any) => row.id === e.target.value)?.nomeSede ||
+                                  "Sede principale",
+                              },
+                            }
                         : x,
                     ),
                   )
@@ -1274,6 +1290,9 @@ export function SettingsClient({ initial }: { initial: any }) {
                     {row.nomeSede || "Sede principale"}
                   </option>
                 ))}
+                {(initial.assignableSalons || []).length > 1 ? (
+                  <option value="__ALL__">Entrambe le sedi (gruppo)</option>
+                ) : null}
               </select>
               {isOwnerSelf ? (
                 <div className="space-y-2 md:col-span-2">

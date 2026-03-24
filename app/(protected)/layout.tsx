@@ -11,7 +11,7 @@ export default async function ProtectedLayout({ children }: { children: React.Re
     select: { salonGroupId: true, nomeAttivita: true, nomeSede: true },
   });
   const switcherOptions =
-    session.user.role === "OWNER" && currentSalon?.salonGroupId
+    (session.user.role === "OWNER" || session.user.canAccessGroupSalons) && currentSalon?.salonGroupId
       ? await prisma.salon.findMany({
           where: { salonGroupId: currentSalon.salonGroupId },
           select: { id: true, nomeAttivita: true, nomeSede: true },
