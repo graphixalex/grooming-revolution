@@ -1216,6 +1216,16 @@ export function PlannerClient({
                                 const apptBgColor = getAppointmentBgColor(appt);
                                 const treatmentsText = appt.trattamentiSelezionati.map((t) => t.treatment.nome).join(", ");
                                 const noteText = appt.noteAppuntamento?.trim() ?? "";
+                                const previewLines = [
+                                  isPersonalNoteAppointment(appt)
+                                    ? "Nota personale"
+                                    : `${appt.cane.nome} / ${appt.cliente.nome} ${appt.cliente.cognome}`,
+                                  `${format(new Date(apptStartMs), "HH:mm")} - ${format(new Date(apptEndMs), "HH:mm")}`,
+                                  treatmentsText ? `Trattamenti: ${treatmentsText}` : null,
+                                  noteText ? `Note: ${noteText}` : null,
+                                  appt.stato ? `Stato: ${appt.stato}` : null,
+                                ].filter(Boolean) as string[];
+                                const hoverPreviewText = previewLines.join("\n");
                                 const laneAppointments = operatorAppointments
                                   .filter((other) => {
                                     const { startMs: otherStart, endMs: otherEnd } = getRenderBounds(other);
@@ -1269,6 +1279,7 @@ export function PlannerClient({
                                       event.stopPropagation();
                                       openAppointmentEditor(appt, op.id);
                                     }}
+                                    title={hoverPreviewText}
                                   >
                                     {apptStartsHere ? (
                                       <>
