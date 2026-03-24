@@ -336,6 +336,8 @@ export function PlannerClient({
   const [modalMode, setModalMode] = useState<"APPOINTMENT" | "NOTE">("APPOINTMENT");
   const [isNewClient, setIsNewClient] = useState<boolean | null>(null);
   const [slotStart, setSlotStart] = useState<Date | null>(null);
+  const [slotDateInput, setSlotDateInput] = useState("");
+  const [slotTimeInput, setSlotTimeInput] = useState("");
   const [selectedClient, setSelectedClient] = useState<Cliente | null>(null);
   const [selectedDog, setSelectedDog] = useState<Cane | null>(null);
   const [search, setSearch] = useState("");
@@ -377,6 +379,18 @@ export function PlannerClient({
 
   const [newClientForm, setNewClientForm] = useState({ nome: "", cognome: "", telefono: "", email: "", noteCliente: "", consensoPromemoria: true });
   const [newDogForm, setNewDogForm] = useState({ nome: "", razza: "", taglia: "M", noteCane: "", tagRapidiIds: [] as string[] });
+
+  function openAppointmentEditor(appt: Appointment, fallbackOperatorId: string) {
+    setSelectedAppointment(appt);
+    setDurata((new Date(appt.endAt).getTime() - new Date(appt.startAt).getTime()) / 60000);
+    setNote(appt.noteAppuntamento || "");
+    setSelectedTreatments(appt.trattamentiSelezionati.map((t) => t.treatment.id));
+    setSelectedOperatorId(appt.operator?.id || fallbackOperatorId);
+    const currentStart = new Date(appt.startAt);
+    setEditDate(toDateInputValue(currentStart));
+    setEditTime(toTimeInputValue(currentStart));
+    setShowEdit(true);
+  }
 
   function maybeOpenWhatsappReminder(args: {
     clientPhone: string;
@@ -529,6 +543,16 @@ export function PlannerClient({
       cancelled = true;
     };
   }, [showModal, selectedDog, selectedTreatments]);
+
+  useEffect(() => {
+    if (!slotStart) {
+      setSlotDateInput("");
+      setSlotTimeInput("");
+      return;
+    }
+    setSlotDateInput(toDateInputValue(slotStart));
+    setSlotTimeInput(toTimeInputValue(slotStart));
+  }, [slotStart]);
 
   async function loadDogs(clienteId: string) {
     const res = await fetch(`/api/dogs?clienteId=${clienteId}`);
@@ -1085,46 +1109,26 @@ export function PlannerClient({
                         {(day.operators.length ? day.operators : [{ id: "none", nome: "Nessuno", start: "--:--", end: "--:--" }]).map((op) => {
                           const slotStart = new Date(day.date);
                           slotStart.setHours(Math.floor(slotMin / 60), slotMin % 60, 0, 0);
-                          const appt = appointments.find((a) => {
+                          const slotTime = slotStart.getTime();
+                          const slotEndMs = slotTime + 30 * 60 * 1000;
+                          const slotAppointments = appointments.filter((a) => {
                             if (a.operator?.id !== op.id) return false;
                             const aStart = new Date(a.startAt).getTime();
                             const aEnd = new Date(a.endAt).getTime();
-                            const slotTime = slotStart.getTime();
                             return slotTime >= aStart && slotTime < aEnd;
                           });
-                          const apptStartsHere = appt ? new Date(appt.startAt).getTime() === slotStart.getTime() : false;
-                          const slotEndMs = slotStart.getTime() + 30 * 60 * 1000;
-                          const apptContinuesBefore = appt ? new Date(appt.startAt).getTime() < slotStart.getTime() : false;
-                          const apptContinuesAfter = appt ? new Date(appt.endAt).getTime() > slotEndMs : false;
+                          const orderedSlotAppointments = slotAppointments.sort(
+                            (a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime(),
+                          );
                           const row = day.operators.find((o) => o.id === op.id);
                           const inShift = row ? slotMin >= toMinutes(row.start) && slotMin < toMinutes(row.end) : false;
-                          const apptBgColor = appt ? getAppointmentBgColor(appt) : undefined;
+                          const visibleCount = Math.max(1, orderedSlotAppointments.length);
                           return (
-                            <button
-                              type="button"
+                            <div
                               key={`${day.date.toISOString()}-${op.id}-${slotMin}`}
-                              draggable={Boolean(appt && apptStartsHere)}
-                              className={`h-9 w-full px-1.5 text-left transition ${
-                                appt
-                                  ? `relative z-10 border-0 px-2 text-white ${
-                                      apptContinuesBefore && apptContinuesAfter
-                                        ? "-mb-px -mt-px rounded-none"
-                                        : apptContinuesBefore
-                                          ? "-mt-px rounded-b-sm rounded-t-none"
-                                          : apptContinuesAfter
-                                            ? "-mb-px rounded-b-none rounded-t-sm"
-                                            : "rounded-sm"
-                                    }`
-                                  : inShift
-                                    ? "border border-zinc-200 bg-white hover:bg-[#f2f5fb]"
-                                    : "border border-zinc-100 bg-zinc-50 text-zinc-300"
+                              className={`relative h-9 w-full ${
+                                inShift ? "border border-zinc-200 bg-white" : "border border-zinc-100 bg-zinc-50"
                               }`}
-                              style={appt ? { backgroundColor: apptBgColor, color: "#ffffff" } : undefined}
-                              onDragStart={(event) => {
-                                if (!appt || !apptStartsHere) return;
-                                event.dataTransfer.setData("text/plain", appt.id);
-                                event.dataTransfer.effectAllowed = "move";
-                              }}
                               onDragOver={(event) => {
                                 if (!inShift || op.id === "none") return;
                                 event.preventDefault();
@@ -1139,81 +1143,115 @@ export function PlannerClient({
                               }}
                               onClick={() => {
                                 if (resizeDrag) return;
-                                if ((!inShift && !appt) || op.id === "none") return;
+                                if ((!inShift && orderedSlotAppointments.length === 0) || op.id === "none") return;
                                 if (pendingMoveAppointmentId) {
                                   void moveAppointmentToSlot(pendingMoveAppointmentId, slotStart, op.id || null);
                                   setPendingMoveAppointmentId(null);
                                   return;
                                 }
-                                if (!appt && copiedAppointmentId) {
+                                if (copiedAppointmentId) {
                                   void pasteAppointmentToSlot(copiedAppointmentId, slotStart, op.id || null);
                                   return;
                                 }
-                                if (appt) {
-                                  setSelectedAppointment(appt);
-                                  setDurata((new Date(appt.endAt).getTime() - new Date(appt.startAt).getTime()) / 60000);
-                                  setNote(appt.noteAppuntamento || "");
-                                  setSelectedTreatments(appt.trattamentiSelezionati.map((t) => t.treatment.id));
-                                  setSelectedOperatorId(appt.operator?.id || op.id);
-                                  const currentStart = new Date(appt.startAt);
-                                  setEditDate(toDateInputValue(currentStart));
-                                  setEditTime(toTimeInputValue(currentStart));
-                                  setShowEdit(true);
-                                  return;
+                                if (orderedSlotAppointments.length === 0) {
+                                  setSlotStart(slotStart);
+                                  setSelectedOperatorId(op.id);
+                                  setModalMode("APPOINTMENT");
+                                  setListinoQuote(null);
+                                  setNote("");
+                                  setShowModal(true);
                                 }
-                                setSlotStart(slotStart);
-                                setSelectedOperatorId(op.id);
-                                setModalMode("APPOINTMENT");
-                                setListinoQuote(null);
-                                setNote("");
-                                setShowModal(true);
                               }}
                             >
-                              {appt && apptStartsHere ? (
-                                <>
-                                  <span className="block truncate pt-0.5 text-[14px] font-bold leading-tight">
-                                    {isPersonalNoteAppointment(appt) ? `Nota: ${appt.noteAppuntamento || ""}` : `${appt.cane.nome} / ${appt.cliente.nome}`}
-                                  </span>
-                                  <span className="block truncate text-[11px] font-medium leading-tight text-white/90">
-                                    {format(new Date(appt.startAt), "HH:mm")} - {format(new Date(appt.endAt), "HH:mm")}
-                                  </span>
-                                  <span
-                                    role="button"
-                                    aria-label="Ridimensiona inizio appuntamento"
-                                    className="absolute inset-x-2 top-0 h-1 cursor-ns-resize rounded-t-sm bg-white/70 opacity-0 transition-opacity hover:opacity-100"
-                                    onPointerDown={(event) => {
-                                      event.preventDefault();
-                                      event.stopPropagation();
-                                      setResizeDrag({
-                                        appointmentId: appt.id,
-                                        direction: "start",
-                                        originY: event.clientY,
-                                        baseStartMs: new Date(appt.startAt).getTime(),
-                                        baseEndMs: new Date(appt.endAt).getTime(),
-                                      });
+                              {orderedSlotAppointments.map((appt, idx) => {
+                                const apptStartMs = new Date(appt.startAt).getTime();
+                                const apptEndMs = new Date(appt.endAt).getTime();
+                                const apptStartsHere = apptStartMs === slotTime;
+                                const apptContinuesBefore = apptStartMs < slotTime;
+                                const apptContinuesAfter = apptEndMs > slotEndMs;
+                                const apptBgColor = getAppointmentBgColor(appt);
+                                const widthPct = 100 / visibleCount;
+                                return (
+                                  <button
+                                    type="button"
+                                    key={appt.id}
+                                    draggable={Boolean(apptStartsHere)}
+                                    className={`absolute bottom-0 top-0 z-10 px-1 text-left text-white transition ${
+                                      apptContinuesBefore && apptContinuesAfter
+                                        ? "-mb-px -mt-px rounded-none"
+                                        : apptContinuesBefore
+                                          ? "-mt-px rounded-b-sm rounded-t-none"
+                                          : apptContinuesAfter
+                                            ? "-mb-px rounded-b-none rounded-t-sm"
+                                            : "rounded-sm"
+                                    }`}
+                                    style={{
+                                      left: `${idx * widthPct}%`,
+                                      width: `${widthPct}%`,
+                                      backgroundColor: apptBgColor,
                                     }}
-                                  />
-                                </>
-                              ) : null}
-                              {appt && ((!apptStartsHere && !apptContinuesAfter) || (apptStartsHere && !apptContinuesAfter)) ? (
-                                <span
-                                  role="button"
-                                  aria-label="Ridimensiona fine appuntamento"
-                                  className="absolute inset-x-2 bottom-0 h-1 cursor-ns-resize rounded-b-sm bg-white/70 opacity-0 transition-opacity hover:opacity-100"
-                                  onPointerDown={(event) => {
-                                    event.preventDefault();
-                                    event.stopPropagation();
-                                    setResizeDrag({
-                                      appointmentId: appt.id,
-                                      direction: "end",
-                                      originY: event.clientY,
-                                      baseStartMs: new Date(appt.startAt).getTime(),
-                                      baseEndMs: new Date(appt.endAt).getTime(),
-                                    });
-                                  }}
-                                />
-                              ) : null}
-                            </button>
+                                    onDragStart={(event) => {
+                                      if (!apptStartsHere) return;
+                                      event.dataTransfer.setData("text/plain", appt.id);
+                                      event.dataTransfer.effectAllowed = "move";
+                                    }}
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      openAppointmentEditor(appt, op.id);
+                                    }}
+                                  >
+                                    {apptStartsHere ? (
+                                      <>
+                                        <span className="block truncate pt-0.5 text-[11px] font-bold leading-tight">
+                                          {isPersonalNoteAppointment(appt) ? "Nota" : `${appt.cane.nome} / ${appt.cliente.nome}`}
+                                        </span>
+                                        <span className="block truncate text-[10px] font-medium leading-tight text-white/90">
+                                          {format(new Date(appt.startAt), "HH:mm")} - {format(new Date(appt.endAt), "HH:mm")}
+                                        </span>
+                                      </>
+                                    ) : (
+                                      <span className="block pt-0.5 text-[10px] font-semibold leading-tight text-white/70">in corso</span>
+                                    )}
+                                    {visibleCount === 1 && apptStartsHere ? (
+                                      <span
+                                        role="button"
+                                        aria-label="Ridimensiona inizio appuntamento"
+                                        className="absolute inset-x-2 top-0 h-1 cursor-ns-resize rounded-t-sm bg-white/70 opacity-0 transition-opacity hover:opacity-100"
+                                        onPointerDown={(event) => {
+                                          event.preventDefault();
+                                          event.stopPropagation();
+                                          setResizeDrag({
+                                            appointmentId: appt.id,
+                                            direction: "start",
+                                            originY: event.clientY,
+                                            baseStartMs: apptStartMs,
+                                            baseEndMs: apptEndMs,
+                                          });
+                                        }}
+                                      />
+                                    ) : null}
+                                    {visibleCount === 1 && ((!apptStartsHere && !apptContinuesAfter) || (apptStartsHere && !apptContinuesAfter)) ? (
+                                      <span
+                                        role="button"
+                                        aria-label="Ridimensiona fine appuntamento"
+                                        className="absolute inset-x-2 bottom-0 h-1 cursor-ns-resize rounded-b-sm bg-white/70 opacity-0 transition-opacity hover:opacity-100"
+                                        onPointerDown={(event) => {
+                                          event.preventDefault();
+                                          event.stopPropagation();
+                                          setResizeDrag({
+                                            appointmentId: appt.id,
+                                            direction: "end",
+                                            originY: event.clientY,
+                                            baseStartMs: apptStartMs,
+                                            baseEndMs: apptEndMs,
+                                          });
+                                        }}
+                                      />
+                                    ) : null}
+                                  </button>
+                                );
+                              })}
+                            </div>
                           );
                         })}
                       </div>
@@ -1229,14 +1267,36 @@ export function PlannerClient({
 
       {showModal ? (
         <div
-          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 px-2 py-3 md:items-center md:p-4"
+          className="fixed inset-0 z-50 overflow-y-auto bg-black/40 p-2 md:p-4"
           onClick={(e) => {
             if (e.target === e.currentTarget) setShowModal(false);
           }}
         >
-          <Card className="max-h-[calc(100dvh-1rem)] w-full max-w-2xl overflow-y-auto p-3 md:max-h-[calc(100dvh-3rem)] md:p-4">
+          <Card className="mx-auto my-0 w-full max-w-2xl overflow-y-auto p-3 md:my-4 md:max-h-[calc(100dvh-3rem)] md:p-4">
             <h3 className="mb-3 text-lg font-semibold">Nuovo Appuntamento</h3>
             <p className="text-sm text-zinc-600">Slot: {slotStart ? format(slotStart, "dd/MM/yyyy HH:mm") : "-"}</p>
+            <div className="mt-2 grid gap-2 md:grid-cols-2">
+              <Input
+                type="date"
+                value={slotDateInput}
+                onChange={(e) => {
+                  const nextDate = e.target.value;
+                  setSlotDateInput(nextDate);
+                  const next = buildLocalDateTime(nextDate, slotTimeInput);
+                  if (next) setSlotStart(next);
+                }}
+              />
+              <Input
+                type="time"
+                value={slotTimeInput}
+                onChange={(e) => {
+                  const nextTime = e.target.value;
+                  setSlotTimeInput(nextTime);
+                  const next = buildLocalDateTime(slotDateInput, nextTime);
+                  if (next) setSlotStart(next);
+                }}
+              />
+            </div>
             {operators.length ? (
               <p className="mt-2 text-sm text-zinc-600">
                 Operatore assegnato:{" "}
@@ -1432,12 +1492,12 @@ export function PlannerClient({
 
       {showEdit && selectedAppointment ? (
         <div
-          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 px-2 py-3 md:items-center md:p-4"
+          className="fixed inset-0 z-50 overflow-y-auto bg-black/40 p-2 md:p-4"
           onClick={(e) => {
             if (e.target === e.currentTarget) setShowEdit(false);
           }}
         >
-          <Card className="max-h-[calc(100dvh-1rem)] w-full max-w-xl space-y-3 overflow-y-auto p-3 md:max-h-[calc(100dvh-3rem)] md:p-4">
+          <Card className="mx-auto my-0 w-full max-w-xl space-y-3 overflow-y-auto p-3 md:my-4 md:max-h-[calc(100dvh-3rem)] md:p-4">
             <h3 className="text-lg font-semibold">Modifica Appuntamento</h3>
             <p className="text-sm">
               {isPersonalNoteAppointment(selectedAppointment)
