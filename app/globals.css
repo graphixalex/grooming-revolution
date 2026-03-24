@@ -5,6 +5,10 @@
   --foreground: #111827;
 }
 
+html {
+  overflow-x: hidden;
+}
+
 body {
   background:
     radial-gradient(circle at top right, rgba(251, 191, 36, 0.22) 0%, rgba(247, 248, 251, 0) 35%),

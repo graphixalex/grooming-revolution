@@ -322,7 +322,7 @@ export function HomeLanding() {
             : "border-white/60 bg-white/85"
         }`}
       >
-        <div className="mx-auto grid w-full max-w-[1400px] grid-cols-[auto_1fr_auto] items-center gap-4">
+        <div className="mx-auto grid w-full max-w-[1400px] grid-cols-[1fr_auto] items-center gap-3 md:grid-cols-[auto_1fr_auto] md:gap-4">
           <div className="hidden items-center xl:flex">
             <span className="inline-flex rounded-full border border-cyan-200 bg-cyan-50 px-4 py-1.5 text-[11px] font-bold tracking-wide text-cyan-700">
               <Zap className="mr-1.5 h-3.5 w-3.5" />
@@ -330,8 +330,8 @@ export function HomeLanding() {
             </span>
           </div>
 
-          <motion.div className="justify-self-center" whileHover={{ scale: 1.02 }}>
-            <div className="relative h-14 w-56 overflow-hidden rounded-xl border border-zinc-200 bg-white p-2 shadow sm:h-16 sm:w-64">
+          <motion.div className="justify-self-start md:justify-self-center" whileHover={{ scale: 1.02 }}>
+            <div className="relative h-12 w-44 overflow-hidden rounded-xl border border-zinc-200 bg-white p-2 shadow sm:h-16 sm:w-64">
               <Image
                 src="/img/logo-grooming-revolution.png"
                 alt="Grooming Revolution"
@@ -343,16 +343,16 @@ export function HomeLanding() {
             </div>
           </motion.div>
 
-          <div className="flex items-center gap-3 justify-self-end">
+          <div className="flex items-center gap-2 justify-self-end sm:gap-3">
             <Link
               href="/login"
-              className="whitespace-nowrap rounded-xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 transition-all hover:scale-105 hover:bg-zinc-50"
+              className="whitespace-nowrap rounded-xl border border-zinc-300 bg-white px-3 py-2 text-xs font-semibold text-zinc-800 transition-all hover:scale-105 hover:bg-zinc-50 sm:px-4 sm:py-2.5 sm:text-sm"
             >
               Accedi
             </Link>
             <Link
               href="/register"
-              className="whitespace-nowrap rounded-xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 transition-all hover:scale-105 hover:bg-zinc-50"
+              className="whitespace-nowrap rounded-xl border border-zinc-300 bg-white px-3 py-2 text-xs font-semibold text-zinc-800 transition-all hover:scale-105 hover:bg-zinc-50 sm:px-4 sm:py-2.5 sm:text-sm"
             >
               Registrati
             </Link>
@@ -477,7 +477,7 @@ export function HomeLanding() {
             >
               <Link
                 href="/register"
-                className="group relative inline-flex items-center gap-3 overflow-hidden rounded-2xl bg-zinc-950 px-10 py-5 text-lg font-black text-white shadow-[0_18px_35px_rgba(15,23,42,0.2)] transition-all hover:bg-zinc-800"
+                className="group relative inline-flex w-full items-center justify-center gap-3 overflow-hidden rounded-2xl bg-zinc-950 px-6 py-4 text-base font-black text-white shadow-[0_18px_35px_rgba(15,23,42,0.2)] transition-all hover:bg-zinc-800 sm:w-auto sm:px-10 sm:py-5 sm:text-lg"
               >
                 <Rocket className="h-6 w-6 transition-transform group-hover:rotate-12" />
                 <span className="relative z-10">INIZIA GRATIS ORA</span>
@@ -493,7 +493,7 @@ export function HomeLanding() {
                 href="https://wa.me/41784104391?text=Ciao%2C%20voglio%20una%20demo%20di%20Grooming%20Revolution!"
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-3 rounded-2xl border-2 border-emerald-300 bg-emerald-50 px-10 py-5 text-lg font-bold text-emerald-700 transition-all hover:border-emerald-400 hover:bg-emerald-100"
+                className="inline-flex w-full items-center justify-center gap-3 rounded-2xl border-2 border-emerald-300 bg-emerald-50 px-6 py-4 text-base font-bold text-emerald-700 transition-all hover:border-emerald-400 hover:bg-emerald-100 sm:w-auto sm:px-10 sm:py-5 sm:text-lg"
               >
                 <MessageCircle className="h-6 w-6" />
                 Demo WhatsApp
@@ -835,9 +835,9 @@ export function HomeLanding() {
               sede attiva e orari consentiti. Niente slot incoerenti, niente overbooking nascosto.
             </p>
             <ul className="mt-5 space-y-2 text-sm text-zinc-700">
-              <li className="inline-flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-600" />Slot filtrati per sede e operatore</li>
-              <li className="inline-flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-600" />Durate prese dal listino reale</li>
-              <li className="inline-flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-600" />Conferme WhatsApp automatiche post-prenotazione</li>
+              <li className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />Slot filtrati per sede e operatore</li>
+              <li className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />Durate prese dal listino reale</li>
+              <li className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />Conferme WhatsApp automatiche post-prenotazione</li>
             </ul>
           </motion.article>
 
@@ -860,9 +860,9 @@ export function HomeLanding() {
               gia una base clienti, il team puo importarla per partire senza reinserimenti manuali.
             </p>
             <ul className="mt-5 space-y-2 text-sm text-zinc-700">
-              <li className="inline-flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-600" />Blocchi non prenotabili fuori orario</li>
-              <li className="inline-flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-600" />Allineamento con agenda interna in tempo reale</li>
-              <li className="inline-flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-600" />Reminder automatici prima dell&apos;appuntamento</li>
+              <li className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />Blocchi non prenotabili fuori orario</li>
+              <li className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />Allineamento con agenda interna in tempo reale</li>
+              <li className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />Reminder automatici prima dell&apos;appuntamento</li>
             </ul>
           </motion.article>
         </div>
@@ -1028,7 +1028,7 @@ export function HomeLanding() {
               >
                 <Link
                   href="/register"
-                  className="group relative inline-flex items-center gap-3 overflow-hidden rounded-2xl bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500 px-12 py-6 text-xl font-black text-white shadow-[0_0_80px_rgba(34,211,238,0.6)] transition-all hover:shadow-[0_0_120px_rgba(34,211,238,0.9)]"
+                  className="group relative inline-flex w-full items-center justify-center gap-3 overflow-hidden rounded-2xl bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500 px-8 py-4 text-lg font-black text-white shadow-[0_0_80px_rgba(34,211,238,0.6)] transition-all hover:shadow-[0_0_120px_rgba(34,211,238,0.9)] sm:w-auto sm:px-12 sm:py-6 sm:text-xl"
                 >
                   <Rocket className="h-7 w-7 transition-transform group-hover:rotate-12" />
                   <span className="relative z-10">INIZIA GRATIS</span>
@@ -1048,7 +1048,7 @@ export function HomeLanding() {
               >
                 <Link
                   href="/login"
-                  className="inline-flex items-center gap-3 rounded-2xl border-2 border-zinc-300 bg-white px-12 py-6 text-xl font-bold text-zinc-900 transition-all hover:border-zinc-400 hover:bg-zinc-50"
+                  className="inline-flex w-full items-center justify-center gap-3 rounded-2xl border-2 border-zinc-300 bg-white px-8 py-4 text-lg font-bold text-zinc-900 transition-all hover:border-zinc-400 hover:bg-zinc-50 sm:w-auto sm:px-12 sm:py-6 sm:text-xl"
                 >
                   Accedi
                 </Link>
