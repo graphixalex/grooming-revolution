@@ -7,7 +7,22 @@ export const size = {
 
 export const contentType = "image/png";
 
+function getBaseUrl() {
+  const explicitUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL;
+  if (explicitUrl) return explicitUrl;
+
+  const vercelProd = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+  if (vercelProd) return `https://${vercelProd}`;
+
+  const vercelPreview = process.env.VERCEL_URL;
+  if (vercelPreview) return `https://${vercelPreview}`;
+
+  return "https://grooming-revolution.vercel.app";
+}
+
 export default function OpenGraphImage() {
+  const ogImageUrl = `${getBaseUrl()}/img/per-homepage.png?v=20260324`;
+
   return new ImageResponse(
     (
       <div
@@ -15,44 +30,19 @@ export default function OpenGraphImage() {
           width: "100%",
           height: "100%",
           display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-between",
-          background: "linear-gradient(135deg, #0f172a 0%, #1f2937 48%, #f59e0b 100%)",
-          color: "white",
-          padding: 56,
-          fontFamily: "Arial, sans-serif",
+          overflow: "hidden",
+          background: "#0b1220",
         }}
       >
-        <div
+        <img
+          src={ogImageUrl}
+          alt="Grooming Revolution"
           style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-            fontSize: 28,
-            fontWeight: 700,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
           }}
-        >
-          <div
-            style={{
-              width: 16,
-              height: 16,
-              borderRadius: 999,
-              background: "#f59e0b",
-            }}
-          />
-          Grooming Revolution
-        </div>
-
-        <div style={{ display: "flex", flexDirection: "column", gap: 16, maxWidth: 920 }}>
-          <div style={{ fontSize: 64, lineHeight: 1.04, fontWeight: 800 }}>
-            Gestionale professionale per toelettatura
-          </div>
-          <div style={{ fontSize: 30, color: "#e5e7eb", lineHeight: 1.3 }}>
-            Agenda, clienti, incassi, listino intelligente e report.
-          </div>
-        </div>
-
-        <div style={{ fontSize: 24, color: "#fde68a" }}>grooming-revolution.vercel.app</div>
+        />
       </div>
     ),
     size,
