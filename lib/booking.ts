@@ -1,6 +1,7 @@
 import { addMinutes } from "date-fns";
 import { DogSize } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { getDayKeyInTimeZone, getWorkingHoursRowForDate, type WorkingHoursRow } from "@/lib/working-hours";
 
 type SlotOption = {
   startAt: Date;
@@ -9,15 +10,6 @@ type SlotOption = {
   operatorName: string | null;
 };
 
-type WorkingHoursRow = {
-  enabled?: boolean;
-  start?: string;
-  end?: string;
-  breaks?: Array<{ start?: string; end?: string }>;
-};
-
-const dayKeys = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
-type DayKey = (typeof dayKeys)[number];
 type DateParts = { year: number; month: number; day: number; hour: number; minute: number; second: number };
 
 function toMinutes(time: string) {
@@ -50,19 +42,6 @@ function isInsideRowByMinutes(row: WorkingHoursRow | undefined, start: number, e
     if (start < be && end > bs) return false;
   }
   return true;
-}
-
-function weekdayToDayKey(weekday: string): DayKey {
-  const map: Record<string, DayKey> = {
-    Sun: "sun",
-    Mon: "mon",
-    Tue: "tue",
-    Wed: "wed",
-    Thu: "thu",
-    Fri: "fri",
-    Sat: "sat",
-  };
-  return map[weekday] ?? "mon";
 }
 
 function getDatePartsInTimeZone(date: Date, timeZone: string): DateParts {
@@ -111,9 +90,8 @@ function addDaysToYmd(parts: Pick<DateParts, "year" | "month" | "day">, dayOffse
 
 function getDayKeyAndMinutesInTimeZone(date: Date, timeZone: string) {
   const parts = getDatePartsInTimeZone(date, timeZone);
-  const weekday = new Intl.DateTimeFormat("en-US", { timeZone, weekday: "short" }).format(date);
   return {
-    dayKey: weekdayToDayKey(weekday),
+    dayKey: getDayKeyInTimeZone(date, timeZone),
     minutes: parts.hour * 60 + parts.minute,
   };
 }
@@ -225,15 +203,24 @@ export async function getBookingSlotOptions(params: {
 
   for (let dayOffset = 0; dayOffset <= 20 && results.length < maxOptions; dayOffset += 1) {
     const ymd = addDaysToYmd(baseYmd, dayOffset);
-    const dayUtcRef = new Date(Date.UTC(ymd.year, ymd.month - 1, ymd.day));
-    const dayKey = dayKeys[dayUtcRef.getUTCDay()];
 
     let dayAdded = 0;
     let firstDayStartMin: number | null = null;
 
     if (!operatorsEnabled) continue;
     for (const op of operators) {
-      const row = (op.workingHoursJson as Record<string, WorkingHoursRow> | null | undefined)?.[dayKey];
+      const dayDate = zonedDateTimeToUtc(
+        {
+          year: ymd.year,
+          month: ymd.month,
+          day: ymd.day,
+          hour: 12,
+          minute: 0,
+          second: 0,
+        },
+        timeZone,
+      );
+      const row = getWorkingHoursRowForDate(op.workingHoursJson as any, dayDate, timeZone);
       if (!row?.enabled || !row.start || !row.end) continue;
       const startMin = toMinutes(row.start);
       const endMin = toMinutes(row.end);
@@ -302,7 +289,7 @@ export async function isBookingSlotStillAvailable(params: {
     select: { workingHoursJson: true },
   });
   if (!op) return false;
-  const opRow = (op.workingHoursJson as Record<string, WorkingHoursRow> | null | undefined)?.[startInfo.dayKey];
+  const opRow = getWorkingHoursRowForDate(op.workingHoursJson as any, params.startAt, timeZone);
   if (!isInsideRowByMinutes(opRow, startInfo.minutes, endInfo.minutes)) return false;
 
   const overlapOperator = await db.appointment.findFirst({

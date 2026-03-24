@@ -1,5 +1,6 @@
 import { addMinutes } from "date-fns";
 import { prisma } from "@/lib/prisma";
+import { getWorkingHoursRowForDate } from "@/lib/working-hours";
 
 function parseTime(time: string) {
   const [h, m] = time.split(":").map(Number);
@@ -59,8 +60,8 @@ export function isInsideWorkingHours(workingHoursJson: any, startAt: Date, endAt
   const endParts = getPartsInTimeZone(endAt, timeZone);
   if (startParts.day !== endParts.day) return false;
 
-  const config = workingHoursJson[startParts.day];
-  if (!config?.enabled) return false;
+  const config = getWorkingHoursRowForDate(workingHoursJson, startAt, timeZone);
+  if (!config?.enabled || !config.start || !config.end) return false;
 
   const { h: sh, m: sm } = parseTime(config.start);
   const { h: eh, m: em } = parseTime(config.end);
@@ -73,6 +74,7 @@ export function isInsideWorkingHours(workingHoursJson: any, startAt: Date, endAt
   if (slotStart < workStart || slotEnd > workEnd) return false;
 
   for (const b of config.breaks ?? []) {
+    if (!b.start || !b.end) continue;
     const { h: bh1, m: bm1 } = parseTime(b.start);
     const { h: bh2, m: bm2 } = parseTime(b.end);
     const breakStart = bh1 * 60 + bm1;

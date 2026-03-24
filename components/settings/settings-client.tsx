@@ -19,6 +19,16 @@ type DayHours = {
 };
 
 type WorkingHoursState = Record<DayKey, DayHours>;
+type ExceptionHours = {
+  id: string;
+  date: string;
+  enabled: boolean;
+  start: string;
+  end: string;
+  hasBreak: boolean;
+  breakStart: string;
+  breakEnd: string;
+};
 type CampaignType = "MARKETING" | "SERVICE";
 type CampaignSegment =
   | "ALL_RECENT"
@@ -69,8 +79,27 @@ function normalizeWorkingHours(input: any): WorkingHoursState {
   return out;
 }
 
-function toWorkingHoursJson(state: WorkingHoursState) {
-  const out: Record<string, { enabled: boolean; start: string; end: string; breaks: Array<{ start: string; end: string }> }> = {};
+function normalizeOperatorExceptions(input: any): ExceptionHours[] {
+  const source = input?.exceptions && typeof input.exceptions === "object" ? input.exceptions : {};
+  return Object.entries(source)
+    .map(([date, raw]: [string, any]) => {
+      const firstBreak = raw?.breaks?.[0];
+      return {
+        id: `${date}-${Math.random().toString(36).slice(2, 7)}`,
+        date,
+        enabled: Boolean(raw?.enabled),
+        start: raw?.start ?? "09:00",
+        end: raw?.end ?? "18:00",
+        hasBreak: Boolean(firstBreak?.start && firstBreak?.end),
+        breakStart: firstBreak?.start ?? "",
+        breakEnd: firstBreak?.end ?? "",
+      };
+    })
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+function toWorkingHoursJson(state: WorkingHoursState, exceptions: ExceptionHours[] = []) {
+  const out: Record<string, any> = {};
   for (const day of dayOrder) {
     const row = state[day];
     const hasBreak = row.hasBreak && row.breakStart && row.breakEnd;
@@ -80,6 +109,22 @@ function toWorkingHoursJson(state: WorkingHoursState) {
       end: row.end,
       breaks: hasBreak ? [{ start: row.breakStart, end: row.breakEnd }] : [],
     };
+  }
+  const filteredExceptions = exceptions
+    .filter((x) => /^\d{4}-\d{2}-\d{2}$/.test(x.date))
+    .sort((a, b) => a.date.localeCompare(b.date));
+  if (filteredExceptions.length) {
+    out.exceptions = Object.fromEntries(
+      filteredExceptions.map((x) => [
+        x.date,
+        {
+          enabled: x.enabled,
+          start: x.start,
+          end: x.end,
+          breaks: x.hasBreak && x.breakStart && x.breakEnd ? [{ start: x.breakStart, end: x.breakEnd }] : [],
+        },
+      ]),
+    );
   }
   return out;
 }
@@ -114,6 +159,7 @@ export function SettingsClient({ initial }: { initial: any }) {
       kpiTargetRevenue: o.kpiTargetRevenue != null ? String(o.kpiTargetRevenue) : "",
       kpiTargetAppointments: o.kpiTargetAppointments != null ? String(o.kpiTargetAppointments) : "",
       workingHours: normalizeWorkingHours(o.workingHoursJson),
+      exceptions: normalizeOperatorExceptions(o.workingHoursJson),
     })),
   );
   const [campaignType, setCampaignType] = useState<CampaignType>("SERVICE");
@@ -627,6 +673,212 @@ export function SettingsClient({ initial }: { initial: any }) {
                 </div>
               ))}
             </div>
+            <div className="space-y-2 rounded-md border border-zinc-100 bg-zinc-50 p-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm font-medium text-zinc-800">Turni straordinari per data</p>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() =>
+                    setOperators((prev: any[]) =>
+                      prev.map((x, i) =>
+                        i === opIndex
+                          ? {
+                              ...x,
+                              exceptions: [
+                                ...(x.exceptions || []),
+                                {
+                                  id: `new-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+                                  date: "",
+                                  enabled: true,
+                                  start: "09:00",
+                                  end: "13:00",
+                                  hasBreak: false,
+                                  breakStart: "",
+                                  breakEnd: "",
+                                },
+                              ],
+                            }
+                          : x,
+                      ),
+                    )
+                  }
+                >
+                  Aggiungi giorno extra
+                </Button>
+              </div>
+              <p className="text-xs text-zinc-600">
+                Qui puoi inserire eccezioni per una data precisa (es. un sabato del mese). Se disattivi "Attivo" blocchi quel giorno.
+              </p>
+              {(op.exceptions || []).length === 0 ? (
+                <p className="text-xs text-zinc-500">Nessuna eccezione configurata.</p>
+              ) : (
+                (op.exceptions || []).map((ex: any) => (
+                  <div key={ex.id} className="grid gap-2 rounded border border-zinc-200 bg-white p-2 md:grid-cols-7">
+                    <Input
+                      type="date"
+                      value={ex.date}
+                      onChange={(e) =>
+                        setOperators((prev: any[]) =>
+                          prev.map((x, i) =>
+                            i === opIndex
+                              ? {
+                                  ...x,
+                                  exceptions: (x.exceptions || []).map((row: any) =>
+                                    row.id === ex.id ? { ...row, date: e.target.value } : row,
+                                  ),
+                                }
+                              : x,
+                          ),
+                        )
+                      }
+                    />
+                    <label className="flex h-10 items-center gap-2 rounded-md border border-zinc-300 px-3 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(ex.enabled)}
+                        onChange={(e) =>
+                          setOperators((prev: any[]) =>
+                            prev.map((x, i) =>
+                              i === opIndex
+                                ? {
+                                    ...x,
+                                    exceptions: (x.exceptions || []).map((row: any) =>
+                                      row.id === ex.id ? { ...row, enabled: e.target.checked } : row,
+                                    ),
+                                  }
+                                : x,
+                            ),
+                          )
+                        }
+                      />
+                      Attivo
+                    </label>
+                    <Input
+                      type="time"
+                      value={ex.start}
+                      onChange={(e) =>
+                        setOperators((prev: any[]) =>
+                          prev.map((x, i) =>
+                            i === opIndex
+                              ? {
+                                  ...x,
+                                  exceptions: (x.exceptions || []).map((row: any) =>
+                                    row.id === ex.id ? { ...row, start: e.target.value } : row,
+                                  ),
+                                }
+                              : x,
+                          ),
+                        )
+                      }
+                      disabled={!ex.enabled}
+                    />
+                    <Input
+                      type="time"
+                      value={ex.end}
+                      onChange={(e) =>
+                        setOperators((prev: any[]) =>
+                          prev.map((x, i) =>
+                            i === opIndex
+                              ? {
+                                  ...x,
+                                  exceptions: (x.exceptions || []).map((row: any) =>
+                                    row.id === ex.id ? { ...row, end: e.target.value } : row,
+                                  ),
+                                }
+                              : x,
+                          ),
+                        )
+                      }
+                      disabled={!ex.enabled}
+                    />
+                    <label className="flex h-10 items-center gap-2 rounded-md border border-zinc-300 px-3 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(ex.hasBreak)}
+                        onChange={(e) =>
+                          setOperators((prev: any[]) =>
+                            prev.map((x, i) =>
+                              i === opIndex
+                                ? {
+                                    ...x,
+                                    exceptions: (x.exceptions || []).map((row: any) =>
+                                      row.id === ex.id
+                                        ? {
+                                            ...row,
+                                            hasBreak: e.target.checked,
+                                            breakStart: e.target.checked ? row.breakStart : "",
+                                            breakEnd: e.target.checked ? row.breakEnd : "",
+                                          }
+                                        : row,
+                                    ),
+                                  }
+                                : x,
+                            ),
+                          )
+                        }
+                        disabled={!ex.enabled}
+                      />
+                      Pausa
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input
+                        type="time"
+                        value={ex.breakStart}
+                        onChange={(e) =>
+                          setOperators((prev: any[]) =>
+                            prev.map((x, i) =>
+                              i === opIndex
+                                ? {
+                                    ...x,
+                                    exceptions: (x.exceptions || []).map((row: any) =>
+                                      row.id === ex.id ? { ...row, breakStart: e.target.value } : row,
+                                    ),
+                                  }
+                                : x,
+                            ),
+                          )
+                        }
+                        disabled={!ex.enabled || !ex.hasBreak}
+                      />
+                      <Input
+                        type="time"
+                        value={ex.breakEnd}
+                        onChange={(e) =>
+                          setOperators((prev: any[]) =>
+                            prev.map((x, i) =>
+                              i === opIndex
+                                ? {
+                                    ...x,
+                                    exceptions: (x.exceptions || []).map((row: any) =>
+                                      row.id === ex.id ? { ...row, breakEnd: e.target.value } : row,
+                                    ),
+                                  }
+                                : x,
+                            ),
+                          )
+                        }
+                        disabled={!ex.enabled || !ex.hasBreak}
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      onClick={() =>
+                        setOperators((prev: any[]) =>
+                          prev.map((x, i) =>
+                            i === opIndex ? { ...x, exceptions: (x.exceptions || []).filter((row: any) => row.id !== ex.id) } : x,
+                          ),
+                        )
+                      }
+                    >
+                      Rimuovi
+                    </Button>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         ))}
         <Button
@@ -642,6 +894,7 @@ export function SettingsClient({ initial }: { initial: any }) {
                 kpiTargetRevenue: "",
                 kpiTargetAppointments: "",
                 workingHours: normalizeWorkingHours(operators[0]?.workingHours ? toWorkingHoursJson(operators[0].workingHours) : undefined),
+                exceptions: [],
               },
             ])
           }
@@ -659,7 +912,7 @@ export function SettingsClient({ initial }: { initial: any }) {
                 color: o.color,
                 kpiTargetRevenue: o.kpiTargetRevenue === "" ? null : Number(o.kpiTargetRevenue),
                 kpiTargetAppointments: o.kpiTargetAppointments === "" ? null : Number(o.kpiTargetAppointments),
-                workingHoursJson: toWorkingHoursJson(o.workingHours),
+                workingHoursJson: toWorkingHoursJson(o.workingHours, o.exceptions || []),
               })),
               overlapAllowed: Boolean(salon.overlapAllowed),
             })

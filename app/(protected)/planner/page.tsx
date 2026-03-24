@@ -9,7 +9,7 @@ export default async function PlannerPage() {
     prisma.treatment.findMany({ where: { salonId: session.user.salonId }, orderBy: { ordine: "asc" } }),
     prisma.salon.findUnique({
       where: { id: session.user.salonId },
-      select: { workingHoursJson: true, whatsappTemplate: true, nomeAttivita: true, nomeSede: true, indirizzo: true, salonGroupId: true, valuta: true },
+      select: { workingHoursJson: true, whatsappTemplate: true, nomeAttivita: true, nomeSede: true, indirizzo: true, salonGroupId: true, valuta: true, timezone: true },
     }),
     prisma.operator.findMany({
       where: { salonId: session.user.salonId, attivo: true },
@@ -38,6 +38,7 @@ export default async function PlannerPage() {
           indirizzoAttivita: salon?.indirizzo || "",
         }}
         currency={salon?.valuta || "EUR"}
+        timezone={salon?.timezone || "Europe/Zurich"}
         operators={operators as any[]}
         branchSwitcher={
           branches.length > 1

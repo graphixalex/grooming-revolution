@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { getDateKeyInTimeZone, getWorkingHoursRowForDate } from "@/lib/working-hours";
 
 type Cliente = { id: string; nome: string; cognome: string; telefono: string; email?: string | null };
 type Cane = { id: string; nome: string; razza?: string | null; taglia: "XS" | "S" | "M" | "L" | "XL" | "XXL"; clienteId: string };
@@ -297,13 +298,12 @@ function getItalianHolidayEvents(fromIso: string, toIso: string) {
   return events;
 }
 
-function getOperatorsForDate(operators: Operator[], date: Date) {
-  const dayKey = indexToDayKey[date.getDay()];
+function getOperatorsForDate(operators: Operator[], date: Date, timeZone: string) {
   return operators
     .filter((op) => Boolean(op.attivo ?? true))
     .flatMap((op) => {
-      const row = (op.workingHoursJson as WorkingHoursJson | null | undefined)?.[dayKey];
-      if (!row?.enabled) return [];
+      const row = getWorkingHoursRowForDate(op.workingHoursJson as any, date, timeZone);
+      if (!row?.enabled || !row.start || !row.end) return [];
       return [{ id: op.id, nome: op.nome, start: row.start, end: row.end }];
     });
 }
@@ -314,6 +314,7 @@ export function PlannerClient({
   whatsappConfig,
   currency,
   operators,
+  timezone,
   branchSwitcher,
 }: {
   treatments: Treatment[];
@@ -325,11 +326,13 @@ export function PlannerClient({
   };
   currency: string;
   operators: Operator[];
+  timezone?: string;
   branchSwitcher: {
     currentSalonId: string;
     branches: Array<{ id: string; label: string }>;
   } | null;
 }) {
+  const plannerTimeZone = timezone || "Europe/Zurich";
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
@@ -933,16 +936,18 @@ export function PlannerClient({
     const enabledByOperators = new Set<DayKey>();
     for (const op of operators) {
       if (op.attivo === false) continue;
-      const rows = (op.workingHoursJson as WorkingHoursJson | null | undefined) ?? null;
-      if (!rows) continue;
       for (const key of ordered) {
-        if (rows[key]?.enabled) enabledByOperators.add(key);
+        const date = new Date(desktopWeekStart);
+        const offset = (dayKeyToIndex[key] + 6) % 7;
+        date.setDate(desktopWeekStart.getDate() + offset);
+        const row = getWorkingHoursRowForDate(op.workingHoursJson as any, date, plannerTimeZone);
+        if (row?.enabled) enabledByOperators.add(key);
       }
     }
     const enabled = ordered.filter((key) => enabledBySalon.has(key) || enabledByOperators.has(key));
     if (enabled.length > 0) return enabled;
     return ["mon", "tue", "wed", "thu", "fri", "sat"];
-  }, [workingHoursJson, operators]);
+  }, [workingHoursJson, operators, desktopWeekStart, plannerTimeZone]);
   const matrixDays = useMemo(() => {
     if (isMobile) {
       const dayKey = indexToDayKey[mobileDay.getDay()];
@@ -958,9 +963,9 @@ export function PlannerClient({
   const matrixColumns = useMemo(() => {
     return matrixDays.map((d) => ({
       ...d,
-      operators: getOperatorsForDate(operators, d.date),
+      operators: getOperatorsForDate(operators, d.date, plannerTimeZone),
     }));
-  }, [matrixDays, operators]);
+  }, [matrixDays, operators, plannerTimeZone]);
   const matrixSlots = useMemo(() => {
     const times = matrixColumns.flatMap((d) => d.operators.flatMap((op) => [toMinutes(op.start), toMinutes(op.end)]));
     if (!times.length) return [];
