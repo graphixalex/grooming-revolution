@@ -7,14 +7,29 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { aggregateByCurrency, formatCurrencyTotals } from "@/lib/money";
 
-export function PaymentsClient({ initial, exportHref }: { initial: any[]; exportHref: string }) {
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
+export function PaymentsClient({
+  initial,
+  exportHref,
+  initialFrom,
+  initialTo,
+}: {
+  initial: any[];
+  exportHref: string;
+  initialFrom?: string;
+  initialTo?: string;
+}) {
+  const [from, setFrom] = useState(initialFrom || "");
+  const [to, setTo] = useState(initialTo || "");
   const [rows, setRows] = useState(initial);
 
   useEffect(() => {
     setRows(initial);
   }, [initial]);
+
+  useEffect(() => {
+    setFrom(initialFrom || "");
+    setTo(initialTo || "");
+  }, [initialFrom, initialTo]);
 
   const filtered = useMemo(() => {
     return rows.filter((r) => {

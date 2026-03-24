@@ -1,8 +1,8 @@
-﻿import { endOfMonth, endOfWeek, startOfMonth, startOfWeek } from "date-fns";
-import { redirect } from "next/navigation";
+﻿import { redirect } from "next/navigation";
 import { AccountingScopeSwitcher } from "@/components/accounting/scope-switcher";
 import { Card } from "@/components/ui/card";
 import { getAccountingScope } from "@/lib/accounting-scope";
+import { PERIOD_PRESET_OPTIONS, resolvePeriodRange } from "@/lib/period-range";
 import { prisma } from "@/lib/prisma";
 import { getRequiredSession } from "@/lib/session";
 
@@ -13,19 +13,14 @@ type OperatorMetrics = {
   currency: string;
   targetRevenue: number;
   targetAppointments: number;
-  appointmentsWeek: number;
-  appointmentsMonth: number;
-  completedWeek: number;
-  completedMonth: number;
-  noShowWeek: number;
-  noShowMonth: number;
-  workedMinutesWeek: number;
-  workedMinutesMonth: number;
-  plannedMinutesWeek: number;
-  plannedMinutesMonth: number;
-  revenueMonth: number;
-  tipsMonth: number;
-  workedDaysMonth: Set<string>;
+  appointments: number;
+  completed: number;
+  noShow: number;
+  workedMinutes: number;
+  plannedMinutes: number;
+  revenue: number;
+  tips: number;
+  workedDays: Set<string>;
 };
 
 function toHours(minutes: number) {
@@ -40,21 +35,28 @@ function toPercent(part: number, total: number) {
 export default async function OperatorReportsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ scope?: string }>;
+  searchParams: Promise<{ scope?: string; period?: string; from?: string; to?: string }>;
 }) {
   const session = await getRequiredSession();
   if (session.user.role !== "OWNER") {
     redirect("/planner");
   }
 
-  const { scope } = await searchParams;
+  const { scope, period, from: fromRaw, to: toRaw } = await searchParams;
   const accountingScope = await getAccountingScope(session.user, scope);
+  const periodRange = resolvePeriodRange({
+    presetRaw: period,
+    fromRaw,
+    toRaw,
+    defaultPreset: "this_month",
+  });
 
-  const now = new Date();
-  const weekFrom = startOfWeek(now, { weekStartsOn: 1 });
-  const weekTo = endOfWeek(now, { weekStartsOn: 1 });
-  const monthFrom = startOfMonth(now);
-  const monthTo = endOfMonth(now);
+  const salonDateFilter = periodRange.from || periodRange.to
+    ? {
+        ...(periodRange.from ? { gte: periodRange.from } : {}),
+        ...(periodRange.to ? { lte: periodRange.to } : {}),
+      }
+    : undefined;
 
   const operators = await prisma.operator.findMany({
     where: { salonId: { in: accountingScope.salonIds } },
@@ -71,30 +73,21 @@ export default async function OperatorReportsPage({
 
   const operatorIds = operators.map((operator) => operator.id);
 
-  const [appointmentsWeek, appointmentsMonth, monthTransactions] = operatorIds.length
+  const [appointments, transactions] = operatorIds.length
     ? await Promise.all([
         prisma.appointment.findMany({
           where: {
             deletedAt: null,
             operatorId: { in: operatorIds },
-            startAt: { gte: weekFrom, lte: weekTo },
             stato: { not: "CANCELLATO" },
-          },
-          select: { operatorId: true, durataMinuti: true, stato: true, startAt: true },
-        }),
-        prisma.appointment.findMany({
-          where: {
-            deletedAt: null,
-            operatorId: { in: operatorIds },
-            startAt: { gte: monthFrom, lte: monthTo },
-            stato: { not: "CANCELLATO" },
+            ...(salonDateFilter ? { startAt: salonDateFilter } : {}),
           },
           select: { operatorId: true, durataMinuti: true, stato: true, startAt: true },
         }),
         prisma.transaction.findMany({
           where: {
             salonId: { in: accountingScope.salonIds },
-            dateTime: { gte: monthFrom, lte: monthTo },
+            ...(salonDateFilter ? { dateTime: salonDateFilter } : {}),
           },
           select: {
             grossAmount: true,
@@ -103,7 +96,7 @@ export default async function OperatorReportsPage({
           },
         }),
       ])
-    : [[], [], []];
+    : [[], []];
 
   const metrics = new Map<string, OperatorMetrics>();
   for (const operator of operators) {
@@ -114,138 +107,118 @@ export default async function OperatorReportsPage({
       currency: operator.salon.valuta || "EUR",
       targetRevenue: Number(operator.kpiTargetRevenue ?? 0),
       targetAppointments: Number(operator.kpiTargetAppointments ?? 0),
-      appointmentsWeek: 0,
-      appointmentsMonth: 0,
-      completedWeek: 0,
-      completedMonth: 0,
-      noShowWeek: 0,
-      noShowMonth: 0,
-      workedMinutesWeek: 0,
-      workedMinutesMonth: 0,
-      plannedMinutesWeek: 0,
-      plannedMinutesMonth: 0,
-      revenueMonth: 0,
-      tipsMonth: 0,
-      workedDaysMonth: new Set<string>(),
+      appointments: 0,
+      completed: 0,
+      noShow: 0,
+      workedMinutes: 0,
+      plannedMinutes: 0,
+      revenue: 0,
+      tips: 0,
+      workedDays: new Set<string>(),
     });
   }
 
-  for (const appointment of appointmentsWeek) {
+  for (const appointment of appointments) {
     if (!appointment.operatorId) continue;
     const row = metrics.get(appointment.operatorId);
     if (!row) continue;
 
-    row.appointmentsWeek += 1;
-    row.plannedMinutesWeek += appointment.durataMinuti;
+    row.appointments += 1;
+    row.plannedMinutes += appointment.durataMinuti;
 
     if (appointment.stato === "COMPLETATO") {
-      row.completedWeek += 1;
-      row.workedMinutesWeek += appointment.durataMinuti;
+      row.completed += 1;
+      row.workedMinutes += appointment.durataMinuti;
+      row.workedDays.add(new Date(appointment.startAt).toLocaleDateString("it-IT"));
     }
     if (appointment.stato === "NO_SHOW") {
-      row.noShowWeek += 1;
+      row.noShow += 1;
     }
   }
 
-  for (const appointment of appointmentsMonth) {
-    if (!appointment.operatorId) continue;
-    const row = metrics.get(appointment.operatorId);
-    if (!row) continue;
-
-    row.appointmentsMonth += 1;
-    row.plannedMinutesMonth += appointment.durataMinuti;
-
-    if (appointment.stato === "COMPLETATO") {
-      row.completedMonth += 1;
-      row.workedMinutesMonth += appointment.durataMinuti;
-      row.workedDaysMonth.add(new Date(appointment.startAt).toLocaleDateString("it-IT"));
-    }
-    if (appointment.stato === "NO_SHOW") {
-      row.noShowMonth += 1;
-    }
-  }
-
-  for (const transaction of monthTransactions) {
+  for (const transaction of transactions) {
     const operatorId = transaction.appointment.operatorId;
     if (!operatorId) continue;
     const row = metrics.get(operatorId);
     if (!row) continue;
-    row.revenueMonth += Number(transaction.grossAmount);
-    row.tipsMonth += Number(transaction.tipAmount);
+    row.revenue += Number(transaction.grossAmount);
+    row.tips += Number(transaction.tipAmount);
   }
 
   const rows = [...metrics.values()].sort(
-    (a, b) => b.revenueMonth - a.revenueMonth || b.workedMinutesMonth - a.workedMinutesMonth || a.operatorName.localeCompare(b.operatorName),
+    (a, b) => b.revenue - a.revenue || b.workedMinutes - a.workedMinutes || a.operatorName.localeCompare(b.operatorName),
   );
 
   const totals = rows.reduce(
     (acc, row) => {
-      acc.workedWeek += row.workedMinutesWeek;
-      acc.workedMonth += row.workedMinutesMonth;
-      acc.plannedMonth += row.plannedMinutesMonth;
-      acc.appointmentsMonth += row.appointmentsMonth;
-      acc.completedMonth += row.completedMonth;
-      acc.noShowMonth += row.noShowMonth;
-      acc.revenueMonth += row.revenueMonth;
-      acc.tipsMonth += row.tipsMonth;
+      acc.worked += row.workedMinutes;
+      acc.planned += row.plannedMinutes;
+      acc.appointments += row.appointments;
+      acc.completed += row.completed;
+      acc.noShow += row.noShow;
+      acc.revenue += row.revenue;
+      acc.tips += row.tips;
       return acc;
     },
-    {
-      workedWeek: 0,
-      workedMonth: 0,
-      plannedMonth: 0,
-      appointmentsMonth: 0,
-      completedMonth: 0,
-      noShowMonth: 0,
-      revenueMonth: 0,
-      tipsMonth: 0,
-    },
+    { worked: 0, planned: 0, appointments: 0, completed: 0, noShow: 0, revenue: 0, tips: 0 },
   );
 
   return (
     <div className="space-y-5">
       <div className="space-y-2">
         <h1 className="text-2xl font-semibold">Report operatori</h1>
-        <p className="text-sm text-zinc-600">
-          Tutti i KPI team concentrati qui: produttivita, presenze, appuntamenti, incassi e target.
-        </p>
+        <p className="text-sm text-zinc-600">KPI team concentrati qui: produttivita, presenze, appuntamenti, incassi e target.</p>
       </div>
 
       <Card className="space-y-3">
-        <AccountingScopeSwitcher
-          basePath="/operator-reports"
-          selectedScope={String(accountingScope.selectedScope)}
-          options={accountingScope.options}
-        />
-        <p className="text-sm text-zinc-600">
-          Settimana corrente: {weekFrom.toLocaleDateString("it-IT")} - {weekTo.toLocaleDateString("it-IT")} | Mese corrente: {monthFrom.toLocaleDateString("it-IT")} - {monthTo.toLocaleDateString("it-IT")}
-        </p>
+        <AccountingScopeSwitcher basePath="/operator-reports" selectedScope={String(accountingScope.selectedScope)} options={accountingScope.options} extraQuery={{ period: periodRange.preset, from: periodRange.fromInput, to: periodRange.toInput }} />
+        <form method="get" className="grid gap-2 md:grid-cols-[1fr_160px_160px_auto] md:items-end">
+          {scope ? <input type="hidden" name="scope" value={scope} /> : null}
+          <div>
+            <label className="mb-1 block text-xs font-medium text-zinc-600">Periodo</label>
+            <select name="period" defaultValue={periodRange.preset} className="h-10 w-full rounded-md border border-zinc-300 px-3 text-sm">
+              {PERIOD_PRESET_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-zinc-600">Da</label>
+            <input type="date" name="from" defaultValue={periodRange.fromInput} className="h-10 w-full rounded-md border border-zinc-300 px-3 text-sm" />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-zinc-600">A</label>
+            <input type="date" name="to" defaultValue={periodRange.toInput} className="h-10 w-full rounded-md border border-zinc-300 px-3 text-sm" />
+          </div>
+          <button type="submit" className="h-10 rounded-md bg-zinc-900 px-4 text-sm font-medium text-white">Applica</button>
+        </form>
+        <p className="text-sm text-zinc-600">Periodo analizzato: {periodRange.label}</p>
       </Card>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
         <Card><p className="text-xs font-medium uppercase tracking-wide text-zinc-500">Operatori in report</p><p className="mt-1 text-2xl font-semibold">{rows.length}</p></Card>
-        <Card><p className="text-xs font-medium uppercase tracking-wide text-zinc-500">Ore lavorate settimana</p><p className="mt-1 text-2xl font-semibold">{toHours(totals.workedWeek)} h</p></Card>
-        <Card><p className="text-xs font-medium uppercase tracking-wide text-zinc-500">Ore lavorate mese</p><p className="mt-1 text-2xl font-semibold">{toHours(totals.workedMonth)} h</p></Card>
-        <Card><p className="text-xs font-medium uppercase tracking-wide text-zinc-500">Appuntamenti mese</p><p className="mt-1 text-2xl font-semibold">{totals.appointmentsMonth}</p></Card>
-        <Card><p className="text-xs font-medium uppercase tracking-wide text-zinc-500">Completati mese</p><p className="mt-1 text-2xl font-semibold">{totals.completedMonth}</p></Card>
-        <Card><p className="text-xs font-medium uppercase tracking-wide text-zinc-500">No-show mese</p><p className="mt-1 text-2xl font-semibold">{totals.noShowMonth}</p></Card>
+        <Card><p className="text-xs font-medium uppercase tracking-wide text-zinc-500">Ore lavorate</p><p className="mt-1 text-2xl font-semibold">{toHours(totals.worked)} h</p></Card>
+        <Card><p className="text-xs font-medium uppercase tracking-wide text-zinc-500">Appuntamenti</p><p className="mt-1 text-2xl font-semibold">{totals.appointments}</p></Card>
+        <Card><p className="text-xs font-medium uppercase tracking-wide text-zinc-500">Completati</p><p className="mt-1 text-2xl font-semibold">{totals.completed}</p></Card>
+        <Card><p className="text-xs font-medium uppercase tracking-wide text-zinc-500">No-show</p><p className="mt-1 text-2xl font-semibold">{totals.noShow}</p></Card>
+        <Card><p className="text-xs font-medium uppercase tracking-wide text-zinc-500">Produttivita team</p><p className="mt-1 text-2xl font-semibold">{toPercent(totals.worked, totals.planned)}</p></Card>
       </div>
 
       <div className="grid gap-3 md:grid-cols-2">
         <Card>
-          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">Incassi operatori (mese)</p>
-          <p className="mt-1 text-2xl font-semibold">EUR {totals.revenueMonth.toFixed(2)}</p>
-          <p className="text-xs text-zinc-500">Mance EUR {totals.tipsMonth.toFixed(2)}</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">Incassi operatori</p>
+          <p className="mt-1 text-2xl font-semibold">EUR {totals.revenue.toFixed(2)}</p>
+          <p className="text-xs text-zinc-500">Mance EUR {totals.tips.toFixed(2)}</p>
         </Card>
         <Card>
-          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">Produttivita team (mese)</p>
-          <p className="mt-1 text-2xl font-semibold">{toPercent(totals.workedMonth, totals.plannedMonth)}</p>
-          <p className="text-xs text-zinc-500">Ore pianificate {toHours(totals.plannedMonth)} h</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">Ore pianificate</p>
+          <p className="mt-1 text-2xl font-semibold">{toHours(totals.planned)} h</p>
+          <p className="text-xs text-zinc-500">Periodo: {periodRange.label}</p>
         </Card>
       </div>
 
       <Card className="space-y-3">
-        <h2 className="text-lg font-semibold">Ranking operatori (mese)</h2>
+        <h2 className="text-lg font-semibold">Ranking operatori</h2>
         {rows.length === 0 ? (
           <p className="text-sm text-zinc-500">Nessun operatore trovato per lo scope selezionato.</p>
         ) : (
@@ -259,9 +232,7 @@ export default async function OperatorReportsPage({
                     {row.active ? "Attivo" : "Non attivo"}
                   </span>
                 </div>
-                <p className="text-zinc-600">
-                  {row.currency} {row.revenueMonth.toFixed(2)} · {row.appointmentsMonth} appunt. · No-show {toPercent(row.noShowMonth, row.appointmentsMonth)}
-                </p>
+                <p className="text-zinc-600">{row.currency} {row.revenue.toFixed(2)} · {row.appointments} appunt. · No-show {toPercent(row.noShow, row.appointments)}</p>
               </div>
             ))}
           </div>
@@ -270,26 +241,24 @@ export default async function OperatorReportsPage({
 
       <div className="grid gap-3 lg:grid-cols-2">
         {rows.map((row) => {
-          const revenueTargetPct = row.targetRevenue > 0 ? toPercent(row.revenueMonth, row.targetRevenue) : "-";
-          const appointmentsTargetPct = row.targetAppointments > 0 ? toPercent(row.appointmentsMonth, row.targetAppointments) : "-";
+          const revenueTargetPct = row.targetRevenue > 0 ? toPercent(row.revenue, row.targetRevenue) : "-";
+          const appointmentsTargetPct = row.targetAppointments > 0 ? toPercent(row.appointments, row.targetAppointments) : "-";
           return (
             <Card key={row.operatorId} className="space-y-3">
               <div className="flex items-center justify-between gap-2">
                 <h3 className="text-base font-semibold text-zinc-900">{row.operatorName}</h3>
-                <span className="text-xs text-zinc-500">Giorni lavorati mese: {row.workedDaysMonth.size}</span>
+                <span className="text-xs text-zinc-500">Giorni lavorati: {row.workedDays.size}</span>
               </div>
 
               <div className="grid gap-2 text-sm sm:grid-cols-2">
-                <p>Ore lavorate settimana: <span className="font-semibold">{toHours(row.workedMinutesWeek)} h</span></p>
-                <p>Ore lavorate mese: <span className="font-semibold">{toHours(row.workedMinutesMonth)} h</span></p>
-                <p>Ore pianificate mese: <span className="font-semibold">{toHours(row.plannedMinutesMonth)} h</span></p>
-                <p>Produttivita mese: <span className="font-semibold">{toPercent(row.workedMinutesMonth, row.plannedMinutesMonth)}</span></p>
-                <p>Appuntamenti settimana: <span className="font-semibold">{row.appointmentsWeek}</span></p>
-                <p>Appuntamenti mese: <span className="font-semibold">{row.appointmentsMonth}</span></p>
-                <p>Completati mese: <span className="font-semibold">{row.completedMonth}</span></p>
-                <p>No-show mese: <span className="font-semibold">{row.noShowMonth}</span></p>
-                <p>Incasso mese: <span className="font-semibold">{row.currency} {row.revenueMonth.toFixed(2)}</span></p>
-                <p>Mance mese: <span className="font-semibold">{row.currency} {row.tipsMonth.toFixed(2)}</span></p>
+                <p>Ore lavorate: <span className="font-semibold">{toHours(row.workedMinutes)} h</span></p>
+                <p>Ore pianificate: <span className="font-semibold">{toHours(row.plannedMinutes)} h</span></p>
+                <p>Produttivita: <span className="font-semibold">{toPercent(row.workedMinutes, row.plannedMinutes)}</span></p>
+                <p>Appuntamenti: <span className="font-semibold">{row.appointments}</span></p>
+                <p>Completati: <span className="font-semibold">{row.completed}</span></p>
+                <p>No-show: <span className="font-semibold">{row.noShow}</span></p>
+                <p>Incasso: <span className="font-semibold">{row.currency} {row.revenue.toFixed(2)}</span></p>
+                <p>Mance: <span className="font-semibold">{row.currency} {row.tips.toFixed(2)}</span></p>
               </div>
 
               <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-2 text-xs text-zinc-600">
@@ -302,4 +271,3 @@ export default async function OperatorReportsPage({
     </div>
   );
 }
-

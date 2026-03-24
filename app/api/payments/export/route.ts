@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/api-auth";
 import { getAccountingScope } from "@/lib/accounting-scope";
+import { resolvePeriodRange } from "@/lib/period-range";
 
 function q(v: string | null | undefined) {
   const raw = (v ?? "").trimStart();
@@ -18,10 +19,28 @@ export async function GET(req: Request) {
   }
   const { searchParams } = new URL(req.url);
   const scope = searchParams.get("scope") || undefined;
+  const period = searchParams.get("period") || undefined;
+  const fromRaw = searchParams.get("from") || undefined;
+  const toRaw = searchParams.get("to") || undefined;
   const accountingScope = await getAccountingScope(auth.session.user, scope);
+  const periodRange = resolvePeriodRange({
+    presetRaw: period,
+    fromRaw,
+    toRaw,
+    defaultPreset: "all",
+  });
+  const txDateFilter = periodRange.from || periodRange.to
+    ? {
+        ...(periodRange.from ? { gte: periodRange.from } : {}),
+        ...(periodRange.to ? { lte: periodRange.to } : {}),
+      }
+    : undefined;
 
   const tx = await prisma.transaction.findMany({
-    where: { salonId: { in: accountingScope.salonIds } },
+    where: {
+      salonId: { in: accountingScope.salonIds },
+      ...(txDateFilter ? { dateTime: txDateFilter } : {}),
+    },
     include: { appointment: { include: { cane: true, cliente: true } }, salon: true },
     orderBy: { dateTime: "desc" },
   });

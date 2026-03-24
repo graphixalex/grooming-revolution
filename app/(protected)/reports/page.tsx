@@ -1,10 +1,10 @@
-﻿import { endOfMonth, startOfMonth, subMonths } from "date-fns";
-import { redirect } from "next/navigation";
+﻿import { redirect } from "next/navigation";
 import { AccountingScopeSwitcher } from "@/components/accounting/scope-switcher";
 import { Card } from "@/components/ui/card";
 import { buildClientFrequencyProfiles, classifyFrequencyBucket } from "@/lib/client-frequency";
 import { getAccountingScope } from "@/lib/accounting-scope";
 import { aggregateByCurrency, formatCurrencyTotals } from "@/lib/money";
+import { PERIOD_PRESET_OPTIONS, resolvePeriodRange } from "@/lib/period-range";
 import { prisma } from "@/lib/prisma";
 import { getRequiredSession } from "@/lib/session";
 
@@ -22,19 +22,29 @@ const WEEKDAY_LABELS = ["Domenica", "Lunedi", "Martedi", "Mercoledi", "Giovedi",
 export default async function ReportsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ scope?: string }>;
+  searchParams: Promise<{ scope?: string; period?: string; from?: string; to?: string }>;
 }) {
   const session = await getRequiredSession();
   if (session.user.role === "STAFF") {
     redirect("/planner");
   }
 
-  const { scope } = await searchParams;
+  const { scope, period, from: fromRaw, to: toRaw } = await searchParams;
   const accountingScope = await getAccountingScope(session.user, scope);
+  const periodRange = resolvePeriodRange({
+    presetRaw: period,
+    fromRaw,
+    toRaw,
+    defaultPreset: "last_3_months",
+  });
 
-  const from = startOfMonth(subMonths(new Date(), 2));
-  const to = endOfMonth(new Date());
   const salonIds = accountingScope.salonIds;
+  const salonDateFilter = periodRange.from || periodRange.to
+    ? {
+        ...(periodRange.from ? { gte: periodRange.from } : {}),
+        ...(periodRange.to ? { lte: periodRange.to } : {}),
+      }
+    : undefined;
 
   const salonsInScope = await prisma.salon.findMany({
     where: { id: { in: salonIds } },
@@ -43,11 +53,18 @@ export default async function ReportsPage({
 
   const [appointments, transactions, clients, appointmentTreatments] = await Promise.all([
     prisma.appointment.findMany({
-      where: { salonId: { in: salonIds }, startAt: { gte: from, lte: to }, deletedAt: null },
+      where: {
+        salonId: { in: salonIds },
+        deletedAt: null,
+        ...(salonDateFilter ? { startAt: salonDateFilter } : {}),
+      },
       include: { cliente: { select: { id: true } } },
     }),
     prisma.transaction.findMany({
-      where: { salonId: { in: salonIds }, dateTime: { gte: from, lte: to } },
+      where: {
+        salonId: { in: salonIds },
+        ...(salonDateFilter ? { dateTime: salonDateFilter } : {}),
+      },
       include: {
         appointment: { select: { id: true, salonId: true, startAt: true, clienteId: true } },
       },
@@ -60,8 +77,8 @@ export default async function ReportsPage({
       where: {
         appointment: {
           salonId: { in: salonIds },
-          startAt: { gte: from, lte: to },
           deletedAt: null,
+          ...(salonDateFilter ? { startAt: salonDateFilter } : {}),
         },
       },
       include: { treatment: { select: { nome: true } }, appointment: { select: { id: true } } },
@@ -72,9 +89,7 @@ export default async function ReportsPage({
   const totalRevenue = aggregateByCurrency(transactions, (t) => currencyBySalon.get(t.salonId) ?? "EUR", (t) => Number(t.grossAmount));
   const totalTips = aggregateByCurrency(transactions, (t) => currencyBySalon.get(t.salonId) ?? "EUR", (t) => Number(t.tipAmount));
 
-  const noShowRate = appointments.length
-    ? (appointments.filter((a) => a.stato === "NO_SHOW").length / appointments.length) * 100
-    : 0;
+  const noShowRate = appointments.length ? (appointments.filter((a) => a.stato === "NO_SHOW").length / appointments.length) * 100 : 0;
 
   const appointmentsByClient = new Map<string, number>();
   const appointmentsDatesByClient = new Map<string, Date[]>();
@@ -116,10 +131,7 @@ export default async function ReportsPage({
 
   const txByAppointment = new Map<string, number>();
   for (const transaction of transactions) {
-    txByAppointment.set(
-      transaction.appointmentId,
-      (txByAppointment.get(transaction.appointmentId) ?? 0) + Number(transaction.grossAmount),
-    );
+    txByAppointment.set(transaction.appointmentId, (txByAppointment.get(transaction.appointmentId) ?? 0) + Number(transaction.grossAmount));
   }
 
   const serviceAgg = new Map<string, { count: number; revenue: number }>();
@@ -199,11 +211,7 @@ export default async function ReportsPage({
     };
   });
 
-  const frequencyProfiles = await buildClientFrequencyProfiles({
-    salonIds,
-    marketingOnly: false,
-  });
-
+  const frequencyProfiles = await buildClientFrequencyProfiles({ salonIds, marketingOnly: false });
   const frequencyBuckets: Record<
     "RETURN_MAX_5_WEEKS" | "RETURN_MAX_8_WEEKS" | "RETURN_MAX_12_WEEKS" | "INACTIVE_OVER_12_WEEKS",
     typeof frequencyProfiles
@@ -219,29 +227,40 @@ export default async function ReportsPage({
     if (!bucket) continue;
     frequencyBuckets[bucket].push(profile);
   }
-
   for (const key of Object.keys(frequencyBuckets) as Array<keyof typeof frequencyBuckets>) {
-    frequencyBuckets[key].sort((a, b) => {
-      const aTime = a.lastCompletedAt?.getTime() ?? 0;
-      const bTime = b.lastCompletedAt?.getTime() ?? 0;
-      return bTime - aTime;
-    });
+    frequencyBuckets[key].sort((a, b) => (b.lastCompletedAt?.getTime() ?? 0) - (a.lastCompletedAt?.getTime() ?? 0));
   }
 
   return (
     <div className="space-y-5">
       <div className="space-y-2">
         <h1 className="text-2xl font-semibold">Report avanzati</h1>
-        <p className="text-sm text-zinc-600">
-          Panoramica business e clienti. Tutte le metriche operatori sono disponibili in <strong>Report operatori</strong>.
-        </p>
+        <p className="text-sm text-zinc-600">Panoramica business e clienti. Metriche team complete in Report operatori.</p>
       </div>
 
       <Card className="space-y-3">
-        <AccountingScopeSwitcher basePath="/reports" selectedScope={String(accountingScope.selectedScope)} options={accountingScope.options} />
-        <p className="text-sm text-zinc-600">
-          Periodo analizzato: ultimi 3 mesi (da {from.toLocaleDateString("it-IT")} a {to.toLocaleDateString("it-IT")})
-        </p>
+        <AccountingScopeSwitcher basePath="/reports" selectedScope={String(accountingScope.selectedScope)} options={accountingScope.options} extraQuery={{ period: periodRange.preset, from: periodRange.fromInput, to: periodRange.toInput }} />
+        <form method="get" className="grid gap-2 md:grid-cols-[1fr_160px_160px_auto] md:items-end">
+          {scope ? <input type="hidden" name="scope" value={scope} /> : null}
+          <div>
+            <label className="mb-1 block text-xs font-medium text-zinc-600">Periodo</label>
+            <select name="period" defaultValue={periodRange.preset} className="h-10 w-full rounded-md border border-zinc-300 px-3 text-sm">
+              {PERIOD_PRESET_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-zinc-600">Da</label>
+            <input type="date" name="from" defaultValue={periodRange.fromInput} className="h-10 w-full rounded-md border border-zinc-300 px-3 text-sm" />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-zinc-600">A</label>
+            <input type="date" name="to" defaultValue={periodRange.toInput} className="h-10 w-full rounded-md border border-zinc-300 px-3 text-sm" />
+          </div>
+          <button type="submit" className="h-10 rounded-md bg-zinc-900 px-4 text-sm font-medium text-white">Applica</button>
+        </form>
+        <p className="text-sm text-zinc-600">Periodo analizzato: {periodRange.label}</p>
       </Card>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -289,16 +308,12 @@ export default async function ReportsPage({
 
       <Card className="space-y-3">
         <h2 className="text-lg font-semibold">Confronto sedi</h2>
-        <p className="text-sm text-zinc-600">
-          Sedi analizzate: {salonsInScope.length}. Clienti attivi nel gruppo: {clients.length}
-        </p>
+        <p className="text-sm text-zinc-600">Sedi analizzate: {salonsInScope.length}. Clienti attivi nel gruppo: {clients.length}</p>
         <div className="divide-y divide-zinc-100 text-sm">
           {compareBySalon.map((row) => (
             <div key={row.salonId} className="flex flex-wrap items-center justify-between gap-2 py-2">
               <p className="font-medium text-zinc-800">{row.name}</p>
-              <p className="text-zinc-600">
-                {row.currency} {row.total.toFixed(2)} · Appuntamenti {row.appointments} · No-show {row.noShowRate.toFixed(1)}%
-              </p>
+              <p className="text-zinc-600">{row.currency} {row.total.toFixed(2)} · Appuntamenti {row.appointments} · No-show {row.noShowRate.toFixed(1)}%</p>
             </div>
           ))}
         </div>
@@ -306,50 +321,29 @@ export default async function ReportsPage({
 
       <Card className="space-y-3">
         <h2 className="text-lg font-semibold">Frequenza ritorno clienti</h2>
-        <p className="text-sm text-zinc-600">
-          Segmentazione su appuntamenti completati: rientro 5/8/12 settimane e clienti assenti da oltre 12 settimane.
-        </p>
+        <p className="text-sm text-zinc-600">Segmentazione su appuntamenti completati: rientro 5/8/12 settimane e clienti assenti da oltre 12 settimane.</p>
 
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
-            <p className="text-xs font-medium text-emerald-800">Ritorno entro 5 settimane</p>
-            <p className="text-2xl font-semibold text-emerald-900">{frequencyBuckets.RETURN_MAX_5_WEEKS.length}</p>
-          </div>
-          <div className="rounded-xl border border-cyan-200 bg-cyan-50 p-3">
-            <p className="text-xs font-medium text-cyan-800">Ritorno 5-8 settimane</p>
-            <p className="text-2xl font-semibold text-cyan-900">{frequencyBuckets.RETURN_MAX_8_WEEKS.length}</p>
-          </div>
-          <div className="rounded-xl border border-violet-200 bg-violet-50 p-3">
-            <p className="text-xs font-medium text-violet-800">Ritorno 8-12 settimane</p>
-            <p className="text-2xl font-semibold text-violet-900">{frequencyBuckets.RETURN_MAX_12_WEEKS.length}</p>
-          </div>
-          <div className="rounded-xl border border-rose-200 bg-rose-50 p-3">
-            <p className="text-xs font-medium text-rose-800">Assenti oltre 12 settimane</p>
-            <p className="text-2xl font-semibold text-rose-900">{frequencyBuckets.INACTIVE_OVER_12_WEEKS.length}</p>
-          </div>
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3"><p className="text-xs font-medium text-emerald-800">Ritorno entro 5 settimane</p><p className="text-2xl font-semibold text-emerald-900">{frequencyBuckets.RETURN_MAX_5_WEEKS.length}</p></div>
+          <div className="rounded-xl border border-cyan-200 bg-cyan-50 p-3"><p className="text-xs font-medium text-cyan-800">Ritorno 5-8 settimane</p><p className="text-2xl font-semibold text-cyan-900">{frequencyBuckets.RETURN_MAX_8_WEEKS.length}</p></div>
+          <div className="rounded-xl border border-violet-200 bg-violet-50 p-3"><p className="text-xs font-medium text-violet-800">Ritorno 8-12 settimane</p><p className="text-2xl font-semibold text-violet-900">{frequencyBuckets.RETURN_MAX_12_WEEKS.length}</p></div>
+          <div className="rounded-xl border border-rose-200 bg-rose-50 p-3"><p className="text-xs font-medium text-rose-800">Assenti oltre 12 settimane</p><p className="text-2xl font-semibold text-rose-900">{frequencyBuckets.INACTIVE_OVER_12_WEEKS.length}</p></div>
         </div>
 
-        {(
-          [
-            ["RETURN_MAX_5_WEEKS", "Clienti entro 5 settimane"],
-            ["RETURN_MAX_8_WEEKS", "Clienti 5-8 settimane"],
-            ["RETURN_MAX_12_WEEKS", "Clienti 8-12 settimane"],
-            ["INACTIVE_OVER_12_WEEKS", "Clienti assenti oltre 12 settimane"],
-          ] as const
-        ).map(([key, label]) => (
+        {([
+          ["RETURN_MAX_5_WEEKS", "Clienti entro 5 settimane"],
+          ["RETURN_MAX_8_WEEKS", "Clienti 5-8 settimane"],
+          ["RETURN_MAX_12_WEEKS", "Clienti 8-12 settimane"],
+          ["INACTIVE_OVER_12_WEEKS", "Clienti assenti oltre 12 settimane"],
+        ] as const).map(([key, label]) => (
           <details key={key} className="rounded-md border border-zinc-200 bg-white p-3">
-            <summary className="cursor-pointer text-sm font-semibold text-zinc-900">
-              {label}: {frequencyBuckets[key].length}
-            </summary>
+            <summary className="cursor-pointer text-sm font-semibold text-zinc-900">{label}: {frequencyBuckets[key].length}</summary>
             <div className="mt-2 space-y-1 text-sm">
               {frequencyBuckets[key].length === 0 ? (
                 <p className="text-zinc-500">Nessun cliente in questo segmento.</p>
               ) : (
                 frequencyBuckets[key].map((row) => (
-                  <p key={row.client.id}>
-                    {row.client.nome} {row.client.cognome} - {row.client.telefono} - ultima visita{" "}
-                    {row.lastCompletedAt ? new Date(row.lastCompletedAt).toLocaleDateString("it-IT") : "n/d"}
-                  </p>
+                  <p key={row.client.id}>{row.client.nome} {row.client.cognome} - {row.client.telefono} - ultima visita {row.lastCompletedAt ? new Date(row.lastCompletedAt).toLocaleDateString("it-IT") : "n/d"}</p>
                 ))
               )}
             </div>
@@ -359,4 +353,3 @@ export default async function ReportsPage({
     </div>
   );
 }
-
