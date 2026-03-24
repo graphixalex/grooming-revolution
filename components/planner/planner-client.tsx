@@ -1117,12 +1117,12 @@ export function PlannerClient({
                             const aEnd = new Date(a.endAt).getTime();
                             return slotTime >= aStart && slotTime < aEnd;
                           });
-                          const orderedSlotAppointments = slotAppointments.sort(
+                          const orderedSlotAppointments = [...slotAppointments].sort(
                             (a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime(),
                           );
                           const row = day.operators.find((o) => o.id === op.id);
                           const inShift = row ? slotMin >= toMinutes(row.start) && slotMin < toMinutes(row.end) : false;
-                          const visibleCount = Math.max(1, orderedSlotAppointments.length);
+                          const operatorAppointments = appointments.filter((a) => a.operator?.id === op.id);
                           return (
                             <div
                               key={`${day.date.toISOString()}-${op.id}-${slotMin}`}
@@ -1170,7 +1170,21 @@ export function PlannerClient({
                                 const apptContinuesBefore = apptStartMs < slotTime;
                                 const apptContinuesAfter = apptEndMs > slotEndMs;
                                 const apptBgColor = getAppointmentBgColor(appt);
-                                const widthPct = 100 / visibleCount;
+                                const laneAppointments = operatorAppointments
+                                  .filter((other) => {
+                                    const otherStart = new Date(other.startAt).getTime();
+                                    const otherEnd = new Date(other.endAt).getTime();
+                                    return otherStart < apptEndMs && otherEnd > apptStartMs;
+                                  })
+                                  .sort((a, b) => {
+                                    const aStart = new Date(a.startAt).getTime();
+                                    const bStart = new Date(b.startAt).getTime();
+                                    if (aStart !== bStart) return aStart - bStart;
+                                    return a.id.localeCompare(b.id);
+                                  });
+                                const laneCount = Math.max(1, laneAppointments.length);
+                                const laneIndex = Math.max(0, laneAppointments.findIndex((x) => x.id === appt.id));
+                                const widthPct = 100 / laneCount;
                                 return (
                                   <button
                                     type="button"
@@ -1186,7 +1200,7 @@ export function PlannerClient({
                                             : "rounded-sm"
                                     }`}
                                     style={{
-                                      left: `calc(${idx * widthPct}% + 1px)`,
+                                      left: `calc(${laneIndex * widthPct}% + 1px)`,
                                       width: `calc(${widthPct}% - 2px)`,
                                       backgroundColor: apptBgColor,
                                       boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.55)",
