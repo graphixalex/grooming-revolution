@@ -578,38 +578,39 @@ export function HomeLanding() {
               {/* Screenshot */}
               <div className="relative overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-100">
                 <Image
-                  src="/img/homepage.png"
+                  src="/img/per-homepage.png"
                   alt="Preview Grooming Revolution"
                   width={1400}
                   height={880}
-                  className="h-[400px] w-full object-cover object-top sm:h-[500px] lg:h-[600px]"
+                  className="h-[260px] w-full object-cover object-top sm:h-[420px] lg:h-[560px]"
                   priority
                 />
-                
+                 
                 {/* Overlay gradient */}
-                <div className="absolute inset-0 bg-gradient-to-t from-zinc-900/45 via-transparent to-transparent pointer-events-none" />
-                
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-zinc-900/45 via-zinc-900/10 to-transparent" />
+                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_70%_20%,rgba(34,211,238,0.18),transparent_45%)]" />
+                 
                 {/* Floating stats */}
                 <motion.div
-                  className="absolute bottom-6 left-6 rounded-2xl border border-cyan-200 bg-white/90 p-4 backdrop-blur-xl"
+                  className="absolute left-3 top-3 rounded-xl border border-cyan-200 bg-white/92 p-2.5 backdrop-blur-xl sm:bottom-6 sm:left-6 sm:top-auto sm:rounded-2xl sm:p-4"
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 1.5 }}
                 >
                   <div className="text-xs text-zinc-600">No-show ridotti</div>
-                  <div className="text-3xl font-black text-cyan-400">
+                  <div className="text-xl font-black text-cyan-400 sm:text-3xl">
                     <AnimatedCounter value="-37%" />
                   </div>
                 </motion.div>
 
                 <motion.div
-                  className="absolute bottom-6 right-6 rounded-2xl border border-violet-200 bg-white/90 p-4 backdrop-blur-xl"
+                  className="absolute bottom-3 right-3 rounded-xl border border-violet-200 bg-white/92 p-2.5 backdrop-blur-xl sm:bottom-6 sm:right-6 sm:rounded-2xl sm:p-4"
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 1.7 }}
                 >
                   <div className="text-xs text-zinc-600">Tempo risparmiato</div>
-                  <div className="text-3xl font-black text-purple-400">+5h/sett</div>
+                  <div className="text-xl font-black text-purple-400 sm:text-3xl">+5h/sett</div>
                 </motion.div>
               </div>
 
