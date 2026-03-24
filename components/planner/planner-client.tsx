@@ -1214,8 +1214,6 @@ export function PlannerClient({
                                 const apptContinuesBefore = apptStartMs < slotTime;
                                 const apptContinuesAfter = apptEndMs > slotEndMs;
                                 const apptBgColor = getAppointmentBgColor(appt);
-                                const showContinuationLabel =
-                                  !apptStartsHere && slotTime === apptStartMs + 30 * 60 * 1000;
                                 const treatmentsText = appt.trattamentiSelezionati.map((t) => t.treatment.nome).join(", ");
                                 const noteText = appt.noteAppuntamento?.trim() ?? "";
                                 const laneAppointments = operatorAppointments
@@ -1232,6 +1230,7 @@ export function PlannerClient({
                                 const laneCount = Math.max(1, laneAppointments.length);
                                 const laneIndex = Math.max(0, laneAppointments.findIndex((x) => x.id === appt.id));
                                 const widthPct = 100 / laneCount;
+                                const blockHeightPx = Math.max(36, ((apptEndMs - apptStartMs) / (30 * 60 * 1000)) * 36);
                                 const borderColor = "rgba(255,255,255,0.55)";
                                 const segmentBoxShadowParts = [
                                   `inset 1px 0 0 ${borderColor}`,
@@ -1239,12 +1238,13 @@ export function PlannerClient({
                                 ];
                                 if (!apptContinuesBefore) segmentBoxShadowParts.push(`inset 0 1px 0 ${borderColor}`);
                                 if (!apptContinuesAfter) segmentBoxShadowParts.push(`inset 0 -1px 0 ${borderColor}`);
+                                if (!apptStartsHere) return null;
                                 return (
                                   <button
                                     type="button"
                                     key={appt.id}
                                     draggable={Boolean(apptStartsHere)}
-                                    className={`absolute bottom-0 top-0 z-10 overflow-hidden px-1 text-left text-white transition ${
+                                    className={`absolute top-0 z-20 overflow-hidden px-1 text-left text-white transition ${
                                       apptContinuesBefore && apptContinuesAfter
                                         ? "-mb-px -mt-px rounded-none"
                                         : apptContinuesBefore
@@ -1256,6 +1256,7 @@ export function PlannerClient({
                                     style={{
                                       left: `calc(${laneIndex * widthPct}% + 1px)`,
                                       width: `calc(${widthPct}% - 2px)`,
+                                      height: `${blockHeightPx - 2}px`,
                                       backgroundColor: apptBgColor,
                                       boxShadow: segmentBoxShadowParts.join(", "),
                                     }}
@@ -1283,9 +1284,10 @@ export function PlannerClient({
                                         {noteText ? (
                                           <span className="block truncate text-[10px] italic leading-tight text-white/80">{noteText}</span>
                                         ) : null}
+                                        {apptEndMs > slotEndMs ? (
+                                          <span className="block pt-0.5 text-[10px] font-semibold leading-tight text-white/70">in corso</span>
+                                        ) : null}
                                       </>
-                                    ) : showContinuationLabel ? (
-                                      <span className="block pt-0.5 text-[10px] font-semibold leading-tight text-white/70">in corso</span>
                                     ) : null}
                                     {resizePreview?.appointmentId === appt.id ? (
                                       <span className="absolute right-1 top-0.5 rounded bg-black/20 px-1 text-[9px] font-semibold text-white/90">
