@@ -1142,7 +1142,7 @@ export function PlannerClient({
             <>
               <p className="font-semibold text-zinc-900">Uso touch (tablet/smartphone)</p>
               <p>Tocco singolo: anteprima rapida appuntamento.</p>
-              <p>Doppio tocco: modifica completa appuntamento.</p>
+              <p>In anteprima: tasto modifica completa appuntamento.</p>
               <p>Pressione lunga e trascina: sposta appuntamento in agenda.</p>
             </>
           ) : (
@@ -1151,6 +1151,7 @@ export function PlannerClient({
               <p>Click su appuntamento: modifica completa.</p>
               <p>Passa col mouse: anteprima dettagli (trattamenti, note, stato).</p>
               <p>Trascina bordi sopra/sotto: cambia durata con anteprima live.</p>
+              <p>Trascina appuntamento: cambia orario/giorno con anteprima live.</p>
             </>
           )}
         </div>
