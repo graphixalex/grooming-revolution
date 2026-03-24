@@ -43,7 +43,7 @@ export default function PrivacyPage() {
 
         <h2 className="text-lg font-semibold">6. Pagamenti abbonamento</h2>
         <p>
-          Per la gestione del canone in abbonamento viene utilizzato il provider Payrexx. I dati di pagamento sono trattati
+          Per la gestione del canone in abbonamento viene utilizzato il provider Paddle. I dati di pagamento sono trattati
           secondo le policy del provider e i rapporti contrattuali applicabili.
         </p>
 
@@ -80,3 +80,4 @@ export default function PrivacyPage() {
     </LegalShell>
   );
 }
+

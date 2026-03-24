@@ -26,7 +26,7 @@ export default function TermsPage() {
           Il piano Free prevede limiti operativi pubblicati in app. I piani a pagamento sono in abbonamento con rinnovo periodico fino a disdetta.
         </p>
         <p>
-          La gestione degli incassi del canone avviene tramite Payrexx (provider di pagamento terzo). Il Cliente autorizza gli addebiti ricorrenti
+          La gestione degli incassi del canone avviene tramite Paddle (provider di pagamento terzo). Il Cliente autorizza gli addebiti ricorrenti
           secondo il piano scelto e le condizioni mostrate nella sezione Billing.
         </p>
 
@@ -87,3 +87,4 @@ export default function TermsPage() {
     </LegalShell>
   );
 }
+

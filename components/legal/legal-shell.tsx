@@ -55,8 +55,9 @@ export function LegalShell({ title, updatedAt, children }: LegalShellProps) {
             </div>
             <div className="flex flex-col gap-1 text-xs">
               <p className="text-sm font-semibold text-zinc-200">Link legali</p>
-              <Link href="/legal/privacy" className="text-zinc-300 hover:text-white">Privacy Policy</Link>
-              <Link href="/legal/terms" className="text-zinc-300 hover:text-white">Termini di Servizio</Link>
+              <Link href="/privacy-policy" className="text-zinc-300 hover:text-white">Privacy Policy</Link>
+              <Link href="/terms-and-conditions" className="text-zinc-300 hover:text-white">Termini di Servizio</Link>
+              <Link href="/refund-policy" className="text-zinc-300 hover:text-white">Politica di rimborso</Link>
               <Link href="/legal/cookies" className="text-zinc-300 hover:text-white">Cookie Policy</Link>
             </div>
           </div>

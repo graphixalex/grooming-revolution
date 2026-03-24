@@ -25,7 +25,7 @@ export default async function BillingPage() {
         <p className="text-sm text-zinc-600">Trial: fino a 50 clienti inclusi.</p>
         <p className="text-sm text-zinc-600">Piano FULL: EUR 20,00 / mese + IVA ({vatPercent}%).</p>
         <p className="text-sm text-zinc-600">Totale indicativo mensile: EUR {monthlyGross.toFixed(2)} IVA inclusa.</p>
-        <p className="text-sm text-zinc-600">Pagamento automatico mensile su carta tramite Payrexx, finche non disdici.</p>
+        <p className="text-sm text-zinc-600">Pagamento automatico mensile su carta tramite Paddle, finche non disdici.</p>
         <p className="text-sm text-zinc-600">
           Stato addebito automatico: {salon?.stripeSubscriptionId ? "ATTIVO" : "NON ATTIVO"}
         </p>
@@ -42,5 +42,6 @@ export default async function BillingPage() {
     </div>
   );
 }
+
 
 
