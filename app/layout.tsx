@@ -44,18 +44,16 @@ export const metadata: Metadata = {
     url: "/",
     images: [
       {
-        url: "/opengraph-image",
-        width: 1200,
-        height: 630,
-        alt: "Grooming Revolution - Gestionale per toelettatura",
+        url: "/img/logo-grooming-revolution.png",
+        alt: "Logo Grooming Revolution",
       },
     ],
   },
   twitter: {
-    card: "summary_large_image",
+    card: "summary",
     title: socialTitle,
     description: socialDescription,
-    images: ["/twitter-image"],
+    images: ["/img/logo-grooming-revolution.png"],
   },
 };
 
