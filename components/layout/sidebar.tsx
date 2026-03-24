@@ -16,6 +16,7 @@ const links = [
   { href: "/messages", label: "Messaggi", icon: MessageSquare, roles: ["OWNER", "MANAGER", "STAFF"] as Role[] },
   { href: "/pricing", label: "Listino", icon: CreditCard, roles: ["OWNER", "MANAGER"] as Role[] },
   { href: "/reports", label: "Report", icon: BarChart3, roles: ["OWNER", "MANAGER"] as Role[] },
+  { href: "/operator-reports", label: "Report operatori", icon: BarChart3, roles: ["OWNER"] as Role[] },
   { href: "/branches", label: "Multi-sede", icon: Users, roles: ["OWNER", "MANAGER"] as Role[] },
   { href: "/payments", label: "Movimenti", icon: CreditCard, roles: ["OWNER", "MANAGER"] as Role[] },
   { href: "/settings", label: "Impostazioni", icon: Settings, roles: ["OWNER", "MANAGER"] as Role[] },
