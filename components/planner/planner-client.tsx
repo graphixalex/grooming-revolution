@@ -379,6 +379,11 @@ export function PlannerClient({
     baseStartMs: number;
     baseEndMs: number;
   } | null>(null);
+  const [resizePreview, setResizePreview] = useState<{
+    appointmentId: string;
+    startMs: number;
+    endMs: number;
+  } | null>(null);
 
   const [newClientForm, setNewClientForm] = useState({ nome: "", cognome: "", telefono: "", email: "", noteCliente: "", consensoPromemoria: true });
   const [newDogForm, setNewDogForm] = useState({ nome: "", razza: "", taglia: "M", noteCane: "", tagRapidiIds: [] as string[] });
@@ -891,12 +896,18 @@ export function PlannerClient({
         draftStartMs = Math.max(minStart, Math.min(maxStart, resizeDrag.baseStartMs + deltaMinutes * 60000));
         draftDuration = Math.max(15, Math.min(300, Math.round((resizeDrag.baseEndMs - draftStartMs) / 60000)));
       }
+      setResizePreview({
+        appointmentId: resizeDrag.appointmentId,
+        startMs: draftStartMs,
+        endMs: draftStartMs + draftDuration * 60000,
+      });
       changed = draftStartMs !== resizeDrag.baseStartMs || draftDuration !== baseDuration;
     };
 
     const onPointerUp = () => {
       const current = resizeDrag;
       setResizeDrag(null);
+      setResizePreview(null);
       if (!changed) return;
       void (async () => {
         const { res, data } = await requestAppointmentWithOptionalOverlap(
@@ -1142,10 +1153,18 @@ export function PlannerClient({
                           slotStart.setHours(Math.floor(slotMin / 60), slotMin % 60, 0, 0);
                           const slotTime = slotStart.getTime();
                           const slotEndMs = slotTime + 30 * 60 * 1000;
+                          const getRenderBounds = (appointment: Appointment) => {
+                            if (resizePreview?.appointmentId === appointment.id) {
+                              return { startMs: resizePreview.startMs, endMs: resizePreview.endMs };
+                            }
+                            return {
+                              startMs: new Date(appointment.startAt).getTime(),
+                              endMs: new Date(appointment.endAt).getTime(),
+                            };
+                          };
                           const slotAppointments = appointments.filter((a) => {
                             if (a.operator?.id !== op.id) return false;
-                            const aStart = new Date(a.startAt).getTime();
-                            const aEnd = new Date(a.endAt).getTime();
+                            const { startMs: aStart, endMs: aEnd } = getRenderBounds(a);
                             return slotTime >= aStart && slotTime < aEnd;
                           });
                           const orderedSlotAppointments = [...slotAppointments].sort(
@@ -1190,16 +1209,18 @@ export function PlannerClient({
                               }}
                             >
                               {orderedSlotAppointments.map((appt, idx) => {
-                                const apptStartMs = new Date(appt.startAt).getTime();
-                                const apptEndMs = new Date(appt.endAt).getTime();
+                                const { startMs: apptStartMs, endMs: apptEndMs } = getRenderBounds(appt);
                                 const apptStartsHere = apptStartMs === slotTime;
                                 const apptContinuesBefore = apptStartMs < slotTime;
                                 const apptContinuesAfter = apptEndMs > slotEndMs;
                                 const apptBgColor = getAppointmentBgColor(appt);
+                                const showContinuationLabel =
+                                  !apptStartsHere && slotTime === apptStartMs + 30 * 60 * 1000;
+                                const treatmentsText = appt.trattamentiSelezionati.map((t) => t.treatment.nome).join(", ");
+                                const noteText = appt.noteAppuntamento?.trim() ?? "";
                                 const laneAppointments = operatorAppointments
                                   .filter((other) => {
-                                    const otherStart = new Date(other.startAt).getTime();
-                                    const otherEnd = new Date(other.endAt).getTime();
+                                    const { startMs: otherStart, endMs: otherEnd } = getRenderBounds(other);
                                     return otherStart < apptEndMs && otherEnd > apptStartMs;
                                   })
                                   .sort((a, b) => {
@@ -1254,12 +1275,23 @@ export function PlannerClient({
                                           {isPersonalNoteAppointment(appt) ? "Nota" : `${appt.cane.nome} / ${appt.cliente.nome}`}
                                         </span>
                                         <span className="block truncate text-[10px] font-medium leading-tight text-white/90">
-                                          {format(new Date(appt.startAt), "HH:mm")} - {format(new Date(appt.endAt), "HH:mm")}
+                                          {format(new Date(apptStartMs), "HH:mm")} - {format(new Date(apptEndMs), "HH:mm")}
                                         </span>
+                                        {!isPersonalNoteAppointment(appt) && treatmentsText ? (
+                                          <span className="block truncate text-[10px] leading-tight text-white/85">{treatmentsText}</span>
+                                        ) : null}
+                                        {noteText ? (
+                                          <span className="block truncate text-[10px] italic leading-tight text-white/80">{noteText}</span>
+                                        ) : null}
                                       </>
-                                    ) : (
+                                    ) : showContinuationLabel ? (
                                       <span className="block pt-0.5 text-[10px] font-semibold leading-tight text-white/70">in corso</span>
-                                    )}
+                                    ) : null}
+                                    {resizePreview?.appointmentId === appt.id ? (
+                                      <span className="absolute right-1 top-0.5 rounded bg-black/20 px-1 text-[9px] font-semibold text-white/90">
+                                        {Math.round((apptEndMs - apptStartMs) / 60000)}m
+                                      </span>
+                                    ) : null}
                                     {apptStartsHere ? (
                                       <span
                                         role="button"
@@ -1274,6 +1306,11 @@ export function PlannerClient({
                                             originY: event.clientY,
                                             baseStartMs: apptStartMs,
                                             baseEndMs: apptEndMs,
+                                          });
+                                          setResizePreview({
+                                            appointmentId: appt.id,
+                                            startMs: apptStartMs,
+                                            endMs: apptEndMs,
                                           });
                                         }}
                                       />
@@ -1292,6 +1329,11 @@ export function PlannerClient({
                                             originY: event.clientY,
                                             baseStartMs: apptStartMs,
                                             baseEndMs: apptEndMs,
+                                          });
+                                          setResizePreview({
+                                            appointmentId: appt.id,
+                                            startMs: apptStartMs,
+                                            endMs: apptEndMs,
                                           });
                                         }}
                                       />
