@@ -1211,6 +1211,13 @@ export function PlannerClient({
                                 const laneCount = Math.max(1, laneAppointments.length);
                                 const laneIndex = Math.max(0, laneAppointments.findIndex((x) => x.id === appt.id));
                                 const widthPct = 100 / laneCount;
+                                const borderColor = "rgba(255,255,255,0.55)";
+                                const segmentBoxShadowParts = [
+                                  `inset 1px 0 0 ${borderColor}`,
+                                  `inset -1px 0 0 ${borderColor}`,
+                                ];
+                                if (!apptContinuesBefore) segmentBoxShadowParts.push(`inset 0 1px 0 ${borderColor}`);
+                                if (!apptContinuesAfter) segmentBoxShadowParts.push(`inset 0 -1px 0 ${borderColor}`);
                                 return (
                                   <button
                                     type="button"
@@ -1229,7 +1236,7 @@ export function PlannerClient({
                                       left: `calc(${laneIndex * widthPct}% + 1px)`,
                                       width: `calc(${widthPct}% - 2px)`,
                                       backgroundColor: apptBgColor,
-                                      boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.55)",
+                                      boxShadow: segmentBoxShadowParts.join(", "),
                                     }}
                                     onDragStart={(event) => {
                                       if (!apptStartsHere) return;
