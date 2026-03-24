@@ -1,4 +1,4 @@
-import { getRequiredSession } from "@/lib/session";
+﻿import { getRequiredSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { Card } from "@/components/ui/card";
 import { ProConsentActions } from "@/components/billing/pro-consent-actions";
@@ -25,7 +25,7 @@ export default async function BillingPage() {
         <p className="text-sm text-zinc-600">Trial: fino a 50 clienti inclusi.</p>
         <p className="text-sm text-zinc-600">Piano FULL: EUR 20,00 / mese + IVA ({vatPercent}%).</p>
         <p className="text-sm text-zinc-600">Totale indicativo mensile: EUR {monthlyGross.toFixed(2)} IVA inclusa.</p>
-        <p className="text-sm text-zinc-600">Pagamento automatico mensile su carta tramite Stripe, finché non disdici.</p>
+        <p className="text-sm text-zinc-600">Pagamento automatico mensile su carta tramite Payrexx, finche non disdici.</p>
         <p className="text-sm text-zinc-600">
           Stato addebito automatico: {salon?.stripeSubscriptionId ? "ATTIVO" : "NON ATTIVO"}
         </p>
@@ -37,9 +37,10 @@ export default async function BillingPage() {
 
       <Card>
         <h2 className="font-semibold">Invoice/Receipt base</h2>
-        <p className="text-sm text-zinc-600">In MVP: riepilogo fiscale per transazione con VAT inclusa e dati attività.</p>
+        <p className="text-sm text-zinc-600">In MVP: riepilogo fiscale per transazione con VAT inclusa e dati attivitÃ .</p>
       </Card>
     </div>
   );
 }
+
 

@@ -1,79 +1,80 @@
-import { LegalShell } from "@/components/legal/legal-shell";
+﻿import { LegalShell } from "@/components/legal/legal-shell";
 
 export default function PrivacyPage() {
   return (
-    <LegalShell title="Privacy Policy" updatedAt="21 marzo 2026">
+    <LegalShell title="Privacy Policy" updatedAt="24 marzo 2026">
       <div className="space-y-4">
         <p>
-          La presente informativa descrive come Grooming Revolution tratta i dati personali in qualità di fornitore software.
-          Per i dati caricati dai saloni (clienti finali, animali, appuntamenti), il salone opera normalmente come Titolare del trattamento.
+          La presente informativa descrive il trattamento dei dati personali nell&apos;uso del servizio Grooming Revolution,
+          prodotto e gestito da Cecilia Luxury Grooming.
         </p>
 
-        <h2 className="text-lg font-semibold">1. Quadro normativo</h2>
+        <h2 className="text-lg font-semibold">1. Ruoli privacy</h2>
         <p>
-          Il trattamento è svolto nel rispetto della normativa applicabile, incluse GDPR (UE/SEE), LPD/FADP Svizzera e, ove pertinenti,
-          altre norme locali in materia di protezione dei dati.
+          Per i dati dei clienti finali inseriti dai saloni, il salone Cliente agisce di norma come Titolare del trattamento.
+          Cecilia Luxury Grooming agisce come fornitore tecnico e Responsabile del trattamento per conto del Cliente.
         </p>
 
         <h2 className="text-lg font-semibold">2. Categorie di dati trattati</h2>
         <p>
-          Dati account (email, password hash, ruoli), dati salone, dati clienti finali, recapiti telefonici, dati animali domestici,
-          agenda appuntamenti, dati operativi su pagamenti/incassi, log tecnici e dati di sicurezza.
+          Dati account utenti, dati anagrafici clienti, dati cani e preferenze, appuntamenti, dati transazionali,
+          log tecnici e dati di sicurezza necessari all&apos;erogazione del servizio.
         </p>
 
-        <h2 className="text-lg font-semibold">3. Finalità e basi giuridiche</h2>
+        <h2 className="text-lg font-semibold">3. Finalita e basi giuridiche</h2>
         <p>
-          Esecuzione del contratto, erogazione del servizio, sicurezza, prevenzione frodi/abusi, supporto tecnico, adempimenti legali/fiscali,
-          miglioramento del prodotto. La base giuridica dipende dal contesto: esecuzione contrattuale, obbligo legale, legittimo interesse
-          o consenso quando richiesto dalla legge.
+          Erogazione del servizio, sicurezza, supporto, prevenzione abusi, adempimenti legali e fiscali,
+          miglioramento della piattaforma. Le basi giuridiche includono esecuzione contrattuale, obbligo legale,
+          legittimo interesse e consenso quando richiesto.
         </p>
 
-        <h2 className="text-lg font-semibold">4. Ruoli del trattamento</h2>
+        <h2 className="text-lg font-semibold">4. Conservazione dei dati</h2>
         <p>
-          Per i dati dei clienti finali inseriti nel gestionale, il salone determina finalità e mezzi del trattamento (Titolare).
-          Grooming Revolution tratta tali dati come Responsabile/fornitore tecnico secondo istruzioni documentate del Titolare.
+          I dati sono conservati per il tempo necessario alle finalita contrattuali e agli obblighi normativi.
+          In caso di cessazione, i dati vengono cancellati o anonimizzati entro tempi tecnici ragionevoli,
+          salvo obblighi legali di conservazione.
         </p>
 
-        <h2 className="text-lg font-semibold">5. Conservazione dei dati</h2>
+        <h2 className="text-lg font-semibold">5. Sub-responsabili e terze parti</h2>
         <p>
-          I dati sono conservati per il tempo necessario alle finalità contrattuali e agli obblighi di legge. Alla cessazione del rapporto,
-          i dati vengono cancellati o anonimizzati secondo policy interne e tempi tecnici ragionevoli, salvo obblighi di conservazione.
+          Il servizio puo coinvolgere fornitori terzi qualificati (hosting, email, pagamenti, messaggistica, infrastruttura).
+          Tali fornitori operano con accordi contrattuali, istruzioni documentate e misure di sicurezza adeguate.
         </p>
 
-        <h2 className="text-lg font-semibold">6. Sicurezza</h2>
+        <h2 className="text-lg font-semibold">6. Pagamenti abbonamento</h2>
         <p>
-          Sono adottate misure tecniche e organizzative adeguate, tra cui controllo accessi, segregazione logica dei tenant, audit log,
-          protezione delle credenziali, monitoraggio e aggiornamenti di sicurezza.
+          Per la gestione del canone in abbonamento viene utilizzato il provider Payrexx. I dati di pagamento sono trattati
+          secondo le policy del provider e i rapporti contrattuali applicabili.
         </p>
 
-        <h2 className="text-lg font-semibold">7. Comunicazione a terzi e subprocessori</h2>
+        <h2 className="text-lg font-semibold">7. Trasferimenti internazionali</h2>
         <p>
-          I dati possono essere trattati da fornitori terzi indispensabili al servizio (es. cloud hosting, database, pagamenti, messaggistica),
-          vincolati da accordi contrattuali e standard di sicurezza adeguati.
+          Quando necessari, eventuali trasferimenti internazionali avvengono con garanzie adeguate previste dalla normativa
+          applicabile (es. clausole contrattuali standard o meccanismi equivalenti).
         </p>
 
-        <h2 className="text-lg font-semibold">8. Trasferimenti internazionali</h2>
+        <h2 className="text-lg font-semibold">8. Sicurezza</h2>
         <p>
-          Se i dati sono trasferiti fuori dalla giurisdizione dell&apos;utente, il trasferimento avviene con garanzie adeguate previste dalla legge
-          (es. clausole contrattuali standard o meccanismi equivalenti).
+          Sono adottate misure tecniche e organizzative adeguate, incluse autenticazione, controllo accessi, segregazione logica,
+          audit log, monitoraggio e procedure di gestione incidente.
         </p>
 
         <h2 className="text-lg font-semibold">9. Diritti degli interessati</h2>
         <p>
-          Nei limiti di legge, gli interessati possono richiedere accesso, rettifica, cancellazione, limitazione, opposizione e portabilità.
-          Le richieste sui dati dei clienti finali vanno rivolte prima al salone Titolare.
+          Nei limiti di legge, gli interessati possono esercitare i diritti di accesso, rettifica, cancellazione, limitazione,
+          opposizione e portabilita. Per i dati dei clienti finali, la richiesta va presentata in prima istanza al salone Titolare.
         </p>
 
-        <h2 className="text-lg font-semibold">10. Violazioni dei dati (data breach)</h2>
+        <h2 className="text-lg font-semibold">10. Data breach</h2>
         <p>
-          In caso di violazione dei dati personali, Grooming Revolution applica procedure interne di gestione incidente, mitigazione,
-          registrazione e notifica secondo i requisiti normativi applicabili.
+          In caso di violazione dei dati personali, vengono attivate procedure interne di contenimento, analisi, documentazione
+          e notifica secondo la normativa applicabile.
         </p>
 
-        <h2 className="text-lg font-semibold">11. Modifiche alla presente informativa</h2>
+        <h2 className="text-lg font-semibold">11. Aggiornamenti della policy</h2>
         <p>
-          La Privacy Policy può essere aggiornata per esigenze tecniche, legali o organizzative. La versione più recente è pubblicata
-          su questa pagina con indicazione della data di aggiornamento.
+          Questa informativa puo essere aggiornata per esigenze tecniche, legali o organizzative. La versione aggiornata
+          e sempre pubblicata su questa pagina con data di revisione.
         </p>
       </div>
     </LegalShell>

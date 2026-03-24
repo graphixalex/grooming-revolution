@@ -1,4 +1,4 @@
-import Image from "next/image";
+﻿import Image from "next/image";
 import Link from "next/link";
 import { ReactNode } from "react";
 
@@ -7,6 +7,8 @@ type LegalShellProps = {
   updatedAt: string;
   children: ReactNode;
 };
+
+const SUPPORT_EMAIL = "servizioclienti@grooming-revolution.com";
 
 export function LegalShell({ title, updatedAt, children }: LegalShellProps) {
   return (
@@ -24,10 +26,7 @@ export function LegalShell({ title, updatedAt, children }: LegalShellProps) {
                 priority
               />
             </Link>
-            <Link
-              href="/"
-              className="rounded-xl border border-zinc-300 bg-white px-4 py-2 text-sm font-semibold text-zinc-800 hover:bg-zinc-100"
-            >
+            <Link href="/" className="rounded-xl border border-zinc-300 bg-white px-4 py-2 text-sm font-semibold text-zinc-800 hover:bg-zinc-100">
               Torna alla Home
             </Link>
           </div>
@@ -35,7 +34,7 @@ export function LegalShell({ title, updatedAt, children }: LegalShellProps) {
             <p className="text-lg font-bold text-zinc-900">{title}</p>
             <p className="text-sm text-zinc-600">Ultimo aggiornamento: {updatedAt}</p>
             <p className="mt-2 text-sm text-zinc-700">
-              Cecilia Luxury Grooming - Sede legale: Paradiso, Ticino, Svizzera - Piattaforma SaaS per toelettature professionali.
+              Grooming Revolution e il brand del servizio SaaS sviluppato, gestito e commercializzato da Cecilia Luxury Grooming.
             </p>
           </div>
         </header>
@@ -46,33 +45,24 @@ export function LegalShell({ title, updatedAt, children }: LegalShellProps) {
           <div className="grid gap-5 md:grid-cols-3">
             <div>
               <p className="text-sm font-semibold">Cecilia Luxury Grooming</p>
-              <p className="mt-1 text-xs text-zinc-400">Paradiso, Ticino, Svizzera</p>
-              <p className="text-xs text-zinc-400">SaaS gestione toelettature</p>
+              <p className="mt-1 text-xs text-zinc-400">Sede legale: Via Ernesto Bosia 4, 6900 Paradiso (CH)</p>
+              <p className="text-xs text-zinc-400">Titolare del servizio SaaS Grooming Revolution</p>
             </div>
             <div>
-              <p className="text-sm font-semibold">Contatti</p>
-              <p className="mt-1 text-xs text-zinc-400">WhatsApp: +41 00 000 00 00</p>
-              <p className="text-xs text-zinc-400">Telefono: +41 00 000 00 00</p>
+              <p className="text-sm font-semibold">Contatti servizio clienti</p>
+              <p className="mt-1 text-xs text-zinc-300">Email: {SUPPORT_EMAIL}</p>
+              <p className="text-xs text-zinc-500">Assistenza commerciale e tecnica</p>
             </div>
             <div className="flex flex-col gap-1 text-xs">
               <p className="text-sm font-semibold text-zinc-200">Link legali</p>
-              <Link href="/legal/privacy" className="text-zinc-300 hover:text-white">
-                Privacy Policy
-              </Link>
-              <Link href="/legal/terms" className="text-zinc-300 hover:text-white">
-                Termini di Servizio
-              </Link>
-              <Link href="/legal/cookies" className="text-zinc-300 hover:text-white">
-                Cookie Policy
-              </Link>
+              <Link href="/legal/privacy" className="text-zinc-300 hover:text-white">Privacy Policy</Link>
+              <Link href="/legal/terms" className="text-zinc-300 hover:text-white">Termini di Servizio</Link>
+              <Link href="/legal/cookies" className="text-zinc-300 hover:text-white">Cookie Policy</Link>
             </div>
           </div>
           <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-zinc-800 pt-4">
-            <p className="text-xs text-zinc-500">© {new Date().getFullYear()} Cecilia Luxury Grooming. Tutti i diritti riservati.</p>
-            <Link
-              href="/"
-              className="rounded-lg border border-zinc-700 px-3 py-1.5 text-xs font-semibold text-zinc-200 hover:bg-zinc-900"
-            >
+            <p className="text-xs text-zinc-500">© {new Date().getFullYear()} Grooming Revolution. Diritti riservati a Cecilia Luxury Grooming.</p>
+            <Link href="/" className="rounded-lg border border-zinc-700 px-3 py-1.5 text-xs font-semibold text-zinc-200 hover:bg-zinc-900">
               Torna alla Home
             </Link>
           </div>
@@ -81,4 +71,3 @@ export function LegalShell({ title, updatedAt, children }: LegalShellProps) {
     </main>
   );
 }
-

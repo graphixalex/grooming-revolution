@@ -490,13 +490,11 @@ export function HomeLanding() {
               whileTap={{ scale: 0.95 }}
             >
               <a
-                href="https://wa.me/41784104391?text=Ciao%2C%20voglio%20una%20demo%20di%20Grooming%20Revolution!"
-                target="_blank"
-                rel="noreferrer"
+                href="mailto:servizioclienti@grooming-revolution.com?subject=Richiesta%20demo%20Grooming%20Revolution"
                 className="inline-flex w-full items-center justify-center gap-3 rounded-2xl border-2 border-emerald-300 bg-emerald-50 px-6 py-4 text-base font-bold text-emerald-700 transition-all hover:border-emerald-400 hover:bg-emerald-100 sm:w-auto sm:px-10 sm:py-5 sm:text-lg"
               >
                 <MessageCircle className="h-6 w-6" />
-                Demo WhatsApp
+                Contattaci via email
               </a>
             </motion.div>
           </motion.div>
@@ -976,6 +974,34 @@ export function HomeLanding() {
         </div>
       </section>
 
+      {/* Contatti */}
+      <section className="relative px-4 py-20 sm:px-6 lg:px-8">
+        <div className="mx-auto w-full max-w-[1200px] rounded-[2rem] border border-cyan-200 bg-gradient-to-br from-cyan-50 to-blue-50 p-8 shadow-[0_12px_35px_rgba(15,23,42,0.08)] md:p-12">
+          <div className="grid gap-6 md:grid-cols-[1.4fr_1fr] md:items-center">
+            <div>
+              <p className="inline-flex items-center gap-2 rounded-full border border-cyan-300 bg-white px-4 py-2 text-xs font-bold uppercase tracking-widest text-cyan-700">
+                Supporto clienti
+              </p>
+              <h2 className={`${headingFont.className} mt-4 text-3xl font-black text-zinc-900 sm:text-4xl`}>
+                Contattaci per demo, onboarding e assistenza
+              </h2>
+              <p className="mt-3 text-base leading-relaxed text-zinc-700">
+                Per informazioni commerciali e supporto tecnico del gestionale Grooming Revolution, usa il canale email ufficiale.
+              </p>
+            </div>
+            <div className="rounded-2xl border border-zinc-200 bg-white p-5">
+              <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Email servizio clienti</p>
+              <a
+                href="mailto:servizioclienti@grooming-revolution.com"
+                className="mt-2 block text-base font-bold text-cyan-700 hover:text-cyan-800"
+              >
+                servizioclienti@grooming-revolution.com
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Final CTA ESPLOSIVA */}
       <section className="relative px-4 py-32 sm:px-6 lg:px-8">
         <motion.div
@@ -1088,7 +1114,7 @@ export function HomeLanding() {
 
       {/* Footer minimale ma elegante */}
       <footer className="relative border-t border-zinc-200 bg-white/70 px-4 py-16 sm:px-6 lg:px-8">
-        <div className="mx-auto grid w-full max-w-[1400px] gap-10 md:grid-cols-3">
+        <div className="mx-auto grid w-full max-w-[1400px] gap-10 md:grid-cols-4">
           <div>
             <div className="h-12 w-40 overflow-hidden rounded-xl border border-zinc-200 bg-white p-2">
               <Image
@@ -1100,7 +1126,7 @@ export function HomeLanding() {
               />
             </div>
             <p className="mt-4 text-sm text-zinc-600">
-              Grooming Revolution e un prodotto sviluppato e curato da Cecilia Luxury Grooming.
+              Grooming Revolution e un brand software gestito da Cecilia Luxury Grooming.
               <br />
               Sede legale: Via Ernesto Bosia 4, 6900 Paradiso (CH).
             </p>
@@ -1132,10 +1158,19 @@ export function HomeLanding() {
               </Link>
             </div>
           </div>
+
+          <div>
+            <p className="font-bold text-zinc-900">Contatti</p>
+            <div className="mt-4 flex flex-col gap-2 text-sm text-zinc-600">
+              <a href="mailto:servizioclienti@grooming-revolution.com" className="transition-colors hover:text-cyan-400">
+                servizioclienti@grooming-revolution.com
+              </a>
+            </div>
+          </div>
         </div>
 
         <p className="mx-auto mt-12 w-full max-w-[1400px] text-center text-xs text-slate-500">
-          © {new Date().getFullYear()} Grooming Revolution. Tutti i diritti riservati.
+          © {new Date().getFullYear()} Grooming Revolution. Diritti riservati a Cecilia Luxury Grooming.
         </p>
       </footer>
     </main>
