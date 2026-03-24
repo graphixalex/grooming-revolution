@@ -927,10 +927,22 @@ export function PlannerClient({
 
   const desktopVisibleDayKeys = useMemo<DayKey[]>(() => {
     const ordered: DayKey[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
-    const enabled = ordered.filter((key) => Boolean(workingHoursJson?.[key]?.enabled));
+    const enabledBySalon = new Set(
+      ordered.filter((key) => Boolean(workingHoursJson?.[key]?.enabled)),
+    );
+    const enabledByOperators = new Set<DayKey>();
+    for (const op of operators) {
+      if (op.attivo === false) continue;
+      const rows = (op.workingHoursJson as WorkingHoursJson | null | undefined) ?? null;
+      if (!rows) continue;
+      for (const key of ordered) {
+        if (rows[key]?.enabled) enabledByOperators.add(key);
+      }
+    }
+    const enabled = ordered.filter((key) => enabledBySalon.has(key) || enabledByOperators.has(key));
     if (enabled.length > 0) return enabled;
     return ["mon", "tue", "wed", "thu", "fri", "sat"];
-  }, [workingHoursJson]);
+  }, [workingHoursJson, operators]);
   const matrixDays = useMemo(() => {
     if (isMobile) {
       const dayKey = indexToDayKey[mobileDay.getDay()];
