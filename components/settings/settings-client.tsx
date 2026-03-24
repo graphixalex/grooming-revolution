@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useState } from "react";
 import { COUNTRY_OPTIONS, getCountryMeta } from "@/lib/geo";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -29,28 +30,6 @@ type ExceptionHours = {
   breakStart: string;
   breakEnd: string;
 };
-type CampaignType = "MARKETING" | "SERVICE";
-type CampaignSegment =
-  | "ALL_RECENT"
-  | "RETURN_MAX_5_WEEKS"
-  | "RETURN_MAX_8_WEEKS"
-  | "RETURN_MAX_12_WEEKS"
-  | "INACTIVE_OVER_12_WEEKS";
-
-type CampaignRow = {
-  id: string;
-  type: CampaignType;
-  title: string;
-  status: "DRAFT" | "RUNNING" | "COMPLETED" | "FAILED";
-  totalRecipients: number;
-  sentCount: number;
-  failedCount: number;
-  skippedCount: number;
-  createdAt: string;
-  startedAt?: string | null;
-  completedAt?: string | null;
-};
-
 const dayOrder: DayKey[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 const dayLabel: Record<DayKey, string> = {
   mon: "Lunedi",
@@ -163,32 +142,9 @@ export function SettingsClient({ initial }: { initial: any }) {
       exceptions: normalizeOperatorExceptions(o.workingHoursJson),
     })),
   );
-  const [campaignType, setCampaignType] = useState<CampaignType>("SERVICE");
-  const [campaignTitle, setCampaignTitle] = useState("");
-  const [campaignMessage, setCampaignMessage] = useState("");
-  const [campaignMonthsBack, setCampaignMonthsBack] = useState("12");
-  const [campaignSegment, setCampaignSegment] = useState<CampaignSegment>("ALL_RECENT");
-  const [campaignLoading, setCampaignLoading] = useState(false);
-  const [campaigns, setCampaigns] = useState<CampaignRow[]>([]);
-  const [campaignPreviewCount, setCampaignPreviewCount] = useState<number | null>(null);
-  const [campaignPreviewLoading, setCampaignPreviewLoading] = useState(false);
   const [bookingLinkCopied, setBookingLinkCopied] = useState(false);
   const [deleteConfirmWord, setDeleteConfirmWord] = useState("");
   const [deleteRequestLoading, setDeleteRequestLoading] = useState(false);
-
-  const loadCampaigns = async () => {
-    const res = await fetch("/api/whatsapp/campaigns");
-    const data = await res.json();
-    if (!res.ok) {
-      alert(data.error || "Errore caricamento campagne");
-      return;
-    }
-    setCampaigns(data);
-  };
-
-  useEffect(() => {
-    void loadCampaigns();
-  }, []);
 
   async function saveSection(section: string, payload: Record<string, unknown>) {
     const res = await fetch("/api/settings", {
@@ -280,80 +236,6 @@ export function SettingsClient({ initial }: { initial: any }) {
     const result = await saveSection("staffDelete", { userId: row.id });
     if (!result) return;
     setStaff((prev: any[]) => prev.filter((x) => x.id !== row.id));
-  }
-
-  async function dispatchCampaign(campaignId: string) {
-    setCampaignLoading(true);
-    try {
-      for (let i = 0; i < 20; i += 1) {
-        const res = await fetch(`/api/whatsapp/campaigns/${campaignId}/dispatch`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ batchSize: 100 }),
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          alert(data.error || "Errore invio campagna");
-          break;
-        }
-        if (data.status === "COMPLETED" || data.processed === 0) break;
-      }
-      await loadCampaigns();
-    } finally {
-      setCampaignLoading(false);
-    }
-  }
-
-  async function createCampaign() {
-    if (!campaignTitle.trim() || !campaignMessage.trim()) {
-      alert("Inserisci titolo e messaggio");
-      return;
-    }
-    setCampaignLoading(true);
-    try {
-      const res = await fetch("/api/whatsapp/campaigns", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: campaignType,
-          title: campaignTitle.trim(),
-          messageTemplate: campaignMessage.trim(),
-          monthsBack: Number(campaignMonthsBack) || 12,
-          segment: campaignSegment,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        alert(data.error || "Errore creazione campagna");
-        return;
-      }
-      await dispatchCampaign(data.campaignId);
-      setCampaignTitle("");
-      setCampaignMessage("");
-      alert("Campagna avviata");
-    } finally {
-      setCampaignLoading(false);
-    }
-  }
-
-  async function previewCampaignRecipients() {
-    setCampaignPreviewLoading(true);
-    try {
-      const query = new URLSearchParams({
-        type: campaignType,
-        monthsBack: String(Math.max(1, Math.min(36, Number(campaignMonthsBack) || 12))),
-        segment: campaignSegment,
-      });
-      const res = await fetch(`/api/whatsapp/campaigns/preview?${query.toString()}`);
-      const data = await res.json();
-      if (!res.ok) {
-        alert(data.error || "Errore anteprima destinatari");
-        return;
-      }
-      setCampaignPreviewCount(Number(data.recipients) || 0);
-    } finally {
-      setCampaignPreviewLoading(false);
-    }
   }
 
   async function copyBookingLink() {
@@ -926,242 +808,17 @@ export function SettingsClient({ initial }: { initial: any }) {
           Salva operatori
         </Button>
       </Card>
-
       <Card className="space-y-2">
-        <h2 className="font-semibold">Modelli messaggi WhatsApp</h2>
-        <p className="text-xs text-zinc-500">Placeholder: %nome_cliente% %nome_pet% %data_appuntamento% %orario_appuntamento% %nome_attivita% %indirizzo_attivita%</p>
-        <div className="space-y-1">
-          <p className="text-xs font-medium text-zinc-700">Modello WhatsApp</p>
-          <Textarea
-            value={salon.whatsappTemplate || ""}
-            onChange={(e) => setSalon({ ...salon, whatsappTemplate: e.target.value })}
-            placeholder="Ciao %nome_cliente%, promemoria per %nome_pet% il %data_appuntamento% alle %orario_appuntamento% presso %nome_attivita%."
-            className="min-h-[110px]"
-          />
-        </div>
-        <div className="rounded-md border border-zinc-200 p-3 space-y-2">
-          <h3 className="text-sm font-semibold">WhatsApp API (opzionale)</h3>
-          <div className="rounded-md border border-sky-200 bg-sky-50 p-3 text-xs text-sky-900 space-y-2">
-            <p className="font-semibold">Guida rapida collegamento</p>
-            <ol className="list-decimal space-y-1 pl-4">
-              <li>Apri Meta for Developers e attiva WhatsApp Business Platform sulla tua app.</li>
-              <li>Copia il <strong>Phone Number ID</strong> del numero WhatsApp Business che userai per inviare.</li>
-              <li>Genera un <strong>Access Token</strong> con permessi di invio messaggi.</li>
-              <li>Incolla qui sotto Phone Number ID e Access Token. Lascia la versione API su <strong>v23.0</strong> se non hai esigenze particolari.</li>
-              <li>Abilita la checkbox “Abilita invio automatico via API Meta” e clicca <strong>Salva messaggio</strong>.</li>
-            </ol>
-            <p>
-              Se la configurazione non e completa o il token non e valido, il sistema non si blocca:
-              usa automaticamente il metodo manuale (apertura WhatsApp con link).
-            </p>
-          </div>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={Boolean(salon.whatsappApiEnabled)}
-              onChange={(e) => setSalon({ ...salon, whatsappApiEnabled: e.target.checked })}
-            />
-            Abilita invio automatico via API Meta
-          </label>
-          <div className="grid gap-2 md:grid-cols-2">
-            <Input
-              value={salon.whatsappApiPhoneNumberId || ""}
-              onChange={(e) => setSalon({ ...salon, whatsappApiPhoneNumberId: e.target.value })}
-              placeholder="Phone Number ID"
-            />
-            <Input
-              value={salon.whatsappApiVersion || "v23.0"}
-              onChange={(e) => setSalon({ ...salon, whatsappApiVersion: e.target.value })}
-              placeholder="Versione API (es. v23.0)"
-            />
-          </div>
-          <Input
-            type="password"
-            value={salon.whatsappApiAccessToken || ""}
-            onChange={(e) => setSalon({ ...salon, whatsappApiAccessToken: e.target.value })}
-            placeholder="Access Token (lascia vuoto per mantenere quello attuale)"
-          />
-          <p className="text-xs text-zinc-500">
-            Se la configurazione API non e attiva o non valida, il sistema usa automaticamente il metodo manuale (wa.me).
-          </p>
-          <p className="text-xs text-zinc-600">
-            Quando API e attiva, il sistema invia automaticamente un reminder WhatsApp il giorno prima degli appuntamenti prenotati.
-          </p>
-        </div>
-        <Button
-          onClick={() =>
-            saveSection("templates", {
-              whatsappTemplate: salon.whatsappTemplate,
-              whatsappApiEnabled: Boolean(salon.whatsappApiEnabled),
-              whatsappApiPhoneNumberId: salon.whatsappApiPhoneNumberId || "",
-              whatsappApiVersion: salon.whatsappApiVersion || "v23.0",
-              whatsappApiAccessToken: salon.whatsappApiAccessToken || "",
-            })
-          }
+        <h2 className="font-semibold">WhatsApp e comunicazioni</h2>
+        <p className="text-sm text-zinc-600">
+          Configurazione template promemoria, API Meta e campagne massivo in pagina dedicata.
+        </p>
+        <Link
+          href="/whatsapp"
+          className="inline-flex h-10 items-center justify-center rounded-xl border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-800 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-zinc-300 hover:bg-zinc-50"
         >
-          Salva messaggio
-        </Button>
-      </Card>
-
-      <Card className="space-y-3">
-        <h2 className="font-semibold">Campagne WhatsApp (invio massivo)</h2>
-        <div
-          className={`rounded-md border p-3 text-sm ${
-            salon.whatsappApiEnabled
-              ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-              : "border-amber-200 bg-amber-50 text-amber-800"
-          }`}
-        >
-          {salon.whatsappApiEnabled ? (
-            <p>
-              Invio massivo attivo: i messaggi vengono inviati tramite WhatsApp API.
-            </p>
-          ) : (
-            <p>
-              Invio massivo disponibile solo con WhatsApp API attiva in questa sede.
-              Vai sopra alla sezione “WhatsApp API (opzionale)”, configura i dati e abilita l&apos;invio automatico.
-            </p>
-          )}
-        </div>
-        <div className="grid gap-3 md:grid-cols-2">
-          <div className={`rounded-md border p-3 ${campaignType === "SERVICE" ? "border-emerald-300 bg-emerald-50" : "border-zinc-200 bg-white"}`}>
-            <p className="text-sm font-semibold">Invio di servizio</p>
-            <p className="text-xs text-zinc-600">
-              Per chiusure, ferie, malattia e comunicazioni operative. Invia a tutti i clienti nel periodo scelto.
-            </p>
-            <Button variant={campaignType === "SERVICE" ? "default" : "outline"} className="mt-2" onClick={() => setCampaignType("SERVICE")}>
-              Usa questa sezione
-            </Button>
-          </div>
-          <div className={`rounded-md border p-3 ${campaignType === "MARKETING" ? "border-amber-300 bg-amber-50" : "border-zinc-200 bg-white"}`}>
-            <p className="text-sm font-semibold">Invio marketing</p>
-            <p className="text-xs text-zinc-600">
-              Promozioni e offerte. Invia solo ai clienti con consenso promemoria attivo.
-            </p>
-            <Button variant={campaignType === "MARKETING" ? "default" : "outline"} className="mt-2" onClick={() => setCampaignType("MARKETING")}>
-              Usa questa sezione
-            </Button>
-          </div>
-        </div>
-
-        <div className="grid gap-3 md:grid-cols-4">
-          <div className="space-y-1">
-            <p className="text-xs font-medium text-zinc-600">Titolo campagna</p>
-            <Input value={campaignTitle} onChange={(e) => setCampaignTitle(e.target.value)} placeholder="Es. Chiusura per ferie Agosto" />
-          </div>
-          <div className="space-y-1">
-            <p className="text-xs font-medium text-zinc-600">Clienti considerati (ultimi mesi)</p>
-            <Input
-              type="number"
-              min="1"
-              max="36"
-              value={campaignMonthsBack}
-              onChange={(e) => setCampaignMonthsBack(e.target.value)}
-              placeholder="Es. 12"
-            />
-          </div>
-          <div className="space-y-1">
-            <p className="text-xs font-medium text-zinc-600">Tipo invio selezionato</p>
-            <div
-              className={`flex h-10 items-center rounded-md border px-3 text-sm font-semibold ${
-                campaignType === "SERVICE"
-                  ? "border-emerald-300 bg-emerald-50 text-emerald-800"
-                  : "border-amber-300 bg-amber-50 text-amber-800"
-              }`}
-            >
-              {campaignType === "SERVICE" ? "Servizio (avvisi operativi)" : "Marketing (promo/offerte)"}
-            </div>
-          </div>
-          <div className="space-y-1">
-            <p className="text-xs font-medium text-zinc-600">Segmento clienti</p>
-            <select
-              className="h-10 rounded-md border border-zinc-300 px-3 text-sm"
-              value={campaignSegment}
-              onChange={(e) => setCampaignSegment(e.target.value as CampaignSegment)}
-            >
-              <option value="ALL_RECENT">Tutti i clienti recenti (filtro mesi)</option>
-              <option value="RETURN_MAX_5_WEEKS">Ritorno medio entro 5 settimane</option>
-              <option value="RETURN_MAX_8_WEEKS">Ritorno medio 5-8 settimane</option>
-              <option value="RETURN_MAX_12_WEEKS">Ritorno medio 8-12 settimane</option>
-              <option value="INACTIVE_OVER_12_WEEKS">Assenti da oltre 12 settimane</option>
-            </select>
-          </div>
-        </div>
-        {campaignSegment === "ALL_RECENT" ? null : (
-          <p className="text-xs text-zinc-600">
-            Segmentazione basata su appuntamenti COMPLETATI. Per i segmenti frequenza usa storico reale visite.
-          </p>
-        )}
-        <Textarea
-          value={campaignMessage}
-          onChange={(e) => setCampaignMessage(e.target.value)}
-          placeholder="Messaggio campagna. Variabili supportate: %nome_cliente% %nome_attivita%"
-        />
-        <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3 text-sm">
-          <p className="font-medium text-zinc-800">Anteprima destinatari</p>
-          <p className="text-xs text-zinc-600">
-            Calcola quanti clienti verranno inclusi prima di inviare la campagna.
-          </p>
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <Button variant="outline" onClick={previewCampaignRecipients} disabled={campaignPreviewLoading || campaignLoading}>
-              {campaignPreviewLoading ? "Calcolo..." : "Calcola anteprima destinatari"}
-            </Button>
-            {campaignPreviewCount !== null ? (
-              <span className="rounded-md bg-white px-2 py-1 text-xs font-semibold text-zinc-700 border border-zinc-200">
-                Destinatari stimati: {campaignPreviewCount}
-              </span>
-            ) : null}
-          </div>
-          {campaignPreviewCount === 0 ? (
-            <p className="mt-2 text-xs text-amber-700">Nessun destinatario trovato con i filtri attuali.</p>
-          ) : null}
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button onClick={createCampaign} disabled={campaignLoading || !salon.whatsappApiEnabled}>
-            {campaignLoading ? "Invio in corso..." : "Crea e invia campagna"}
-          </Button>
-          <Button variant="outline" onClick={loadCampaigns} disabled={campaignLoading}>
-            Aggiorna storico
-          </Button>
-        </div>
-        <div className="space-y-2">
-          {campaigns.length === 0 ? (
-            <p className="text-sm text-zinc-500">Nessuna campagna presente.</p>
-          ) : (
-            campaigns.map((row) => (
-              <div key={row.id} className="rounded-md border border-zinc-200 p-3">
-                {(() => {
-                  const remaining = Math.max(0, row.totalRecipients - row.sentCount - row.skippedCount);
-                  return (
-                    <>
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-sm font-semibold">
-                    {row.title} - {row.type}
-                  </p>
-                  <span className="rounded-md bg-zinc-100 px-2 py-1 text-xs font-semibold text-zinc-700">{row.status}</span>
-                </div>
-                <p className="mt-1 text-xs text-zinc-600">
-                  Totale: {row.totalRecipients} | Inviati: {row.sentCount} | Falliti: {row.failedCount} | Saltati: {row.skippedCount}
-                </p>
-                <p className="text-xs text-zinc-600">Restano da inviare: {remaining}</p>
-                <p className="text-xs text-zinc-500">Creata: {new Date(row.createdAt).toLocaleString("it-IT")}</p>
-                {row.status !== "COMPLETED" ? (
-                  <Button
-                    variant="outline"
-                    className="mt-2"
-                    onClick={() => dispatchCampaign(row.id)}
-                    disabled={campaignLoading || !salon.whatsappApiEnabled}
-                  >
-                    Continua invio
-                  </Button>
-                ) : null}
-                    </>
-                  );
-                })()}
-              </div>
-            ))
-          )}
-        </div>
+          Apri pagina WhatsApp
+        </Link>
       </Card>
 
       <Card className="space-y-2">
@@ -1413,3 +1070,4 @@ export function SettingsClient({ initial }: { initial: any }) {
     </div>
   );
 }
+
