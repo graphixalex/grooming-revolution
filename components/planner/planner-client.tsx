@@ -1176,7 +1176,7 @@ export function PlannerClient({
                                     type="button"
                                     key={appt.id}
                                     draggable={Boolean(apptStartsHere)}
-                                    className={`absolute bottom-0 top-0 z-10 px-1 text-left text-white transition ${
+                                    className={`absolute bottom-0 top-0 z-10 overflow-hidden px-1 text-left text-white transition ${
                                       apptContinuesBefore && apptContinuesAfter
                                         ? "-mb-px -mt-px rounded-none"
                                         : apptContinuesBefore
@@ -1186,9 +1186,10 @@ export function PlannerClient({
                                             : "rounded-sm"
                                     }`}
                                     style={{
-                                      left: `${idx * widthPct}%`,
-                                      width: `${widthPct}%`,
+                                      left: `calc(${idx * widthPct}% + 1px)`,
+                                      width: `calc(${widthPct}% - 2px)`,
                                       backgroundColor: apptBgColor,
+                                      boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.55)",
                                     }}
                                     onDragStart={(event) => {
                                       if (!apptStartsHere) return;
@@ -1212,11 +1213,11 @@ export function PlannerClient({
                                     ) : (
                                       <span className="block pt-0.5 text-[10px] font-semibold leading-tight text-white/70">in corso</span>
                                     )}
-                                    {visibleCount === 1 && apptStartsHere ? (
+                                    {apptStartsHere ? (
                                       <span
                                         role="button"
                                         aria-label="Ridimensiona inizio appuntamento"
-                                        className="absolute inset-x-2 top-0 h-1 cursor-ns-resize rounded-t-sm bg-white/70 opacity-0 transition-opacity hover:opacity-100"
+                                        className="absolute inset-x-1 top-0 h-1 cursor-ns-resize rounded-t-sm bg-white/75 opacity-0 transition-opacity hover:opacity-100"
                                         onPointerDown={(event) => {
                                           event.preventDefault();
                                           event.stopPropagation();
@@ -1230,11 +1231,11 @@ export function PlannerClient({
                                         }}
                                       />
                                     ) : null}
-                                    {visibleCount === 1 && ((!apptStartsHere && !apptContinuesAfter) || (apptStartsHere && !apptContinuesAfter)) ? (
+                                    {((!apptStartsHere && !apptContinuesAfter) || (apptStartsHere && !apptContinuesAfter)) ? (
                                       <span
                                         role="button"
                                         aria-label="Ridimensiona fine appuntamento"
-                                        className="absolute inset-x-2 bottom-0 h-1 cursor-ns-resize rounded-b-sm bg-white/70 opacity-0 transition-opacity hover:opacity-100"
+                                        className="absolute inset-x-1 bottom-0 h-1 cursor-ns-resize rounded-b-sm bg-white/75 opacity-0 transition-opacity hover:opacity-100"
                                         onPointerDown={(event) => {
                                           event.preventDefault();
                                           event.stopPropagation();
