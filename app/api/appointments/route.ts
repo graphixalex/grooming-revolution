@@ -126,8 +126,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Operatore non valido" }, { status: 400 });
     }
 
-    if (!isInsideWorkingHours(salon.workingHoursJson, startAt, endAt, salonTimeZone)) {
-      return NextResponse.json({ error: "Orario fuori fascia lavorativa" }, { status: 400 });
+    const useSalonHoursCheck = !operatorId;
+    if (useSalonHoursCheck && !isInsideWorkingHours(salon.workingHoursJson, startAt, endAt, salonTimeZone)) {
+      return NextResponse.json({ error: "Orario fuori fascia lavorativa sede" }, { status: 400 });
     }
     if (operator?.workingHoursJson && !isInsideWorkingHours(operator.workingHoursJson, startAt, endAt, salonTimeZone)) {
       return NextResponse.json({ error: "Orario fuori disponibilita operatore" }, { status: 400 });
@@ -176,8 +177,9 @@ export async function POST(req: NextRequest) {
   const startAt = new Date(parsed.data.startAt);
   const endAt = computeEndAt(startAt, parsed.data.durataMinuti);
 
-  if (!isInsideWorkingHours(salon.workingHoursJson, startAt, endAt, salonTimeZone)) {
-    return NextResponse.json({ error: "Orario fuori fascia lavorativa" }, { status: 400 });
+  const useSalonHoursCheck = !operatorId && activeOperatorsCount === 0;
+  if (useSalonHoursCheck && !isInsideWorkingHours(salon.workingHoursJson, startAt, endAt, salonTimeZone)) {
+    return NextResponse.json({ error: "Orario fuori fascia lavorativa sede" }, { status: 400 });
   }
   if (operator?.workingHoursJson && !isInsideWorkingHours(operator.workingHoursJson, startAt, endAt, salonTimeZone)) {
     return NextResponse.json({ error: "Orario fuori disponibilita operatore" }, { status: 400 });
@@ -354,8 +356,10 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Operatore non valido" }, { status: 400 });
     }
 
-    if (!isInsideWorkingHours(salon.workingHoursJson, startAt, endAt, salonTimeZone)) {
-      return NextResponse.json({ error: "Orario fuori fascia lavorativa" }, { status: 400 });
+    const activeOperatorsCount = await prisma.operator.count({ where: { salonId, attivo: true } });
+    const useSalonHoursCheck = !candidateOperatorId && activeOperatorsCount === 0;
+    if (useSalonHoursCheck && !isInsideWorkingHours(salon.workingHoursJson, startAt, endAt, salonTimeZone)) {
+      return NextResponse.json({ error: "Orario fuori fascia lavorativa sede" }, { status: 400 });
     }
     if (
       candidateOperator?.workingHoursJson &&

@@ -189,7 +189,7 @@ export async function getBookingSlotOptions(params: {
   const [salon, operators, appointments] = await Promise.all([
     prisma.salon.findUnique({
       where: { id: params.salonId },
-      select: { workingHoursJson: true, overlapAllowed: true, timezone: true },
+      select: { timezone: true },
     }),
     prisma.operator.findMany({
       where: { salonId: params.salonId, attivo: true },
@@ -231,57 +231,13 @@ export async function getBookingSlotOptions(params: {
     let dayAdded = 0;
     let firstDayStartMin: number | null = null;
 
-    if (operatorsEnabled) {
-      for (const op of operators) {
-        const salonRow = (salon.workingHoursJson as Record<string, WorkingHoursRow> | null | undefined)?.[dayKey];
-        if (!salonRow?.enabled || !salonRow.start || !salonRow.end) continue;
-        const row = (op.workingHoursJson as Record<string, WorkingHoursRow> | null | undefined)?.[dayKey];
-        if (!row?.enabled || !row.start || !row.end) continue;
-        const startMin = toMinutes(row.start);
-        const endMin = toMinutes(row.end);
-
-        for (let m = startMin; m + durationMin <= endMin && results.length < maxOptions && dayAdded < 2; m += 30) {
-          const slotStart = zonedDateTimeToUtc(
-            {
-              year: ymd.year,
-              month: ymd.month,
-              day: ymd.day,
-              hour: Math.floor(m / 60),
-              minute: m % 60,
-              second: 0,
-            },
-            timeZone,
-          );
-          if (slotStart <= now) continue;
-          const slotEnd = addMinutes(slotStart, durationMin);
-          if (!isInsideRowByMinutes(salonRow, m, m + durationMin)) continue;
-          if (!isInsideRowByMinutes(row, m, m + durationMin)) continue;
-          if (dayAdded >= 1 && firstDayStartMin !== null) {
-            const minGap = 180;
-            const preferFrom = Math.max(firstDayStartMin + minGap, 13 * 60);
-            if (m < preferFrom) continue;
-          }
-
-          const overlapOperator = appointments.some((a) => a.operatorId === op.id && overlaps(slotStart, slotEnd, a.startAt, a.endAt));
-          if (overlapOperator) continue;
-          const overlapSalon = appointments.some((a) => overlaps(slotStart, slotEnd, a.startAt, a.endAt));
-          if (overlapSalon) continue;
-
-          results.push({
-            startAt: slotStart,
-            endAt: slotEnd,
-            operatorId: op.id,
-            operatorName: op.nome,
-          });
-          if (firstDayStartMin === null) firstDayStartMin = m;
-          dayAdded += 1;
-        }
-      }
-    } else {
-      const row = (salon.workingHoursJson as Record<string, WorkingHoursRow> | null | undefined)?.[dayKey];
+    if (!operatorsEnabled) continue;
+    for (const op of operators) {
+      const row = (op.workingHoursJson as Record<string, WorkingHoursRow> | null | undefined)?.[dayKey];
       if (!row?.enabled || !row.start || !row.end) continue;
       const startMin = toMinutes(row.start);
       const endMin = toMinutes(row.end);
+
       for (let m = startMin; m + durationMin <= endMin && results.length < maxOptions && dayAdded < 2; m += 30) {
         const slotStart = zonedDateTimeToUtc(
           {
@@ -302,13 +258,15 @@ export async function getBookingSlotOptions(params: {
           const preferFrom = Math.max(firstDayStartMin + minGap, 13 * 60);
           if (m < preferFrom) continue;
         }
+        const overlapOperator = appointments.some((a) => a.operatorId === op.id && overlaps(slotStart, slotEnd, a.startAt, a.endAt));
+        if (overlapOperator) continue;
         const overlapSalon = appointments.some((a) => overlaps(slotStart, slotEnd, a.startAt, a.endAt));
         if (overlapSalon) continue;
         results.push({
           startAt: slotStart,
           endAt: slotEnd,
-          operatorId: null,
-          operatorName: null,
+          operatorId: op.id,
+          operatorName: op.nome,
         });
         if (firstDayStartMin === null) firstDayStartMin = m;
         dayAdded += 1;
@@ -329,7 +287,7 @@ export async function isBookingSlotStillAvailable(params: {
   const db = params.db ?? prisma;
   const salon = await db.salon.findUnique({
     where: { id: params.salonId },
-    select: { overlapAllowed: true, workingHoursJson: true, timezone: true },
+    select: { timezone: true },
   });
   if (!salon) return false;
 
@@ -338,31 +296,27 @@ export async function isBookingSlotStillAvailable(params: {
   const endInfo = getDayKeyAndMinutesInTimeZone(params.endAt, timeZone);
   if (startInfo.dayKey !== endInfo.dayKey) return false;
 
-  const salonRow = (salon.workingHoursJson as Record<string, WorkingHoursRow> | null | undefined)?.[startInfo.dayKey];
-  if (!isInsideRowByMinutes(salonRow, startInfo.minutes, endInfo.minutes)) return false;
+  if (!params.operatorId) return false;
+  const op = await db.operator.findFirst({
+    where: { id: params.operatorId, salonId: params.salonId, attivo: true },
+    select: { workingHoursJson: true },
+  });
+  if (!op) return false;
+  const opRow = (op.workingHoursJson as Record<string, WorkingHoursRow> | null | undefined)?.[startInfo.dayKey];
+  if (!isInsideRowByMinutes(opRow, startInfo.minutes, endInfo.minutes)) return false;
 
-  if (params.operatorId) {
-    const op = await db.operator.findFirst({
-      where: { id: params.operatorId, salonId: params.salonId, attivo: true },
-      select: { workingHoursJson: true },
-    });
-    if (!op) return false;
-    const opRow = (op.workingHoursJson as Record<string, WorkingHoursRow> | null | undefined)?.[startInfo.dayKey];
-    if (!isInsideRowByMinutes(opRow, startInfo.minutes, endInfo.minutes)) return false;
-
-    const overlapOperator = await db.appointment.findFirst({
-      where: {
-        salonId: params.salonId,
-        operatorId: params.operatorId,
-        deletedAt: null,
-        stato: { not: "CANCELLATO" },
-        startAt: { lt: params.endAt },
-        endAt: { gt: params.startAt },
-      },
-      select: { id: true },
-    });
-    if (overlapOperator) return false;
-  }
+  const overlapOperator = await db.appointment.findFirst({
+    where: {
+      salonId: params.salonId,
+      operatorId: params.operatorId,
+      deletedAt: null,
+      stato: { not: "CANCELLATO" },
+      startAt: { lt: params.endAt },
+      endAt: { gt: params.startAt },
+    },
+    select: { id: true },
+  });
+  if (overlapOperator) return false;
 
   const overlapSalon = await db.appointment.findFirst({
     where: {
