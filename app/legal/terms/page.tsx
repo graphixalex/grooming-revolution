@@ -6,7 +6,8 @@ export default function TermsPage() {
       <div className="space-y-4">
         <p>
           I presenti Termini disciplinano l&apos;uso della piattaforma SaaS Grooming Revolution da parte di professionisti della toelettatura
-          e relative organizzazioni. Grooming Revolution e un prodotto software di Cecilia Luxury Grooming.
+          e relative organizzazioni. Grooming Revolution e un prodotto software di
+          <strong> Cecilia Luxury Grooming</strong>.
         </p>
 
         <h2 className="text-lg font-semibold">1. Oggetto del servizio</h2>
@@ -29,6 +30,10 @@ export default function TermsPage() {
           La gestione degli incassi del canone avviene tramite Paddle (provider di pagamento terzo). Il Cliente autorizza gli addebiti ricorrenti
           secondo il piano scelto e le condizioni mostrate nella sezione Billing.
         </p>
+        <p>
+          Rimborsi, cancellazioni e diritti di recesso applicabili sono gestiti in coerenza con la policy Paddle:
+          <a className="underline" href="https://www.paddle.com/legal/refund-policy" target="_blank" rel="noreferrer"> https://www.paddle.com/legal/refund-policy</a>.
+        </p>
 
         <h2 className="text-lg font-semibold">4. Uso consentito e divieti</h2>
         <p>
@@ -39,7 +44,7 @@ export default function TermsPage() {
         <h2 className="text-lg font-semibold">5. Dati personali e ruoli privacy</h2>
         <p>
           Salvo diverso accordo scritto, il salone Cliente agisce come Titolare del trattamento verso i propri clienti finali.
-          Cecilia Luxury Grooming, per il servizio Grooming Revolution, agisce come fornitore tecnico e Responsabile del trattamento.
+          Cecilia Luxury Grooming agisce come fornitore tecnico e Responsabile del trattamento.
         </p>
 
         <h2 className="text-lg font-semibold">6. Servizi e provider terzi</h2>
@@ -56,7 +61,8 @@ export default function TermsPage() {
 
         <h2 className="text-lg font-semibold">8. Proprieta intellettuale</h2>
         <p>
-          Codice, interfaccia, marchio Grooming Revolution, documentazione e contenuti restano di proprieta di Cecilia Luxury Grooming
+          Codice, interfaccia, marchio Grooming Revolution, documentazione e contenuti restano di proprieta di
+          Cecilia Luxury Grooming
           o dei rispettivi titolari. Al Cliente e concessa una licenza d&apos;uso non esclusiva, non trasferibile e limitata alla durata del rapporto.
         </p>
 
@@ -87,4 +93,6 @@ export default function TermsPage() {
     </LegalShell>
   );
 }
+
+
 

@@ -34,7 +34,8 @@ export function LegalShell({ title, updatedAt, children }: LegalShellProps) {
             <p className="text-lg font-bold text-zinc-900">{title}</p>
             <p className="text-sm text-zinc-600">Ultimo aggiornamento: {updatedAt}</p>
             <p className="mt-2 text-sm text-zinc-700">
-              Grooming Revolution e il brand del servizio SaaS sviluppato, gestito e commercializzato da Cecilia Luxury Grooming.
+              Grooming Revolution e il brand del servizio SaaS sviluppato, gestito e commercializzato da
+              Cecilia Luxury Grooming.
             </p>
           </div>
         </header>
@@ -72,3 +73,5 @@ export function LegalShell({ title, updatedAt, children }: LegalShellProps) {
     </main>
   );
 }
+
+
