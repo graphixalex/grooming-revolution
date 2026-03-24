@@ -83,6 +83,40 @@ export const servicePriceRuleSchema = z.object({
   note: z.string().optional().nullable(),
 });
 
+export const servicePriceRuleToggleSchema = z.object({
+  id: z.string().min(1),
+  attiva: z.boolean(),
+});
+
+export const servicePriceRuleUpdateSchema = z
+  .object({
+    id: z.string().min(1),
+    treatmentId: z.string().min(1).optional(),
+    dogSize: z.enum(["XS", "S", "M", "L", "XL", "XXL"]).optional().nullable(),
+    razzaPattern: z.string().optional().nullable(),
+    basePrice: z.number().min(0).optional(),
+    durataMinuti: z.number().int().min(15).max(480).optional(),
+    validoDa: z.string().datetime().optional(),
+    validoA: z.string().datetime().optional().nullable(),
+    note: z.string().optional().nullable(),
+  })
+  .refine(
+    (v) =>
+      v.treatmentId !== undefined ||
+      v.dogSize !== undefined ||
+      v.razzaPattern !== undefined ||
+      v.basePrice !== undefined ||
+      v.durataMinuti !== undefined ||
+      v.validoDa !== undefined ||
+      v.validoA !== undefined ||
+      v.note !== undefined,
+    { message: "Nessun campo da aggiornare" },
+  );
+
+export const servicePriceRuleDeleteSchema = z.object({
+  id: z.string().min(1),
+});
+
 export const openCashSessionSchema = z.object({
   openingFloat: z.number().min(0),
   noteApertura: z.string().optional(),

@@ -10,6 +10,7 @@ type Treatment = { id: string; nome: string };
 
 type RuleRow = {
   id: string;
+  treatmentId?: string;
   treatment: { nome: string };
   dogSize: "XS" | "S" | "M" | "L" | "XL" | "XXL" | null;
   razzaPattern: string | null;
@@ -20,6 +21,34 @@ type RuleRow = {
   attiva: boolean;
   note: string | null;
 };
+
+type EditFormState = {
+  treatmentId: string;
+  dogSize: string;
+  razzaPattern: string;
+  basePrice: string;
+  durataMinuti: string;
+  validoDa: string;
+  validoA: string;
+  note: string;
+};
+
+function toDateTimeLocal(value: string) {
+  return new Date(value).toISOString().slice(0, 16);
+}
+
+function buildEditForm(rule: RuleRow): EditFormState {
+  return {
+    treatmentId: rule.treatmentId || "",
+    dogSize: rule.dogSize ?? "",
+    razzaPattern: rule.razzaPattern || "",
+    basePrice: String(rule.basePrice),
+    durataMinuti: String(rule.durataMinuti),
+    validoDa: toDateTimeLocal(rule.validoDa),
+    validoA: rule.validoA ? toDateTimeLocal(rule.validoA) : "",
+    note: rule.note || "",
+  };
+}
 
 export function PricingClient({
   treatments,
@@ -33,6 +62,8 @@ export function PricingClient({
   currency: string;
 }) {
   const [rules, setRules] = useState(initialRules);
+  const [editingRuleId, setEditingRuleId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<EditFormState | null>(null);
   const [form, setForm] = useState({
     treatmentId: treatments[0]?.id ?? "",
     dogSize: "",
@@ -79,6 +110,7 @@ export function PricingClient({
       return;
     }
     await loadRules();
+    setForm((prev) => ({ ...prev, razzaPattern: "", basePrice: "", note: "" }));
   }
 
   async function toggleRule(id: string, attiva: boolean) {
@@ -94,6 +126,69 @@ export function PricingClient({
       return;
     }
     setRules((prev) => prev.map((r) => (r.id === id ? { ...r, attiva } : r)));
+  }
+
+  function startEdit(rule: RuleRow) {
+    setEditingRuleId(rule.id);
+    setEditForm(buildEditForm(rule));
+  }
+
+  function cancelEdit() {
+    setEditingRuleId(null);
+    setEditForm(null);
+  }
+
+  async function saveEdit() {
+    if (!canEdit || !editingRuleId || !editForm) return;
+    const basePrice = Number(editForm.basePrice);
+    const durataMinuti = Number(editForm.durataMinuti);
+    if (!Number.isFinite(basePrice) || basePrice < 0 || !Number.isFinite(durataMinuti) || durataMinuti < 15) {
+      alert("Controlla i valori inseriti");
+      return;
+    }
+
+    const res = await fetch("/api/pricing-rules", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: editingRuleId,
+        treatmentId: editForm.treatmentId || undefined,
+        dogSize: editForm.dogSize || null,
+        razzaPattern: editForm.razzaPattern || null,
+        basePrice,
+        durataMinuti,
+        validoDa: new Date(editForm.validoDa).toISOString(),
+        validoA: editForm.validoA ? new Date(editForm.validoA).toISOString() : null,
+        note: editForm.note || null,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data.error || "Errore modifica regola");
+      return;
+    }
+    await loadRules();
+    cancelEdit();
+  }
+
+  async function deleteRule(id: string) {
+    if (!canEdit) return;
+    if (!window.confirm("Eliminare questa regola listino?")) return;
+
+    const res = await fetch("/api/pricing-rules", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data.error || "Errore eliminazione regola");
+      return;
+    }
+    if (editingRuleId === id) {
+      cancelEdit();
+    }
+    await loadRules();
   }
 
   const activeRules = useMemo(() => rules.filter((r) => r.attiva), [rules]);
@@ -195,17 +290,125 @@ export function PricingClient({
         <div className="space-y-2 text-sm">
           {rules.map((r) => (
             <div key={r.id} className="rounded border border-zinc-200 p-3">
-              <p className="font-medium">
-                {r.treatment.nome} | {currency} {Number(r.basePrice).toFixed(2)} | {r.durataMinuti} min
-              </p>
-              <p>Taglia: {r.dogSize ?? "qualsiasi"} | Razza: {r.razzaPattern || "-"}</p>
-              <p>Validita: {new Date(r.validoDa).toLocaleString("it-IT")} - {r.validoA ? new Date(r.validoA).toLocaleString("it-IT") : "aperta"}</p>
-              <p>Stato: {r.attiva ? "Attiva" : "Disattivata"}</p>
-              {canEdit ? (
-                <Button variant="outline" onClick={() => toggleRule(r.id, !r.attiva)}>
-                  {r.attiva ? "Disattiva" : "Riattiva"}
-                </Button>
-              ) : null}
+              {editingRuleId === r.id && editForm ? (
+                <div className="space-y-3">
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-zinc-600">Trattamento</label>
+                      <select
+                        className="h-10 w-full rounded-md border border-zinc-300 px-3 text-sm"
+                        value={editForm.treatmentId}
+                        onChange={(e) => setEditForm((prev) => (prev ? { ...prev, treatmentId: e.target.value } : prev))}
+                        disabled={!canEdit}
+                      >
+                        {treatments.map((t) => (
+                          <option key={t.id} value={t.id}>
+                            {t.nome}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-zinc-600">Taglia</label>
+                      <select
+                        className="h-10 w-full rounded-md border border-zinc-300 px-3 text-sm"
+                        value={editForm.dogSize}
+                        onChange={(e) => setEditForm((prev) => (prev ? { ...prev, dogSize: e.target.value } : prev))}
+                        disabled={!canEdit}
+                      >
+                        <option value="">Taglia qualsiasi</option>
+                        <option value="XS">XS</option>
+                        <option value="S">S</option>
+                        <option value="M">M</option>
+                        <option value="L">L</option>
+                        <option value="XL">XL</option>
+                        <option value="XXL">XXL</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-zinc-600">Razza (opzionale)</label>
+                      <Input
+                        value={editForm.razzaPattern}
+                        onChange={(e) => setEditForm((prev) => (prev ? { ...prev, razzaPattern: e.target.value } : prev))}
+                        disabled={!canEdit}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-zinc-600">Prezzo base ({currency})</label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={editForm.basePrice}
+                        onChange={(e) => setEditForm((prev) => (prev ? { ...prev, basePrice: e.target.value } : prev))}
+                        disabled={!canEdit}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-zinc-600">Durata (minuti)</label>
+                      <Input
+                        type="number"
+                        min="15"
+                        step="15"
+                        value={editForm.durataMinuti}
+                        onChange={(e) => setEditForm((prev) => (prev ? { ...prev, durataMinuti: e.target.value } : prev))}
+                        disabled={!canEdit}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-zinc-600">Valida dal</label>
+                      <Input
+                        type="datetime-local"
+                        value={editForm.validoDa}
+                        onChange={(e) => setEditForm((prev) => (prev ? { ...prev, validoDa: e.target.value } : prev))}
+                        disabled={!canEdit}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-zinc-600">Valida fino al (opzionale)</label>
+                      <Input
+                        type="datetime-local"
+                        value={editForm.validoA}
+                        onChange={(e) => setEditForm((prev) => (prev ? { ...prev, validoA: e.target.value } : prev))}
+                        disabled={!canEdit}
+                      />
+                    </div>
+                  </div>
+                  <Textarea value={editForm.note} onChange={(e) => setEditForm((prev) => (prev ? { ...prev, note: e.target.value } : prev))} disabled={!canEdit} />
+                  <div className="flex flex-wrap gap-2">
+                    <Button onClick={saveEdit} disabled={!canEdit}>
+                      Salva modifica
+                    </Button>
+                    <Button variant="outline" onClick={cancelEdit}>
+                      Annulla
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <p className="font-medium">
+                    {r.treatment.nome} | {currency} {Number(r.basePrice).toFixed(2)} | {r.durataMinuti} min
+                  </p>
+                  <p>Taglia: {r.dogSize ?? "qualsiasi"} | Razza: {r.razzaPattern || "-"}</p>
+                  <p>
+                    Validita: {new Date(r.validoDa).toLocaleString("it-IT")} - {r.validoA ? new Date(r.validoA).toLocaleString("it-IT") : "aperta"}
+                  </p>
+                  <p>Stato: {r.attiva ? "Attiva" : "Disattivata"}</p>
+                  {canEdit ? (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <Button variant="outline" onClick={() => startEdit(r)}>
+                        Modifica
+                      </Button>
+                      <Button variant="outline" onClick={() => toggleRule(r.id, !r.attiva)}>
+                        {r.attiva ? "Disattiva" : "Riattiva"}
+                      </Button>
+                      <Button variant="destructive" onClick={() => deleteRule(r.id)}>
+                        Elimina
+                      </Button>
+                    </div>
+                  ) : null}
+                </>
+              )}
             </div>
           ))}
         </div>
