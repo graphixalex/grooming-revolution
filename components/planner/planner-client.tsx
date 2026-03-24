@@ -380,6 +380,36 @@ export function PlannerClient({
   const [newClientForm, setNewClientForm] = useState({ nome: "", cognome: "", telefono: "", email: "", noteCliente: "", consensoPromemoria: true });
   const [newDogForm, setNewDogForm] = useState({ nome: "", razza: "", taglia: "M", noteCane: "", tagRapidiIds: [] as string[] });
 
+  function resetAppointmentModalState() {
+    setIsNewClient(null);
+    setSelectedClient(null);
+    setSelectedDog(null);
+    setSearch("");
+    setResults([]);
+    setDogs([]);
+    setDurata(60);
+    setNote("");
+    setSelectedTreatments([]);
+    setListinoQuote(null);
+    setModalMode("APPOINTMENT");
+    setNewClientForm({ nome: "", cognome: "", telefono: "", email: "", noteCliente: "", consensoPromemoria: true });
+    setNewDogForm({ nome: "", razza: "", taglia: "M", noteCane: "", tagRapidiIds: [] });
+  }
+
+  function closeAppointmentModal() {
+    setShowModal(false);
+    resetAppointmentModalState();
+    setSlotStart(null);
+    setSelectedOperatorId("");
+  }
+
+  function openNewAppointmentModal(start: Date, operatorId: string) {
+    resetAppointmentModalState();
+    setSlotStart(start);
+    setSelectedOperatorId(operatorId);
+    setShowModal(true);
+  }
+
   function openAppointmentEditor(appt: Appointment, fallbackOperatorId: string) {
     setSelectedAppointment(appt);
     setDurata((new Date(appt.endAt).getTime() - new Date(appt.startAt).getTime()) / 60000);
@@ -668,15 +698,7 @@ export function PlannerClient({
         return;
       }
 
-      setShowModal(false);
-      setModalMode("APPOINTMENT");
-      setIsNewClient(null);
-      setSelectedClient(null);
-      setSelectedDog(null);
-      setNote("");
-      setDurata(60);
-      setSelectedTreatments([]);
-      setListinoQuote(null);
+      closeAppointmentModal();
       if (visibleRange) {
         await loadAppointments(visibleRange.from, visibleRange.to);
       } else {
@@ -714,15 +736,7 @@ export function PlannerClient({
       startAt: startForMessage,
     });
 
-    setShowModal(false);
-    setModalMode("APPOINTMENT");
-    setIsNewClient(null);
-    setSelectedClient(null);
-    setSelectedDog(null);
-    setNote("");
-    setDurata(60);
-    setSelectedTreatments([]);
-    setListinoQuote(null);
+    closeAppointmentModal();
     if (visibleRange) {
       await loadAppointments(visibleRange.from, visibleRange.to);
     } else {
@@ -1154,12 +1168,7 @@ export function PlannerClient({
                                   return;
                                 }
                                 if (orderedSlotAppointments.length === 0) {
-                                  setSlotStart(slotStart);
-                                  setSelectedOperatorId(op.id);
-                                  setModalMode("APPOINTMENT");
-                                  setListinoQuote(null);
-                                  setNote("");
-                                  setShowModal(true);
+                                  openNewAppointmentModal(slotStart, op.id);
                                 }
                               }}
                             >
@@ -1284,7 +1293,7 @@ export function PlannerClient({
         <div
           className="fixed inset-0 z-50 overflow-y-auto bg-black/40 p-2 md:p-4"
           onClick={(e) => {
-            if (e.target === e.currentTarget) setShowModal(false);
+            if (e.target === e.currentTarget) closeAppointmentModal();
           }}
         >
           <Card className="mx-auto my-0 w-full max-w-2xl overflow-y-auto p-3 md:my-4 md:max-h-[calc(100dvh-3rem)] md:p-4">
@@ -1489,7 +1498,7 @@ export function PlannerClient({
             ) : null}
 
             <div className="mt-4 flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowModal(false)}>
+              <Button variant="outline" onClick={closeAppointmentModal}>
                 Chiudi
               </Button>
               <Button
