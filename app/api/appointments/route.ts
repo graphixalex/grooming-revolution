@@ -92,6 +92,7 @@ export async function POST(req: NextRequest) {
   const salonId = auth.session.user.salonId;
 
   const body = await req.json();
+  const allowOverlap = body.allowOverlap === true;
   const activeOperatorsCount = await prisma.operator.count({ where: { salonId, attivo: true } });
 
   const salon = await prisma.salon.findUnique({
@@ -132,7 +133,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Orario fuori disponibilita operatore" }, { status: 400 });
     }
 
-    if (!salon.overlapAllowed && (await hasOverlap(salonId, startAt, endAt, undefined, body.operatorId || null))) {
+    if (!allowOverlap && !salon.overlapAllowed && (await hasOverlap(salonId, startAt, endAt, undefined, body.operatorId || null))) {
       return NextResponse.json({ error: "Sovrapposizione con altro appuntamento" }, { status: 400 });
     }
 
@@ -182,7 +183,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Orario fuori disponibilita operatore" }, { status: 400 });
   }
 
-  if (!salon.overlapAllowed && (await hasOverlap(salonId, startAt, endAt, undefined, operatorId))) {
+  if (!allowOverlap && !salon.overlapAllowed && (await hasOverlap(salonId, startAt, endAt, undefined, operatorId))) {
     return NextResponse.json({ error: "Sovrapposizione con altro appuntamento" }, { status: 400 });
   }
 
@@ -213,6 +214,7 @@ export async function PATCH(req: NextRequest) {
   const salonId = auth.session.user.salonId;
 
   const body = await req.json();
+  const allowOverlap = body.allowOverlap === true;
   const appointmentId = body.appointmentId as string | undefined;
   if (!appointmentId) return NextResponse.json({ error: "appointmentId obbligatorio" }, { status: 400 });
 
@@ -362,7 +364,7 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Orario fuori disponibilita operatore" }, { status: 400 });
     }
 
-    if (!salon.overlapAllowed && (await hasOverlap(salonId, startAt, endAt, appointmentId, candidateOperatorId))) {
+    if (!allowOverlap && !salon.overlapAllowed && (await hasOverlap(salonId, startAt, endAt, appointmentId, candidateOperatorId))) {
       return NextResponse.json({ error: "Sovrapposizione con altro appuntamento" }, { status: 400 });
     }
   }

@@ -586,6 +586,35 @@ export function PlannerClient({
     }
   }
 
+  function isOverlapError(data: unknown) {
+    if (!data || typeof data !== "object") return false;
+    const error = (data as { error?: unknown }).error;
+    return typeof error === "string" && error.toLowerCase().includes("sovrapposizione");
+  }
+
+  async function requestAppointmentWithOptionalOverlap(
+    method: "POST" | "PATCH",
+    payload: Record<string, unknown>,
+    overlapPrompt: string,
+  ) {
+    const send = async (allowOverlap: boolean) =>
+      fetch("/api/appointments", {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...payload, allowOverlap }),
+      });
+
+    let res = await send(false);
+    let data = await res.json();
+
+    if (!res.ok && isOverlapError(data) && confirm(overlapPrompt)) {
+      res = await send(true);
+      data = await res.json();
+    }
+
+    return { res, data };
+  }
+
   async function saveAppointment() {
     if (!slotStart) return;
     const operatorIdForSave = selectedOperatorId;
@@ -599,18 +628,17 @@ export function PlannerClient({
         alert("Inserisci il testo della nota");
         return;
       }
-      const res = await fetch("/api/appointments", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const { res, data } = await requestAppointmentWithOptionalOverlap(
+        "POST",
+        {
           modalita: "NOTE",
           operatorId: operatorIdForSave || null,
           startAt: slotStart.toISOString(),
           durataMinuti: durata,
           noteAppuntamento: note.trim(),
-        }),
-      });
-      const data = await res.json();
+        },
+        "Esiste gia un appuntamento in questo orario. Vuoi salvare comunque la nota in sovrapposizione?",
+      );
       if (!res.ok) {
         alert(data.error || "Errore creazione nota");
         return;
@@ -637,10 +665,9 @@ export function PlannerClient({
     const startForMessage = slotStart;
     const clientForMessage = selectedClient;
     const dogForMessage = selectedDog;
-    const res = await fetch("/api/appointments", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+    const { res, data } = await requestAppointmentWithOptionalOverlap(
+      "POST",
+      {
         operatorId: operatorIdForSave || null,
         clienteId: selectedClient.id,
         caneId: selectedDog.id,
@@ -648,10 +675,9 @@ export function PlannerClient({
         durataMinuti: durata,
         noteAppuntamento: note,
         trattamentiIds: selectedTreatments,
-      }),
-    });
-
-    const data = await res.json();
+      },
+      "Operatore gia occupato in questo orario. Vuoi salvare comunque l'appuntamento in sovrapposizione?",
+    );
     if (!res.ok) {
       alert(data.error || "Errore creazione appuntamento");
       return;
@@ -682,12 +708,11 @@ export function PlannerClient({
 
   async function updateAppointment(payload: Record<string, unknown>) {
     if (!selectedAppointment) return;
-    const res = await fetch("/api/appointments", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ appointmentId: selectedAppointment.id, ...payload }),
-    });
-    const data = await res.json();
+    const { res, data } = await requestAppointmentWithOptionalOverlap(
+      "PATCH",
+      { appointmentId: selectedAppointment.id, ...payload },
+      "Questo cambio crea una sovrapposizione. Vuoi confermare comunque?",
+    );
     if (!res.ok) {
       alert(data.error || "Errore aggiornamento");
       return;
@@ -703,16 +728,15 @@ export function PlannerClient({
   async function moveAppointmentToSlot(appointmentId: string, targetStart: Date, targetOperatorId: string | null) {
     const appointment = appointments.find((a) => a.id === appointmentId);
     if (!appointment) return;
-    const res = await fetch("/api/appointments", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+    const { res, data } = await requestAppointmentWithOptionalOverlap(
+      "PATCH",
+      {
         appointmentId,
         startAt: targetStart.toISOString(),
         operatorId: targetOperatorId,
-      }),
-    });
-    const data = await res.json();
+      },
+      "Lo slot di destinazione e gia occupato. Vuoi spostare comunque in sovrapposizione?",
+    );
     if (!res.ok) {
       alert(data.error || "Errore spostamento appuntamento");
       return;
@@ -729,27 +753,25 @@ export function PlannerClient({
     if (!source) return;
     const durataMinuti = Math.max(15, Math.round((new Date(source.endAt).getTime() - new Date(source.startAt).getTime()) / 60000));
     if (isPersonalNoteAppointment(source)) {
-      const res = await fetch("/api/appointments", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const { res, data } = await requestAppointmentWithOptionalOverlap(
+        "POST",
+        {
           modalita: "NOTE",
           operatorId: targetOperatorId,
           startAt: targetStart.toISOString(),
           durataMinuti,
           noteAppuntamento: source.noteAppuntamento || "Nota personale",
-        }),
-      });
-      const data = await res.json();
+        },
+        "Lo slot e gia occupato. Vuoi incollare comunque la nota in sovrapposizione?",
+      );
       if (!res.ok) {
         alert(data.error || "Errore incolla appuntamento");
         return;
       }
     } else {
-      const res = await fetch("/api/appointments", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const { res, data } = await requestAppointmentWithOptionalOverlap(
+        "POST",
+        {
           operatorId: targetOperatorId,
           clienteId: source.cliente.id,
           caneId: source.cane.id,
@@ -757,9 +779,9 @@ export function PlannerClient({
           durataMinuti,
           noteAppuntamento: source.noteAppuntamento || "",
           trattamentiIds: source.trattamentiSelezionati.map((t) => t.treatment.id),
-        }),
-      });
-      const data = await res.json();
+        },
+        "Lo slot e gia occupato. Vuoi incollare comunque l'appuntamento in sovrapposizione?",
+      );
       if (!res.ok) {
         alert(data.error || "Errore incolla appuntamento");
         return;
@@ -836,16 +858,15 @@ export function PlannerClient({
       setResizeDrag(null);
       if (!changed) return;
       void (async () => {
-        const res = await fetch("/api/appointments", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
+        const { res, data } = await requestAppointmentWithOptionalOverlap(
+          "PATCH",
+          {
             appointmentId: current.appointmentId,
             startAt: new Date(draftStartMs).toISOString(),
             durataMinuti: draftDuration,
-          }),
-        });
-        const data = await res.json();
+          },
+          "La nuova durata/orario crea una sovrapposizione. Vuoi confermare comunque?",
+        );
         if (!res.ok) {
           alert(data.error || "Errore modifica durata appuntamento");
           return;
@@ -1208,12 +1229,12 @@ export function PlannerClient({
 
       {showModal ? (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/40 p-2 md:p-4"
+          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 px-2 py-3 md:items-center md:p-4"
           onClick={(e) => {
             if (e.target === e.currentTarget) setShowModal(false);
           }}
         >
-          <Card className="max-h-[calc(100dvh-1.5rem)] w-full max-w-2xl overflow-y-auto p-3 md:max-h-[calc(100dvh-3rem)] md:p-4">
+          <Card className="max-h-[calc(100dvh-1rem)] w-full max-w-2xl overflow-y-auto p-3 md:max-h-[calc(100dvh-3rem)] md:p-4">
             <h3 className="mb-3 text-lg font-semibold">Nuovo Appuntamento</h3>
             <p className="text-sm text-zinc-600">Slot: {slotStart ? format(slotStart, "dd/MM/yyyy HH:mm") : "-"}</p>
             {operators.length ? (
@@ -1411,12 +1432,12 @@ export function PlannerClient({
 
       {showEdit && selectedAppointment ? (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/40 p-2 md:p-4"
+          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 px-2 py-3 md:items-center md:p-4"
           onClick={(e) => {
             if (e.target === e.currentTarget) setShowEdit(false);
           }}
         >
-          <Card className="max-h-[calc(100dvh-1.5rem)] w-full max-w-xl space-y-3 overflow-y-auto p-3 md:max-h-[calc(100dvh-3rem)] md:p-4">
+          <Card className="max-h-[calc(100dvh-1rem)] w-full max-w-xl space-y-3 overflow-y-auto p-3 md:max-h-[calc(100dvh-3rem)] md:p-4">
             <h3 className="text-lg font-semibold">Modifica Appuntamento</h3>
             <p className="text-sm">
               {isPersonalNoteAppointment(selectedAppointment)

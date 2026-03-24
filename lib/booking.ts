@@ -264,10 +264,8 @@ export async function getBookingSlotOptions(params: {
 
           const overlapOperator = appointments.some((a) => a.operatorId === op.id && overlaps(slotStart, slotEnd, a.startAt, a.endAt));
           if (overlapOperator) continue;
-          if (!salon.overlapAllowed) {
-            const overlapSalon = appointments.some((a) => overlaps(slotStart, slotEnd, a.startAt, a.endAt));
-            if (overlapSalon) continue;
-          }
+          const overlapSalon = appointments.some((a) => overlaps(slotStart, slotEnd, a.startAt, a.endAt));
+          if (overlapSalon) continue;
 
           results.push({
             startAt: slotStart,
@@ -366,19 +364,17 @@ export async function isBookingSlotStillAvailable(params: {
     if (overlapOperator) return false;
   }
 
-  if (!salon.overlapAllowed) {
-    const overlapSalon = await db.appointment.findFirst({
-      where: {
-        salonId: params.salonId,
-        deletedAt: null,
-        stato: { not: "CANCELLATO" },
-        startAt: { lt: params.endAt },
-        endAt: { gt: params.startAt },
-      },
-      select: { id: true },
-    });
-    if (overlapSalon) return false;
-  }
+  const overlapSalon = await db.appointment.findFirst({
+    where: {
+      salonId: params.salonId,
+      deletedAt: null,
+      stato: { not: "CANCELLATO" },
+      startAt: { lt: params.endAt },
+      endAt: { gt: params.startAt },
+    },
+    select: { id: true },
+  });
+  if (overlapSalon) return false;
 
   return true;
 }
