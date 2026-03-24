@@ -6,6 +6,7 @@ import { getAccountingScope } from "@/lib/accounting-scope";
 import { AccountingScopeSwitcher } from "@/components/accounting/scope-switcher";
 import { aggregateByCurrency, formatCurrencyTotals } from "@/lib/money";
 import { redirect } from "next/navigation";
+import { buildClientFrequencyProfiles, classifyFrequencyBucket } from "@/lib/client-frequency";
 
 type RevenueBySalon = { salonId: string; name: string; total: number; currency: string; appointments: number; noShowRate: number };
 
@@ -234,6 +235,32 @@ export default async function ReportsPage({
     };
   });
 
+  const frequencyProfiles = await buildClientFrequencyProfiles({
+    salonIds,
+    marketingOnly: false,
+  });
+  const frequencyBuckets: Record<
+    "RETURN_MAX_5_WEEKS" | "RETURN_MAX_8_WEEKS" | "RETURN_MAX_12_WEEKS" | "INACTIVE_OVER_12_WEEKS",
+    typeof frequencyProfiles
+  > = {
+    RETURN_MAX_5_WEEKS: [],
+    RETURN_MAX_8_WEEKS: [],
+    RETURN_MAX_12_WEEKS: [],
+    INACTIVE_OVER_12_WEEKS: [],
+  };
+  for (const profile of frequencyProfiles) {
+    const bucket = classifyFrequencyBucket(profile);
+    if (!bucket) continue;
+    frequencyBuckets[bucket].push(profile);
+  }
+  for (const key of Object.keys(frequencyBuckets) as Array<keyof typeof frequencyBuckets>) {
+    frequencyBuckets[key].sort((a, b) => {
+      const aTime = a.lastCompletedAt?.getTime() ?? 0;
+      const bTime = b.lastCompletedAt?.getTime() ?? 0;
+      return bTime - aTime;
+    });
+  }
+
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-semibold">Report avanzati</h1>
@@ -318,6 +345,57 @@ export default async function ReportsPage({
             ))
           )}
         </div>
+      </Card>
+
+      <Card className="space-y-3">
+        <h2 className="font-semibold">Frequenza ritorno clienti</h2>
+        <p className="text-sm text-zinc-600">
+          Segmentazione basata su appuntamenti completati: media rientro 5/8/12 settimane e clienti assenti da oltre 12 settimane.
+        </p>
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3">
+            <p className="text-xs font-medium text-emerald-800">Ritorno medio entro 5 settimane</p>
+            <p className="text-2xl font-semibold text-emerald-900">{frequencyBuckets.RETURN_MAX_5_WEEKS.length}</p>
+          </div>
+          <div className="rounded-md border border-cyan-200 bg-cyan-50 p-3">
+            <p className="text-xs font-medium text-cyan-800">Ritorno medio 5-8 settimane</p>
+            <p className="text-2xl font-semibold text-cyan-900">{frequencyBuckets.RETURN_MAX_8_WEEKS.length}</p>
+          </div>
+          <div className="rounded-md border border-violet-200 bg-violet-50 p-3">
+            <p className="text-xs font-medium text-violet-800">Ritorno medio 8-12 settimane</p>
+            <p className="text-2xl font-semibold text-violet-900">{frequencyBuckets.RETURN_MAX_12_WEEKS.length}</p>
+          </div>
+          <div className="rounded-md border border-rose-200 bg-rose-50 p-3">
+            <p className="text-xs font-medium text-rose-800">Assenti da oltre 12 settimane</p>
+            <p className="text-2xl font-semibold text-rose-900">{frequencyBuckets.INACTIVE_OVER_12_WEEKS.length}</p>
+          </div>
+        </div>
+        {(
+          [
+            ["RETURN_MAX_5_WEEKS", "Clienti entro 5 settimane"],
+            ["RETURN_MAX_8_WEEKS", "Clienti 5-8 settimane"],
+            ["RETURN_MAX_12_WEEKS", "Clienti 8-12 settimane"],
+            ["INACTIVE_OVER_12_WEEKS", "Clienti assenti oltre 12 settimane"],
+          ] as const
+        ).map(([key, label]) => (
+          <details key={key} className="rounded-md border border-zinc-200 bg-white p-3">
+            <summary className="cursor-pointer text-sm font-semibold text-zinc-900">
+              {label}: {frequencyBuckets[key].length}
+            </summary>
+            <div className="mt-2 space-y-1 text-sm">
+              {frequencyBuckets[key].length === 0 ? (
+                <p className="text-zinc-500">Nessun cliente in questo segmento.</p>
+              ) : (
+                frequencyBuckets[key].map((row) => (
+                  <p key={row.client.id}>
+                    {row.client.nome} {row.client.cognome} - {row.client.telefono} - ultima visita{" "}
+                    {row.lastCompletedAt ? new Date(row.lastCompletedAt).toLocaleDateString("it-IT") : "n/d"}
+                  </p>
+                ))
+              )}
+            </div>
+          </details>
+        ))}
       </Card>
     </div>
   );

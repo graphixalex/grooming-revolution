@@ -20,6 +20,12 @@ type DayHours = {
 
 type WorkingHoursState = Record<DayKey, DayHours>;
 type CampaignType = "MARKETING" | "SERVICE";
+type CampaignSegment =
+  | "ALL_RECENT"
+  | "RETURN_MAX_5_WEEKS"
+  | "RETURN_MAX_8_WEEKS"
+  | "RETURN_MAX_12_WEEKS"
+  | "INACTIVE_OVER_12_WEEKS";
 
 type CampaignRow = {
   id: string;
@@ -114,6 +120,7 @@ export function SettingsClient({ initial }: { initial: any }) {
   const [campaignTitle, setCampaignTitle] = useState("");
   const [campaignMessage, setCampaignMessage] = useState("");
   const [campaignMonthsBack, setCampaignMonthsBack] = useState("12");
+  const [campaignSegment, setCampaignSegment] = useState<CampaignSegment>("ALL_RECENT");
   const [campaignLoading, setCampaignLoading] = useState(false);
   const [campaigns, setCampaigns] = useState<CampaignRow[]>([]);
   const [campaignPreviewCount, setCampaignPreviewCount] = useState<number | null>(null);
@@ -261,6 +268,7 @@ export function SettingsClient({ initial }: { initial: any }) {
           title: campaignTitle.trim(),
           messageTemplate: campaignMessage.trim(),
           monthsBack: Number(campaignMonthsBack) || 12,
+          segment: campaignSegment,
         }),
       });
       const data = await res.json();
@@ -283,6 +291,7 @@ export function SettingsClient({ initial }: { initial: any }) {
       const query = new URLSearchParams({
         type: campaignType,
         monthsBack: String(Math.max(1, Math.min(36, Number(campaignMonthsBack) || 12))),
+        segment: campaignSegment,
       });
       const res = await fetch(`/api/whatsapp/campaigns/preview?${query.toString()}`);
       const data = await res.json();
@@ -777,7 +786,7 @@ export function SettingsClient({ initial }: { initial: any }) {
           </div>
         </div>
 
-        <div className="grid gap-3 md:grid-cols-3">
+        <div className="grid gap-3 md:grid-cols-4">
           <div className="space-y-1">
             <p className="text-xs font-medium text-zinc-600">Titolo campagna</p>
             <Input value={campaignTitle} onChange={(e) => setCampaignTitle(e.target.value)} placeholder="Es. Chiusura per ferie Agosto" />
@@ -805,7 +814,26 @@ export function SettingsClient({ initial }: { initial: any }) {
               {campaignType === "SERVICE" ? "Servizio (avvisi operativi)" : "Marketing (promo/offerte)"}
             </div>
           </div>
+          <div className="space-y-1">
+            <p className="text-xs font-medium text-zinc-600">Segmento clienti</p>
+            <select
+              className="h-10 rounded-md border border-zinc-300 px-3 text-sm"
+              value={campaignSegment}
+              onChange={(e) => setCampaignSegment(e.target.value as CampaignSegment)}
+            >
+              <option value="ALL_RECENT">Tutti i clienti recenti (filtro mesi)</option>
+              <option value="RETURN_MAX_5_WEEKS">Ritorno medio entro 5 settimane</option>
+              <option value="RETURN_MAX_8_WEEKS">Ritorno medio 5-8 settimane</option>
+              <option value="RETURN_MAX_12_WEEKS">Ritorno medio 8-12 settimane</option>
+              <option value="INACTIVE_OVER_12_WEEKS">Assenti da oltre 12 settimane</option>
+            </select>
+          </div>
         </div>
+        {campaignSegment === "ALL_RECENT" ? null : (
+          <p className="text-xs text-zinc-600">
+            Segmentazione basata su appuntamenti COMPLETATI. Per i segmenti frequenza usa storico reale visite.
+          </p>
+        )}
         <Textarea
           value={campaignMessage}
           onChange={(e) => setCampaignMessage(e.target.value)}

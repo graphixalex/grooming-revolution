@@ -3,16 +3,31 @@ import { WhatsAppCampaignType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/api-auth";
 import { renderTemplate } from "@/lib/reminders";
+import { CampaignAudienceSegment, listCampaignAudienceRecipients } from "@/lib/client-frequency";
 
 type CreateCampaignBody = {
   type?: WhatsAppCampaignType;
   title?: string;
   messageTemplate?: string;
   monthsBack?: number;
+  segment?: CampaignAudienceSegment;
 };
 
 function isValidType(value: unknown): value is WhatsAppCampaignType {
   return value === "MARKETING" || value === "SERVICE";
+}
+
+function parseCampaignSegment(value: unknown): CampaignAudienceSegment {
+  if (
+    value === "ALL_RECENT" ||
+    value === "RETURN_MAX_5_WEEKS" ||
+    value === "RETURN_MAX_8_WEEKS" ||
+    value === "RETURN_MAX_12_WEEKS" ||
+    value === "INACTIVE_OVER_12_WEEKS"
+  ) {
+    return value;
+  }
+  return "ALL_RECENT";
 }
 
 export async function GET() {
@@ -56,24 +71,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Titolo e messaggio sono obbligatori" }, { status: 400 });
   }
   const monthsBack = Math.max(1, Math.min(36, Number(body.monthsBack) || 12));
-  const fromDate = new Date();
-  fromDate.setMonth(fromDate.getMonth() - monthsBack);
+  const segment = parseCampaignSegment(body.segment);
 
   const salon = await prisma.salon.findUnique({
     where: { id: salonId },
     select: { nomeAttivita: true },
   });
 
-  const clients = await prisma.client.findMany({
-    where: {
-      salonId,
-      deletedAt: null,
-      createdAt: { gte: fromDate },
-      telefono: { not: "__NOTE__" },
-      ...(body.type === "MARKETING" ? { consensoPromemoria: true } : {}),
-    },
-    select: { id: true, nome: true, cognome: true, telefono: true },
-    orderBy: { createdAt: "desc" },
+  const clients = await listCampaignAudienceRecipients({
+    salonId,
+    type: body.type,
+    segment,
+    monthsBack,
   });
 
   const campaign = await prisma.whatsAppCampaign.create({
