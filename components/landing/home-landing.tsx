@@ -1156,6 +1156,9 @@ export function HomeLanding() {
               <Link href="/legal/cookies" className="transition-colors hover:text-cyan-400">
                 Cookie Policy
               </Link>
+              <Link href="/refund-policy" className="transition-colors hover:text-cyan-400">
+                Politica di rimborso
+              </Link>
             </div>
           </div>
 
