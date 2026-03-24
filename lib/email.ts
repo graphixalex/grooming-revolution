@@ -15,7 +15,10 @@ function getAppUrl() {
 }
 
 function getSupportEmail() {
-  return process.env.SUPPORT_EMAIL || "servizioclienti@grooming-revolution.com";
+  const official = "servizioclienti@grooming-revolution.com";
+  const configured = (process.env.SUPPORT_EMAIL || "").trim().toLowerCase();
+  if (!configured || configured === "alecostantini87@gmail.com") return official;
+  return configured;
 }
 
 function escapeHtml(value: string) {
@@ -40,28 +43,47 @@ function renderShell(input: { title: string; subtitle: string; bodyHtml: string 
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>${escapeHtml(input.title)}</title>
   </head>
-  <body style="margin:0;background:#f4f5f7;font-family:Arial,sans-serif;color:#1f2937;">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f5f7;padding:24px 12px;">
+  <body style="margin:0;background:#eceef3;font-family:'Segoe UI',Arial,sans-serif;color:#111827;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eceef3;padding:28px 12px;">
       <tr>
         <td align="center">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:700px;background:#ffffff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:700px;background:#ffffff;border:1px solid #d9dce3;border-radius:18px;overflow:hidden;">
             <tr>
-              <td style="background:linear-gradient(135deg,#f59e0b,#fb7185);padding:24px 24px 16px 24px;">
-                <img src="${appUrl}/img/logo-grooming-revolution.png" alt="Grooming Revolution" style="max-width:260px;width:100%;height:auto;display:block;" />
-                <h1 style="margin:16px 0 6px 0;color:#111827;font-size:24px;line-height:1.2;">${escapeHtml(input.title)}</h1>
-                <p style="margin:0;color:#111827;opacity:0.9;font-size:14px;">${escapeHtml(input.subtitle)}</p>
+              <td style="height:6px;background:linear-gradient(90deg,#0b1f8f,#f59e0b);font-size:0;line-height:0;">&nbsp;</td>
+            </tr>
+            <tr>
+              <td style="background:#ffffff;padding:24px 24px 18px 24px;border-bottom:1px solid #eceef3;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td style="vertical-align:middle;">
+                      <img src="${appUrl}/img/logo-grooming-revolution.png" alt="Grooming Revolution" style="max-width:240px;width:100%;height:auto;display:block;" />
+                    </td>
+                    <td align="right" style="vertical-align:middle;">
+                      <span style="display:inline-block;background:#f3f4f6;color:#0f172a;border:1px solid #e5e7eb;border-radius:999px;padding:6px 10px;font-size:11px;font-weight:700;letter-spacing:0.3px;text-transform:uppercase;">
+                        Comunicazione sistema
+                      </span>
+                    </td>
+                  </tr>
+                </table>
               </td>
             </tr>
             <tr>
-              <td style="padding:24px;">
+              <td style="background:linear-gradient(135deg,#fff7ed,#eff6ff);padding:22px 24px 20px 24px;border-bottom:1px solid #eceef3;">
+                <h1 style="margin:0 0 8px 0;color:#0f172a;font-size:26px;line-height:1.2;font-weight:800;">${escapeHtml(input.title)}</h1>
+                <p style="margin:0;color:#334155;font-size:14px;line-height:1.45;">${escapeHtml(input.subtitle)}</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:24px 24px 22px 24px;">
                 ${input.bodyHtml}
               </td>
             </tr>
             <tr>
-              <td style="border-top:1px solid #e5e7eb;padding:16px 24px;background:#fafafa;color:#6b7280;font-size:12px;">
-                <p style="margin:0 0 6px 0;">Grooming Revolution - SaaS gestionale per toelettatura</p>
-                <p style="margin:0 0 6px 0;">Supporto: <a href="mailto:${escapeHtml(supportEmail)}" style="color:#374151;">${escapeHtml(supportEmail)}</a></p>
-                <p style="margin:0;">© ${year} Grooming Revolution. Tutti i diritti riservati.</p>
+              <td style="border-top:1px solid #e5e7eb;padding:16px 24px;background:#f8fafc;color:#64748b;font-size:12px;">
+                <p style="margin:0 0 6px 0;color:#0f172a;font-weight:700;">Grooming Revolution</p>
+                <p style="margin:0 0 6px 0;">Piattaforma professionale per la gestione della toelettatura.</p>
+                <p style="margin:0 0 6px 0;">Supporto clienti: <a href="mailto:${escapeHtml(supportEmail)}" style="color:#0b1f8f;text-decoration:none;font-weight:600;">${escapeHtml(supportEmail)}</a></p>
+                <p style="margin:0;">&copy; ${year} Grooming Revolution. Tutti i diritti riservati.</p>
               </td>
             </tr>
           </table>
@@ -363,3 +385,4 @@ export async function sendAccountDeletionRequestEmails(input: {
 
   return { ok: supportRes.ok && ownerRes.ok, supportRes, ownerRes };
 }
+
