@@ -21,6 +21,7 @@ export function PaddlePayClient() {
   const [transactionId, setTransactionId] = useState<string>("");
   const [loaded, setLoaded] = useState(false);
   const [launched, setLaunched] = useState(false);
+  const [loadTimedOut, setLoadTimedOut] = useState(false);
 
   const clientToken = process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN || "";
   const env = (process.env.NEXT_PUBLIC_PADDLE_ENV || process.env.PADDLE_ENV || "sandbox") as "sandbox" | "production";
@@ -30,6 +31,14 @@ export function PaddlePayClient() {
   }, [searchParams]);
 
   const canInit = useMemo(() => Boolean(clientToken && transactionId && loaded), [clientToken, transactionId, loaded]);
+
+  useEffect(() => {
+    if (loaded) return;
+    const timer = window.setTimeout(() => {
+      setLoadTimedOut(true);
+    }, 5000);
+    return () => window.clearTimeout(timer);
+  }, [loaded]);
 
   useEffect(() => {
     if (!canInit || launched) return;
@@ -66,6 +75,11 @@ export function PaddlePayClient() {
       {clientToken && transactionId ? (
         <p className="text-sm text-zinc-600">
           Stiamo aprendo il checkout Paddle. Se non compare, ricarica la pagina.
+        </p>
+      ) : null}
+      {loadTimedOut && !loaded ? (
+        <p className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+          Il browser sta bloccando risorse esterne del checkout. Disattiva ad-block/tracking protection per questo sito e ricarica.
         </p>
       ) : null}
     </main>
