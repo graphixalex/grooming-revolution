@@ -37,6 +37,15 @@ function getCustomData(data: Record<string, unknown> | undefined) {
   return customData as Record<string, unknown>;
 }
 
+function amountFromMinorUnits(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) return value / 100;
+  if (typeof value === "string" && value.trim().length > 0) {
+    const parsed = Number.parseInt(value, 10);
+    if (Number.isFinite(parsed)) return parsed / 100;
+  }
+  return null;
+}
+
 async function resolveSalonId(data: Record<string, unknown> | undefined) {
   const customData = getCustomData(data);
   if (typeof customData.salonId === "string" && customData.salonId.length > 0) {
@@ -107,6 +116,24 @@ async function handleTransactionCompletedEvent(data: Record<string, unknown>) {
   const paddleSubscriptionId =
     typeof data.subscription_id === "string" ? data.subscription_id : null;
   const paddleCustomerId = typeof data.customer_id === "string" ? data.customer_id : null;
+  const paddleTransactionId = typeof data.id === "string" ? data.id : null;
+  const currencyCode = typeof data.currency_code === "string" ? data.currency_code : "EUR";
+  const details = data.details && typeof data.details === "object" ? (data.details as Record<string, unknown>) : null;
+  const totals = details?.totals && typeof details.totals === "object" ? (details.totals as Record<string, unknown>) : null;
+  const grossAmount =
+    amountFromMinorUnits(totals?.grand_total) ??
+    amountFromMinorUnits(totals?.total) ??
+    amountFromMinorUnits(data?.total) ??
+    0;
+  const netAmount = amountFromMinorUnits(totals?.subtotal);
+  const taxAmount = amountFromMinorUnits(totals?.tax);
+  const paidAtRaw =
+    typeof data.billed_at === "string"
+      ? data.billed_at
+      : typeof data.created_at === "string"
+        ? data.created_at
+        : null;
+  const paidAt = paidAtRaw ? new Date(paidAtRaw) : new Date();
 
   await prisma.salon.update({
     where: { id: salonId },
@@ -116,6 +143,30 @@ async function handleTransactionCompletedEvent(data: Record<string, unknown>) {
       paddleCustomerId: paddleCustomerId || undefined,
     },
   });
+
+  if (paddleTransactionId && grossAmount > 0 && !Number.isNaN(paidAt.getTime())) {
+    await prisma.subscriptionPayment.upsert({
+      where: { paddleTransactionId },
+      update: {
+        paddleSubscriptionId: paddleSubscriptionId || undefined,
+        currency: currencyCode,
+        grossAmount,
+        netAmount: netAmount ?? undefined,
+        taxAmount: taxAmount ?? undefined,
+        paidAt,
+      },
+      create: {
+        salonId,
+        paddleTransactionId,
+        paddleSubscriptionId: paddleSubscriptionId || undefined,
+        currency: currencyCode,
+        grossAmount,
+        netAmount: netAmount ?? undefined,
+        taxAmount: taxAmount ?? undefined,
+        paidAt,
+      },
+    });
+  }
 }
 
 export async function POST(req: Request) {

@@ -25,10 +25,14 @@ const links = [
   { href: "/billing", label: "Billing", icon: Dog, roles: ["OWNER", "MANAGER"] as Role[] },
 ];
 
-export function Sidebar({ role }: { role: Role }) {
+export function Sidebar({ role, isPlatformAdmin = false }: { role: Role; isPlatformAdmin?: boolean }) {
   const pathname = usePathname();
   const [pendingMessages, setPendingMessages] = useState(0);
   const visibleLinks = links.filter((link) => link.roles.includes(role));
+  const allLinks =
+    role === "OWNER" && isPlatformAdmin
+      ? [...visibleLinks, { href: "/admin", label: "Admin", icon: BarChart3, roles: ["OWNER"] as Role[] }]
+      : visibleLinks;
 
   useEffect(() => {
     let mounted = true;
@@ -65,7 +69,7 @@ export function Sidebar({ role }: { role: Role }) {
           />
         </div>
         <nav className="flex gap-2 overflow-x-auto pb-1">
-          {visibleLinks.map((link) => {
+          {allLinks.map((link) => {
             const Icon = link.icon;
             const active = pathname.startsWith(link.href);
             return (
@@ -99,7 +103,7 @@ export function Sidebar({ role }: { role: Role }) {
           />
         </div>
         <nav className="space-y-1">
-          {visibleLinks.map((link) => {
+          {allLinks.map((link) => {
             const Icon = link.icon;
             const active = pathname.startsWith(link.href);
             return (

@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Manrope, Sora } from "next/font/google";
 import { motion, useScroll, useTransform, useSpring, useInView } from "framer-motion";
 import {
@@ -223,6 +223,51 @@ export function HomeLanding() {
     restDelta: 0.001,
   });
 
+  const getTrackingSessionId = useCallback(() => {
+    if (typeof window === "undefined") return null;
+    const key = "gr_public_tracking_session";
+    const existing = window.localStorage.getItem(key);
+    if (existing) return existing;
+    const created = `sess_${crypto.randomUUID()}`;
+    window.localStorage.setItem(key, created);
+    return created;
+  }, []);
+
+  const trackPublicEvent = useCallback(
+    (eventType: "homepage_view" | "register_click", source: string) => {
+      if (typeof window === "undefined") return;
+      const payload = {
+        eventType,
+        source,
+        path: window.location.pathname,
+        sessionId: getTrackingSessionId(),
+      };
+
+      const body = JSON.stringify(payload);
+      try {
+        const sent = navigator.sendBeacon?.("/api/public/analytics/track", body);
+        if (sent) return;
+      } catch {
+        // Fallback below.
+      }
+
+      void fetch("/api/public/analytics/track", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+        keepalive: true,
+      }).catch(() => {});
+    },
+    [getTrackingSessionId],
+  );
+
+  const trackRegisterClick = useCallback(
+    (source: string) => {
+      trackPublicEvent("register_click", source);
+    },
+    [trackPublicEvent],
+  );
+
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 24);
     const handleMouseMove = (e: MouseEvent) => {
@@ -237,6 +282,14 @@ export function HomeLanding() {
       window.removeEventListener("mousemove", handleMouseMove);
     };
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const key = "gr_homepage_view_tracked";
+    if (window.sessionStorage.getItem(key) === "1") return;
+    trackPublicEvent("homepage_view", "home_landing");
+    window.sessionStorage.setItem(key, "1");
+  }, [trackPublicEvent]);
 
   return (
     <main className={`${bodyFont.className} relative min-h-screen overflow-x-clip bg-gradient-to-b from-[#f8fbff] via-[#f5f8fd] to-[#f6f8fc] text-zinc-900`}>
@@ -352,6 +405,7 @@ export function HomeLanding() {
             </Link>
             <Link
               href="/register"
+              onClick={() => trackRegisterClick("header_register")}
               className="whitespace-nowrap rounded-xl border border-zinc-300 bg-white px-3 py-2 text-xs font-semibold text-zinc-800 transition-all hover:scale-105 hover:bg-zinc-50 sm:px-4 sm:py-2.5 sm:text-sm"
             >
               Registrati
@@ -477,6 +531,7 @@ export function HomeLanding() {
             >
               <Link
                 href="/register"
+                onClick={() => trackRegisterClick("hero_primary_cta")}
                 className="group relative inline-flex w-full items-center justify-center gap-3 overflow-hidden rounded-2xl bg-zinc-950 px-6 py-4 text-base font-black text-white shadow-[0_18px_35px_rgba(15,23,42,0.2)] transition-all hover:bg-zinc-800 sm:w-auto sm:px-10 sm:py-5 sm:text-lg"
               >
                 <Rocket className="h-6 w-6 transition-transform group-hover:rotate-12" />
@@ -1055,6 +1110,7 @@ export function HomeLanding() {
               >
                 <Link
                   href="/register"
+                  onClick={() => trackRegisterClick("final_cta")}
                   className="group relative inline-flex w-full items-center justify-center gap-3 overflow-hidden rounded-2xl bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500 px-8 py-4 text-lg font-black text-white shadow-[0_0_80px_rgba(34,211,238,0.6)] transition-all hover:shadow-[0_0_120px_rgba(34,211,238,0.9)] sm:w-auto sm:px-12 sm:py-6 sm:text-xl"
                 >
                   <Rocket className="h-7 w-7 transition-transform group-hover:rotate-12" />
@@ -1138,7 +1194,7 @@ export function HomeLanding() {
               <Link href="/login" className="transition-colors hover:text-cyan-400">
                 Accedi
               </Link>
-              <Link href="/register" className="transition-colors hover:text-cyan-400">
+              <Link href="/register" onClick={() => trackRegisterClick("footer_nav")} className="transition-colors hover:text-cyan-400">
                 Inizia gratis
               </Link>
             </div>
