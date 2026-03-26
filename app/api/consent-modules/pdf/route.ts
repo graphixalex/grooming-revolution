@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import { ConsentKind } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/api-auth";
+import { buildControllerBlock, enrichLegalText } from "@/lib/legal-forms";
 
 type ModuleType = "PRIVACY" | "ANAMNESI" | "NODI";
 
@@ -95,14 +97,20 @@ async function buildPdf(title: string, rows: Array<{ label: string; value: strin
     if (base64) {
       try {
         const png = await doc.embedPng(Buffer.from(base64, "base64"));
-        const scaled = png.scale(0.35);
+        const boxWidth = 260;
+        const boxHeight = 80;
+        const scale = Math.min(boxWidth / png.width, boxHeight / png.height, 1);
+        const drawWidth = png.width * scale;
+        const drawHeight = png.height * scale;
+        const drawX = 48 + (boxWidth - drawWidth) / 2;
+        const drawY = 34 + (boxHeight - drawHeight) / 2;
         page.drawText("Firma", { x: 40, y: 92, size: 11, font: bold });
-        page.drawRectangle({ x: 40, y: 30, width: 220, height: 58, borderColor: rgb(0.8, 0.8, 0.8), borderWidth: 1 });
+        page.drawRectangle({ x: 40, y: 30, width: 276, height: 88, borderColor: rgb(0.8, 0.8, 0.8), borderWidth: 1 });
         page.drawImage(png, {
-          x: 48,
-          y: 34,
-          width: Math.min(scaled.width, 204),
-          height: Math.min(scaled.height, 50),
+          x: drawX,
+          y: drawY,
+          width: drawWidth,
+          height: drawHeight,
         });
       } catch {
         // ignore bad signature image
@@ -126,29 +134,56 @@ export async function GET(req: NextRequest) {
   }
 
   if (type === "PRIVACY") {
-    const rows = await prisma.clientConsent.findMany({
-      where: { salonId, evidenceHash: id },
-      orderBy: [{ signedAt: "desc" }, { createdAt: "desc" }],
-      include: { client: { select: { nome: true, cognome: true, telefono: true } } },
-    });
+    const [rows, salon] = await Promise.all([
+      prisma.clientConsent.findMany({
+        where: { salonId, evidenceHash: id },
+        orderBy: [{ signedAt: "desc" }, { createdAt: "desc" }],
+        include: { client: { select: { nome: true, cognome: true, telefono: true } } },
+      }),
+      prisma.salon.findUnique({
+        where: { id: salonId },
+        select: {
+          nomeAttivita: true,
+          nomeSede: true,
+          indirizzo: true,
+          email: true,
+          telefono: true,
+          billingVatNumber: true,
+          paese: true,
+        },
+      }),
+    ]);
 
     if (!rows.length) return NextResponse.json({ error: "Documento non trovato" }, { status: 404 });
 
     const first = rows[0];
-    const statusByKind = Object.fromEntries(rows.map((row) => [row.kind, row.granted ? (row.revokedAt ? "Revocato" : "Concesso") : "Negato"]));
+    const byKind = new Map<ConsentKind, (typeof rows)[number]>();
+    for (const row of rows) {
+      if (!byKind.has(row.kind)) byKind.set(row.kind, row);
+    }
+    const toStatus = (kind: ConsentKind) => {
+      const row = byKind.get(kind);
+      if (!row) return "N/D";
+      if (!row.granted) return "Non acconsentito";
+      if (row.revokedAt) return `Revocato il ${new Date(row.revokedAt).toLocaleString("it-IT")}`;
+      return "Acconsentito";
+    };
+    const companyBlock = salon ? buildControllerBlock(salon) : "Titolare del trattamento: non disponibile";
+    const legalText = salon ? enrichLegalText(first.legalTextSnapshot, salon) : first.legalTextSnapshot;
 
     const pdf = await buildPdf(
       "Consensi privacy e immagini",
       [
         { label: "Proprietario", value: `${first.client.nome} ${first.client.cognome}` },
         { label: "Telefono", value: first.client.telefono || "-" },
+        { label: "Dati titolare trattamento", value: companyBlock },
         { label: "Firmatario", value: first.signerFullName },
         { label: "Data firma", value: new Date(first.signedAt).toLocaleString("it-IT") },
-        { label: "Trattamento dati", value: String(statusByKind.DATA_PROCESSING || "-") },
-        { label: "Foto uso interno", value: String(statusByKind.PHOTO_INTERNAL || "-") },
-        { label: "Foto social/web", value: String(statusByKind.PHOTO_SOCIAL || "-") },
+        { label: "Trattamento dati", value: toStatus("DATA_PROCESSING") },
+        { label: "Foto uso interno", value: toStatus("PHOTO_INTERNAL") },
+        { label: "Foto social/web", value: toStatus("PHOTO_SOCIAL") },
       ],
-      first.legalTextSnapshot,
+      legalText,
       first.signatureDataUrl,
     );
 
@@ -162,17 +197,34 @@ export async function GET(req: NextRequest) {
   }
 
   if (type === "ANAMNESI") {
-    const row = await prisma.firstVisitAnamnesisRecord.findFirst({
-      where: { salonId, id },
-      include: { client: { select: { nome: true, cognome: true } } },
-    });
+    const [row, salon] = await Promise.all([
+      prisma.firstVisitAnamnesisRecord.findFirst({
+        where: { salonId, id },
+        include: { client: { select: { nome: true, cognome: true } } },
+      }),
+      prisma.salon.findUnique({
+        where: { id: salonId },
+        select: {
+          nomeAttivita: true,
+          nomeSede: true,
+          indirizzo: true,
+          email: true,
+          telefono: true,
+          billingVatNumber: true,
+          paese: true,
+        },
+      }),
+    ]);
     if (!row) return NextResponse.json({ error: "Documento non trovato" }, { status: 404 });
+    const companyBlock = salon ? buildControllerBlock(salon) : "Titolare del trattamento: non disponibile";
+    const legalText = salon ? enrichLegalText(row.legalTextSnapshot, salon) : row.legalTextSnapshot;
 
     const pdf = await buildPdf(
       "Anamnesi prima volta",
       [
         { label: "Proprietario", value: row.ownerFullName },
         { label: "Telefono", value: row.ownerPhone },
+        { label: "Dati titolare trattamento", value: companyBlock },
         { label: "Animale", value: row.petName },
         { label: "Razza", value: row.petBreed || "-" },
         { label: "Eta", value: row.petAge || "-" },
@@ -184,7 +236,7 @@ export async function GET(req: NextRequest) {
         { label: "Firmatario", value: row.signerFullName },
         { label: "Data firma", value: new Date(row.signedAt).toLocaleString("it-IT") },
       ],
-      row.legalTextSnapshot,
+      legalText,
       row.signatureDataUrl,
     );
 
@@ -197,16 +249,33 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  const row = await prisma.mattingConsentRecord.findFirst({
-    where: { salonId, id },
-    include: { client: { select: { nome: true, cognome: true } } },
-  });
+  const [row, salon] = await Promise.all([
+    prisma.mattingConsentRecord.findFirst({
+      where: { salonId, id },
+      include: { client: { select: { nome: true, cognome: true } } },
+    }),
+    prisma.salon.findUnique({
+      where: { id: salonId },
+      select: {
+        nomeAttivita: true,
+        nomeSede: true,
+        indirizzo: true,
+        email: true,
+        telefono: true,
+        billingVatNumber: true,
+        paese: true,
+      },
+    }),
+  ]);
   if (!row) return NextResponse.json({ error: "Documento non trovato" }, { status: 404 });
+  const companyBlock = salon ? buildControllerBlock(salon) : "Titolare del trattamento: non disponibile";
+  const legalText = salon ? enrichLegalText(row.legalTextSnapshot, salon) : row.legalTextSnapshot;
 
   const pdf = await buildPdf(
     "Consenso in caso di nodi",
     [
       { label: "Proprietario", value: row.ownerFullName },
+      { label: "Dati titolare trattamento", value: companyBlock },
       { label: "Animale", value: row.petName },
       { label: "Data modulo", value: new Date(row.formDate).toLocaleDateString("it-IT") },
       { label: "Consenso snodatura", value: row.consentDematting ? "Si" : "No" },
@@ -215,7 +284,7 @@ export async function GET(req: NextRequest) {
       { label: "Data firma", value: new Date(row.signedAt).toLocaleString("it-IT") },
       { label: "Note", value: row.additionalNotes || "-" },
     ],
-    row.legalTextSnapshot,
+    legalText,
     row.signatureDataUrl,
   );
 

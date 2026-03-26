@@ -6,6 +6,7 @@ import { requireApiSession } from "@/lib/api-auth";
 import { getActiveConsentTemplates } from "@/lib/consents";
 import { addAuditLog } from "@/lib/audit";
 import { signClientConsentsSchema } from "@/lib/validators";
+import { enrichLegalText } from "@/lib/legal-forms";
 
 function getRequestIp(req: NextRequest) {
   const forwarded = req.headers.get("x-forwarded-for");
@@ -28,7 +29,7 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
   });
   if (!client) return NextResponse.json({ error: "Cliente non trovato" }, { status: 404 });
 
-  const [templates, history] = await Promise.all([
+  const [templates, history, salon] = await Promise.all([
     getActiveConsentTemplates(salonId),
     prisma.clientConsent.findMany({
       where: { salonId, clientId: id },
@@ -46,6 +47,18 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
         template: { select: { title: true } },
       },
     }),
+    prisma.salon.findUnique({
+      where: { id: salonId },
+      select: {
+        nomeAttivita: true,
+        nomeSede: true,
+        indirizzo: true,
+        email: true,
+        telefono: true,
+        billingVatNumber: true,
+        paese: true,
+      },
+    }),
   ]);
 
   const latestActiveByKind: Partial<Record<ConsentKind, (typeof history)[number]>> = {};
@@ -60,7 +73,7 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
       id: t.id,
       kind: t.kind,
       title: t.title,
-      legalText: t.legalText,
+      legalText: salon ? enrichLegalText(t.legalText, salon) : t.legalText,
       version: t.version,
     })),
     history,
@@ -86,7 +99,21 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const templates = await getActiveConsentTemplates(salonId);
+  const [templates, salon] = await Promise.all([
+    getActiveConsentTemplates(salonId),
+    prisma.salon.findUnique({
+      where: { id: salonId },
+      select: {
+        nomeAttivita: true,
+        nomeSede: true,
+        indirizzo: true,
+        email: true,
+        telefono: true,
+        billingVatNumber: true,
+        paese: true,
+      },
+    }),
+  ]);
   const byKind = new Map(templates.map((t) => [t.kind, t]));
 
   const requiredKinds: ConsentKind[] = ["DATA_PROCESSING", "PHOTO_INTERNAL", "PHOTO_SOCIAL"];
@@ -120,11 +147,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     choices,
     templates: choices.map(({ kind }) => {
       const template = byKind.get(kind)!;
+      const legalText = salon ? enrichLegalText(template.legalText, salon) : template.legalText;
       return {
         kind,
         templateId: template.id,
         version: template.version,
-        legalText: template.legalText,
+        legalText,
       };
     }),
     signatureDataUrl,
@@ -134,6 +162,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   await prisma.$transaction(
     choices.map(({ kind, granted }) => {
       const template = byKind.get(kind)!;
+      const legalTextSnapshot = salon ? enrichLegalText(template.legalText, salon) : template.legalText;
       return prisma.clientConsent.create({
         data: {
           salonId,
@@ -143,7 +172,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           granted,
           signerFullName: parsed.data.signerFullName.trim(),
           signerDocumentId,
-          legalTextSnapshot: template.legalText,
+          legalTextSnapshot,
           templateVersion: template.version,
           signatureDataUrl,
           evidenceHash,

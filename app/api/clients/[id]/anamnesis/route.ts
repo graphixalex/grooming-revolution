@@ -5,6 +5,7 @@ import { requireApiSession } from "@/lib/api-auth";
 import { getActiveFirstVisitAnamnesisTemplate } from "@/lib/anamnesis";
 import { addAuditLog } from "@/lib/audit";
 import { signFirstVisitAnamnesisSchema } from "@/lib/validators";
+import { enrichLegalText } from "@/lib/legal-forms";
 
 function getRequestIp(req: NextRequest) {
   const forwarded = req.headers.get("x-forwarded-for");
@@ -29,7 +30,7 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
 
   if (!client) return NextResponse.json({ error: "Cliente non trovato" }, { status: 404 });
 
-  const [template, history] = await Promise.all([
+  const [template, history, salon] = await Promise.all([
     getActiveFirstVisitAnamnesisTemplate(salonId),
     prisma.firstVisitAnamnesisRecord.findMany({
       where: { salonId, clientId: id },
@@ -57,6 +58,18 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
         revokedReason: true,
       },
     }),
+    prisma.salon.findUnique({
+      where: { id: salonId },
+      select: {
+        nomeAttivita: true,
+        nomeSede: true,
+        indirizzo: true,
+        email: true,
+        telefono: true,
+        billingVatNumber: true,
+        paese: true,
+      },
+    }),
   ]);
 
   const active = history.find((row) => !row.revokedAt) || null;
@@ -67,7 +80,7 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
       ? {
           id: template.id,
           title: template.title,
-          legalText: template.legalText,
+          legalText: salon ? enrichLegalText(template.legalText, salon) : template.legalText,
           version: template.version,
         }
       : null,
@@ -96,7 +109,21 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const template = await getActiveFirstVisitAnamnesisTemplate(salonId);
+  const [template, salon] = await Promise.all([
+    getActiveFirstVisitAnamnesisTemplate(salonId),
+    prisma.salon.findUnique({
+      where: { id: salonId },
+      select: {
+        nomeAttivita: true,
+        nomeSede: true,
+        indirizzo: true,
+        email: true,
+        telefono: true,
+        billingVatNumber: true,
+        paese: true,
+      },
+    }),
+  ]);
   if (!template) {
     return NextResponse.json({ error: "Template anamnesi mancante. Verifica configurazione sede." }, { status: 400 });
   }
@@ -110,6 +137,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const ipAddress = getRequestIp(req);
   const userAgent = req.headers.get("user-agent");
   const signerDocumentId = parsed.data.signerDocumentId?.trim() || null;
+
+  const legalTextSnapshot = salon ? enrichLegalText(template.legalText, salon) : template.legalText;
 
   const payloadToHash = JSON.stringify({
     signedAt: signedAt.toISOString(),
@@ -130,7 +159,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     signerDocumentId,
     templateId: template.id,
     templateVersion: template.version,
-    legalText: template.legalText,
+    legalText: legalTextSnapshot,
     ipAddress,
     userAgent,
     signatureDataUrl,
@@ -158,7 +187,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       acknowledgedRisk: parsed.data.acknowledgedRisk,
       signerFullName: parsed.data.signerFullName.trim(),
       signerDocumentId,
-      legalTextSnapshot: template.legalText,
+      legalTextSnapshot,
       templateVersion: template.version,
       signatureDataUrl,
       evidenceHash,

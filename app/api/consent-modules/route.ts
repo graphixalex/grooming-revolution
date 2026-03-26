@@ -71,6 +71,8 @@ export async function GET(req: NextRequest) {
       orderBy: [{ signedAt: "desc" }, { createdAt: "desc" }],
       select: {
         id: true,
+        kind: true,
+        granted: true,
         evidenceHash: true,
         signerFullName: true,
         signedAt: true,
@@ -112,13 +114,15 @@ export async function GET(req: NextRequest) {
 
   for (const [evidenceHash, rows] of privacyByHash.entries()) {
     const first = rows[0];
+    const dataProcessing = rows.find((row) => row.kind === "DATA_PROCESSING");
+    const isActive = Boolean(dataProcessing?.granted && !dataProcessing?.revokedAt);
     docs.push({
       id: evidenceHash,
       moduleType: "PRIVACY",
       ownerName: `${selectedClient.nome} ${selectedClient.cognome}`,
       signerName: first.signerFullName,
       signedAt: first.signedAt.toISOString(),
-      status: rows.some((row) => row.revokedAt) ? "REVOCATO" : "ATTIVO",
+      status: isActive ? "ATTIVO" : "REVOCATO",
       title: "Consensi privacy e immagini",
     });
   }
