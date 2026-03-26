@@ -92,6 +92,10 @@ export function ProConsentActions({
           <Link href="/legal/cookies" className="font-semibold underline">
             Cookie Policy
           </Link>{" "}
+          e{" "}
+          <Link href="/refund-policy" className="font-semibold underline">
+            Politica di rimborso
+          </Link>{" "}
           per attivare il piano FULL.
         </span>
       </label>
