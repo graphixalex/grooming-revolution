@@ -13,6 +13,7 @@ const publicRoutes = [
   "/api/paddle/webhook",
   "/api/cron/whatsapp-reminders",
   "/book",
+  "/pay",
   "/legal",
   "/terms-and-conditions",
   "/privacy-policy",

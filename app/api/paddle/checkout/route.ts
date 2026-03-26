@@ -86,6 +86,7 @@ export async function POST(req: Request) {
         collection_mode: "automatic",
         custom_data: { salonId: salon.id },
         checkout: {
+          url: `${appUrl}/pay`,
           success_url: `${appUrl}/billing?checkout=success`,
         },
       },
