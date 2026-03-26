@@ -149,3 +149,45 @@ export const revokeClientConsentSchema = z.object({
   reason: z.string().min(3).max(500).optional().or(z.literal("")),
 });
 
+export const signFirstVisitAnamnesisSchema = z.object({
+  ownerFullName: z.string().min(2),
+  ownerPhone: z.string().min(5),
+  petName: z.string().min(1),
+  petType: z.string().max(20).optional().or(z.literal("")),
+  petBreed: z.string().max(120).optional().or(z.literal("")),
+  petAge: z.string().max(80).optional().or(z.literal("")),
+  isSeniorDeclared: z.boolean(),
+  diseasesDeclared: z.string().max(2000).optional().or(z.literal("")),
+  veterinarianName: z.string().max(120).optional().or(z.literal("")),
+  hasMicrochip: z.boolean().nullable().optional(),
+  socialPhotoConsent: z.boolean().nullable().optional(),
+  additionalNotes: z.string().max(2000).optional().or(z.literal("")),
+  acknowledgedRisk: z.literal(true),
+  signerFullName: z.string().min(2),
+  signerDocumentId: z.string().max(100).optional().or(z.literal("")),
+  signatureDataUrl: z.string().startsWith("data:image/png;base64,"),
+});
+
+export const revokeFirstVisitAnamnesisSchema = z.object({
+  recordId: z.string().min(1),
+  reason: z.string().min(3).max(500).optional().or(z.literal("")),
+});
+
+export const signMattingConsentSchema = z.object({
+  ownerFullName: z.string().min(2),
+  petName: z.string().min(1),
+  formDate: z.string().datetime(),
+  consentDematting: z.boolean(),
+  consentUnderMatsShave: z.boolean(),
+  additionalNotes: z.string().max(2000).optional().or(z.literal("")),
+  acknowledgedRisk: z.literal(true),
+  signerFullName: z.string().min(2),
+  signerDocumentId: z.string().max(100).optional().or(z.literal("")),
+  signatureDataUrl: z.string().startsWith("data:image/png;base64,"),
+});
+
+export const revokeMattingConsentSchema = z.object({
+  recordId: z.string().min(1),
+  reason: z.string().min(3).max(500).optional().or(z.literal("")),
+});
+

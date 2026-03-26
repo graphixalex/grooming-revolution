@@ -40,6 +40,8 @@ export default async function SettingsPage() {
         subscriptionPlan: true,
         billingVatNumber: true,
         billingCountry: true,
+        firstVisitAnamnesisEnabled: true,
+        mattingConsentEnabled: true,
         bookingEnabled: true,
         bookingSlug: true,
         bookingDisplayName: true,

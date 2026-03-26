@@ -7,7 +7,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
   const session = await getRequiredSession();
   const { id } = await params;
 
-  const [client, quickTags, paymentHistory] = await Promise.all([
+  const [client, quickTags, paymentHistory, salon] = await Promise.all([
     prisma.client.findFirst({
       where: { id, salonId: session.user.salonId, deletedAt: null },
       include: { dogs: { where: { deletedAt: null }, include: { tagRapidi: { include: { quickTag: true } } } } },
@@ -32,10 +32,22 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
       orderBy: { startAt: "desc" },
       take: 50,
     }),
+    prisma.salon.findUnique({
+      where: { id: session.user.salonId },
+      select: { firstVisitAnamnesisEnabled: true, mattingConsentEnabled: true },
+    }),
   ]);
 
   if (!client) return notFound();
 
-  return <ClientDetailClient client={client} quickTags={quickTags} paymentHistory={paymentHistory} />;
+  return (
+    <ClientDetailClient
+      client={client}
+      quickTags={quickTags}
+      paymentHistory={paymentHistory}
+      firstVisitAnamnesisEnabled={Boolean(salon?.firstVisitAnamnesisEnabled)}
+      mattingConsentEnabled={Boolean(salon?.mattingConsentEnabled)}
+    />
+  );
 }
 

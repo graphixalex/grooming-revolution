@@ -8,15 +8,21 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ClientConsentsCard } from "@/components/clients/client-consents-card";
+import { ClientAnamnesisCard } from "@/components/clients/client-anamnesis-card";
+import { ClientMattingConsentCard } from "@/components/clients/client-matting-consent-card";
 
 export function ClientDetailClient({
   client,
   quickTags,
   paymentHistory,
+  firstVisitAnamnesisEnabled,
+  mattingConsentEnabled,
 }: {
   client: any;
   quickTags: Array<{ id: string; nome: string }>;
   paymentHistory: any[];
+  firstVisitAnamnesisEnabled: boolean;
+  mattingConsentEnabled: boolean;
 }) {
   const [dogForm, setDogForm] = useState({
     nome: "",
@@ -124,6 +130,8 @@ export function ClientDetailClient({
       </Card>
 
       <ClientConsentsCard clientId={client.id} />
+      {firstVisitAnamnesisEnabled ? <ClientAnamnesisCard clientId={client.id} /> : null}
+      {mattingConsentEnabled ? <ClientMattingConsentCard clientId={client.id} /> : null}
     </div>
   );
 }
