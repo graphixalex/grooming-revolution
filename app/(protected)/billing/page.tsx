@@ -4,8 +4,14 @@ import { Card } from "@/components/ui/card";
 import { ProConsentActions } from "@/components/billing/pro-consent-actions";
 import { redirect } from "next/navigation";
 
-export default async function BillingPage() {
+export default async function BillingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ checkout?: string }>;
+}) {
   const session = await getRequiredSession();
+  const params = await searchParams;
+  const checkoutStatus = String(params?.checkout || "").toLowerCase();
   if (session.user.role === "STAFF") {
     redirect("/planner");
   }
@@ -40,6 +46,16 @@ export default async function BillingPage() {
     <div className="space-y-4">
       <h1 className="text-2xl font-semibold">Billing</h1>
       <Card>
+        {checkoutStatus === "closed" ? (
+          <div className="mb-3 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+            Checkout chiuso: pagamento non completato. Nessun addebito e stato effettuato.
+          </div>
+        ) : null}
+        {checkoutStatus === "completed" || checkoutStatus === "success" ? (
+          <div className="mb-3 rounded-md border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-900">
+            Pagamento completato. Stiamo aggiornando lo stato abbonamento via webhook Paddle.
+          </div>
+        ) : null}
         <p>
           Piano attuale: <strong>{salon?.subscriptionPlan}</strong>
         </p>

@@ -8,7 +8,10 @@ declare global {
   interface Window {
     Paddle?: {
       Environment: { set: (value: "sandbox" | "production") => void };
-      Initialize: (options: { token: string }) => void;
+      Initialize: (options: {
+        token: string;
+        eventCallback?: (event: { name?: string; data?: Record<string, unknown> }) => void;
+      }) => void;
       Checkout: {
         open: (options: { transactionId?: string; settings?: Record<string, unknown> }) => void;
       };
@@ -46,7 +49,18 @@ export function PaddlePayClient() {
 
     try {
       window.Paddle.Environment.set(env);
-      window.Paddle.Initialize({ token: clientToken });
+      window.Paddle.Initialize({
+        token: clientToken,
+        eventCallback: (event) => {
+          const name = String(event?.name || "");
+          if (name === "checkout.closed") {
+            window.location.assign("/billing?checkout=closed");
+          }
+          if (name === "checkout.completed") {
+            window.location.assign("/billing?checkout=completed");
+          }
+        },
+      });
       window.Paddle.Checkout.open({ transactionId });
       setLaunched(true);
     } catch {
