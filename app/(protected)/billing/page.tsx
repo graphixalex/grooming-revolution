@@ -35,9 +35,6 @@ export default async function BillingPage() {
   }
 
   const hasPaddleSubscription = Boolean(paddleSubscriptionId);
-  const monthlyNet = 20;
-  const vatPercent = Number(salon?.vatRate ?? 22);
-  const monthlyGross = monthlyNet * (1 + vatPercent / 100);
 
   return (
     <div className="space-y-4">
@@ -47,14 +44,18 @@ export default async function BillingPage() {
           Piano attuale: <strong>{salon?.subscriptionPlan}</strong>
         </p>
         <p className="text-sm text-zinc-600">Trial: fino a 50 clienti inclusi.</p>
-        <p className="text-sm text-zinc-600">Piano FULL: EUR 20,00 / mese + IVA ({vatPercent}%).</p>
-        <p className="text-sm text-zinc-600">Totale indicativo mensile: EUR {monthlyGross.toFixed(2)} IVA inclusa.</p>
-        <p className="text-sm text-zinc-600">Pagamento automatico mensile su carta tramite Paddle, finche non disdici.</p>
+        <p className="text-sm text-zinc-600">Piano FULL: a partire da EUR 20,00 / mese.</p>
+        <p className="text-sm text-zinc-600">
+          Imposte (IVA/VAT/sales tax) calcolate automaticamente da Paddle in base a paese e localita del cliente.
+        </p>
+        <p className="text-sm text-zinc-600">
+          Pagamento automatico mensile su carta tramite Paddle, finche non disdici.
+        </p>
         <p className="text-sm text-zinc-600">
           Stato addebito automatico: {hasPaddleSubscription ? "ATTIVO" : "NON ATTIVO"}
         </p>
         <p className="text-sm text-zinc-600">
-          VAT: {salon?.billingVatNumber || "non impostata"} - Paese: {salon?.billingCountry || "-"}
+          Nota: importo finale visibile in checkout Paddle prima della conferma pagamento.
         </p>
         <ProConsentActions
           currentPlan={(salon?.subscriptionPlan ?? "FREE") as "FREE" | "PRO"}
@@ -64,7 +65,9 @@ export default async function BillingPage() {
 
       <Card>
         <h2 className="font-semibold">Invoice/Receipt base</h2>
-        <p className="text-sm text-zinc-600">In MVP: riepilogo fiscale per transazione con VAT inclusa e dati attivitÃ .</p>
+        <p className="text-sm text-zinc-600">
+          In MVP: storico ricevute e riepilogo fiscale dell&apos;abbonamento gestito da Paddle.
+        </p>
       </Card>
     </div>
   );

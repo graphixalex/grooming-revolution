@@ -15,20 +15,34 @@ function getMetadataBase() {
   return "http://localhost:3000";
 }
 
-const socialTitle = "Grooming Revolution | Gestionale per toelettatura";
+const siteName = "Grooming Revolution";
+const socialTitle = "Grooming Revolution | Gestionale SaaS per Toelettatura";
 const socialDescription =
-  "Agenda, clienti, incassi, listino intelligente e report in un'unica piattaforma per il tuo salone.";
+  "Gestionale SaaS per toelettatori: agenda multi-operatore, clienti e pet, booking online, incassi, WhatsApp e report KPI.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(getMetadataBase()),
   title: {
     default: socialTitle,
-    template: "%s | Grooming Revolution",
+    template: `%s | ${siteName}`,
   },
   description: socialDescription,
-  applicationName: "Grooming Revolution",
-  alternates: {
-    canonical: "/",
+  keywords: [
+    "gestionale toelettatura",
+    "software toelettatura cani",
+    "agenda toelettatura",
+    "gestionale salone cani",
+    "booking toelettatura",
+    "SaaS toelettatori",
+  ],
+  applicationName: siteName,
+  category: "business",
+  creator: siteName,
+  publisher: siteName,
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
   },
   icons: {
     icon: [
@@ -42,7 +56,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "it_IT",
-    siteName: "Grooming Revolution",
+    siteName,
     title: socialTitle,
     description: socialDescription,
     url: "/",
@@ -60,6 +74,17 @@ export const metadata: Metadata = {
     title: socialTitle,
     description: socialDescription,
     images: ["/img/per-homepage.png?v=20260324"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
   },
 };
 
