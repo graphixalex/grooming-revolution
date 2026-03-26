@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/api-auth";
 import { canManageSettings } from "@/lib/rbac";
 import { paddleApiRequest } from "@/lib/paddle";
+import { assertCriticalEnv } from "@/lib/env-security";
 
 type PaddleSubscription = {
   management_urls?: {
@@ -13,6 +14,8 @@ type PaddleSubscription = {
 
 export async function GET() {
   try {
+    assertCriticalEnv("paddle");
+
     const auth = await requireApiSession();
     if ("error" in auth) return auth.error;
     if (!canManageSettings(auth.session.user.role as any)) {

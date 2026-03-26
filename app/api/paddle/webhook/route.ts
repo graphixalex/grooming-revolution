@@ -1,13 +1,34 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getRequiredPaddleEnv, verifyPaddleSignature } from "@/lib/paddle";
+import { markIdempotentOnce } from "@/lib/security-controls";
+import { assertCriticalEnv } from "@/lib/env-security";
 
 const ACTIVE_SUBSCRIPTION_STATUSES = new Set(["active", "trialing", "past_due", "paused"]);
 
 type PaddleWebhookEvent = {
+  event_id?: string;
+  notification_id?: string;
   event_type?: string;
+  occurred_at?: string;
   data?: Record<string, unknown>;
 };
+
+function resolveEventId(event: PaddleWebhookEvent) {
+  if (typeof event.event_id === "string" && event.event_id.length > 0) return event.event_id;
+  if (typeof event.notification_id === "string" && event.notification_id.length > 0) return event.notification_id;
+
+  const dataId =
+    typeof event.data?.id === "string"
+      ? event.data.id
+      : typeof event.data?.subscription_id === "string"
+        ? event.data.subscription_id
+        : typeof event.data?.customer_id === "string"
+          ? event.data.customer_id
+          : "unknown";
+
+  return `${String(event.event_type || "unknown")}::${String(event.occurred_at || "na")}::${dataId}`;
+}
 
 function getCustomData(data: Record<string, unknown> | undefined) {
   if (!data) return {};
@@ -99,6 +120,9 @@ async function handleTransactionCompletedEvent(data: Record<string, unknown>) {
 
 export async function POST(req: Request) {
   try {
+    assertCriticalEnv("paddle");
+    assertCriticalEnv("rateLimit");
+
     const rawBody = await req.text();
     const signature = req.headers.get("paddle-signature") || "";
     const secret = getRequiredPaddleEnv("PADDLE_WEBHOOK_SECRET");
@@ -109,6 +133,16 @@ export async function POST(req: Request) {
 
     const event = JSON.parse(rawBody) as PaddleWebhookEvent;
     const eventType = String(event.event_type || "");
+    const eventId = resolveEventId(event);
+    const firstProcessing = await markIdempotentOnce({
+      bucket: "paddle-webhook",
+      key: eventId,
+      ttlSec: 60 * 60 * 24,
+    });
+    if (!firstProcessing) {
+      return NextResponse.json({ received: true, duplicate: true, type: eventType });
+    }
+
     const data = (event.data || {}) as Record<string, unknown>;
 
     if (eventType.startsWith("subscription.")) {

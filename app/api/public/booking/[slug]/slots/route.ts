@@ -2,9 +2,30 @@ import { NextRequest, NextResponse } from "next/server";
 import { DogSize } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getBookingSlotOptions } from "@/lib/booking";
+import { getClientIp } from "@/lib/request";
+import { isRateLimited } from "@/lib/security-controls";
+import { assertCriticalEnv } from "@/lib/env-security";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
+  try {
+    assertCriticalEnv("rateLimit");
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Configurazione sicurezza non valida";
+    return NextResponse.json({ error: message }, { status: 503 });
+  }
+
   const { slug } = await params;
+  const ip = getClientIp(req);
+  const limited = await isRateLimited({
+    bucket: "booking-slots",
+    key: `${slug}:${ip}`,
+    limit: 60,
+    windowSec: 15 * 60,
+  });
+  if (limited) {
+    return NextResponse.json({ error: "Troppe richieste. Riprova tra qualche minuto." }, { status: 429 });
+  }
+
   const salon = await prisma.salon.findFirst({
     where: {
       bookingSlug: slug,

@@ -7,6 +7,7 @@ import { getCountryMeta } from "@/lib/geo";
 import { getClientIp } from "@/lib/request";
 import { clearRegisterRateLimit, isRegisterRateLimited, recordRegisterAttempt } from "@/lib/rate-limit";
 import { sendRegistrationWelcomeEmail } from "@/lib/email";
+import { DEFAULT_WHATSAPP_REMINDER_TEMPLATE } from "@/lib/default-templates";
 
 const defaultTreatments = [
   "Bagno",
@@ -77,8 +78,7 @@ export async function POST(req: NextRequest) {
         treatments: {
           create: defaultTreatments.map((nome, ordine) => ({ nome, ordine, attivo: true })),
         },
-        whatsappTemplate:
-          "Ciao %nome_cliente%, promemoria per %nome_pet% il %data_appuntamento% alle %orario_appuntamento% presso %nome_attivita% (%indirizzo_attivita%).",
+        whatsappTemplate: DEFAULT_WHATSAPP_REMINDER_TEMPLATE,
         emailTemplate:
           "Gentile %nome_cliente%,\nricordiamo l'appuntamento di %nome_pet% in data %data_appuntamento% alle %orario_appuntamento%.\n%nome_attivita%",
       },

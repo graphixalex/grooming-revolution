@@ -4,6 +4,7 @@ import { it as dateFnsIt } from "date-fns/locale";
 import { prisma } from "@/lib/prisma";
 import { getTomorrowUtcRangeForTimeZone } from "@/lib/timezone";
 import { sendWhatsAppTextViaApi } from "@/lib/whatsapp";
+import { assertCriticalEnv } from "@/lib/env-security";
 
 function isAuthorized(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
@@ -33,6 +34,8 @@ function renderReminderText(input: {
 }
 
 export async function GET(req: NextRequest) {
+  assertCriticalEnv("cron");
+
   if (!isAuthorized(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

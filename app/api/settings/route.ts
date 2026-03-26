@@ -8,6 +8,7 @@ import { canManageSettings } from "@/lib/rbac";
 import { createStaffSchema } from "@/lib/validators";
 import { slugifyBooking } from "@/lib/booking";
 import { sendAccountDeletionRequestEmails, sendPasswordChangedEmail } from "@/lib/email";
+import { DEFAULT_WHATSAPP_REMINDER_TEMPLATE } from "@/lib/default-templates";
 
 export async function GET() {
   const auth = await requireApiSession();
@@ -64,6 +65,10 @@ export async function GET() {
     salon: salon
       ? {
           ...salon,
+          whatsappTemplate:
+            typeof salon.whatsappTemplate === "string" && salon.whatsappTemplate.trim().length > 0
+              ? salon.whatsappTemplate
+              : DEFAULT_WHATSAPP_REMINDER_TEMPLATE,
           // Never expose stored token in clear text to the client.
           whatsappApiAccessToken: "",
         }
@@ -243,7 +248,10 @@ export async function PATCH(req: NextRequest) {
       const salon = await prisma.salon.update({
         where: { id: salonId },
         data: {
-          whatsappTemplate: body.whatsappTemplate,
+          whatsappTemplate:
+            typeof body.whatsappTemplate === "string" && body.whatsappTemplate.trim().length > 0
+              ? body.whatsappTemplate
+              : DEFAULT_WHATSAPP_REMINDER_TEMPLATE,
           whatsappApiEnabled: Boolean(body.whatsappApiEnabled),
           whatsappApiPhoneNumberId:
             typeof body.whatsappApiPhoneNumberId === "string" && body.whatsappApiPhoneNumberId.trim().length > 0
@@ -267,7 +275,10 @@ export async function PATCH(req: NextRequest) {
         const legacy = await prisma.salon.update({
           where: { id: salonId },
           data: {
-            whatsappTemplate: body.whatsappTemplate,
+            whatsappTemplate:
+              typeof body.whatsappTemplate === "string" && body.whatsappTemplate.trim().length > 0
+                ? body.whatsappTemplate
+                : DEFAULT_WHATSAPP_REMINDER_TEMPLATE,
           },
         });
         return NextResponse.json({

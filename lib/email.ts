@@ -1,4 +1,4 @@
-import { Resend } from "resend";
+﻿import { Resend } from "resend";
 
 function getResendClient() {
   const apiKey = process.env.RESEND_API_KEY;
@@ -137,100 +137,114 @@ export async function sendRegistrationWelcomeEmail(input: {
 }) {
   const appUrl = getAppUrl();
   const supportEmail = getSupportEmail();
-  const subject = "Benvenuto in Grooming Revolution - setup operativo completo";
+  const subject = "Benvenuto in Grooming Revolution - guida completa di attivazione";
 
   const html = renderShell({
     title: "Registrazione completata",
-    subtitle: "Benvenuto su Grooming Revolution",
+    subtitle: "Guida operativa completa per attivare il gestionale in modo corretto",
     bodyHtml: `
       <p style="margin:0 0 12px 0;font-size:14px;">
-        Ciao, grazie per aver scelto Grooming Revolution.
-        Il tuo account è pronto.
+        Gentile Cliente, grazie per aver scelto Grooming Revolution.
+        Il suo account e stato creato con successo.
       </p>
       <p style="margin:0 0 16px 0;font-size:14px;">
-        <strong>attività:</strong> ${escapeHtml(input.businessName)}<br/>
+        <strong>Attivita:</strong> ${escapeHtml(input.businessName)}<br/>
         <strong>Sede:</strong> ${escapeHtml(input.branchName || "Sede principale")}
       </p>
 
-      <div style="border:1px solid #f59e0b;background:#fffbeb;border-radius:10px;padding:12px 14px;margin:0 0 18px 0;">
+      <div style="border:1px solid #f59e0b;background:#fffbeb;border-radius:10px;padding:12px 14px;margin:0 0 16px 0;">
         <p style="margin:0;font-size:13px;line-height:1.5;">
-          Prima di iniziare con gli appuntamenti, completa questi passaggi in ordine.
-          Ti evitano errori in agenda, tempi sbagliati e report non allineati.
+          Per lavorare senza errori di agenda, tempi o report, consigliamo di seguire i passaggi qui sotto in ordine.
         </p>
       </div>
 
-      <h2 style="margin:0 0 8px 0;font-size:16px;">Checklist operativa (da fare subito)</h2>
-      <ol style="margin:0 0 16px 18px;padding:0;font-size:14px;line-height:1.6;">
-        <li><strong>Listino prezzi:</strong> vai su <strong>Listino</strong> e configura prezzo + durata media per servizio/taglia/razza (se vuoi). Questo guida stime e slot.</li>
-        <li><strong>Orari sede:</strong> in <strong>Impostazioni</strong> imposta giorni di apertura, orari e pause.</li>
-        <li><strong>Team:</strong> in <strong>Team e ruoli</strong> crea manager/staff e assegna sede/permessi.</li>
-        <li><strong>Operatori:</strong> configura operatori, disponibilità e KPI per monitorare produzione.</li>
-        <li><strong>Sedi multiple:</strong> se hai più sedi, crea/gestisci sedi da <strong>Sedi</strong> e verifica timezone/valuta per ognuna.</li>
-        <li><strong>Template messaggi:</strong> aggiorna testo WhatsApp/email in <strong>Impostazioni</strong>.</li>
+      <h2 style="margin:0 0 8px 0;font-size:16px;">Passaggi obbligatori per partire</h2>
+      <ol style="margin:0 0 16px 18px;padding:0;font-size:14px;line-height:1.65;">
+        <li><strong>Listino prezzi (obbligatorio):</strong> apra <strong>Listino</strong> e configuri per ogni servizio almeno <strong>prezzo</strong> e <strong>durata media</strong>. Senza listino completo il sistema non puo stimare correttamente i tempi in agenda.</li>
+        <li><strong>Operatori (obbligatorio):</strong> apra <strong>Impostazioni > Operatori</strong> e crei gli operatori reali della sede. <strong>L'agenda e gestita esclusivamente dagli operatori presenti in sede</strong> e dalle loro disponibilita.</li>
+        <li><strong>Disponibilita operatori:</strong> per ogni operatore imposti giorni, fasce orarie, pause ed eventuali eccezioni. Questo evita sovrapposizioni e slot non coerenti.</li>
+        <li><strong>Team e ruoli:</strong> in <strong>Impostazioni > Team e ruoli</strong> crei account manager/staff con i permessi corretti.</li>
+        <li><strong>Sedi multiple (se presenti):</strong> verifichi in <strong>Sedi</strong> timezone e configurazione di ogni sede.</li>
       </ol>
 
-      <h2 style="margin:0 0 8px 0;font-size:16px;">WhatsApp automatico e reminder</h2>
+      <h2 style="margin:0 0 8px 0;font-size:16px;">Cosa fa il gestionale</h2>
+      <ul style="margin:0 0 16px 18px;padding:0;font-size:14px;line-height:1.6;">
+        <li>Agenda intelligente con controllo conflitti e disponibilita reali.</li>
+        <li>Schede clienti e pet con storico operativo.</li>
+        <li>Booking online con validazione slot in tempo reale.</li>
+        <li>Incassi e report KPI per monitorare performance e crescita.</li>
+        <li>Workflow operativo multi-sede.</li>
+      </ul>
+
+      <h2 style="margin:0 0 8px 0;font-size:16px;">Configurazione WhatsApp API (consigliata)</h2>
       <p style="margin:0 0 8px 0;font-size:14px;line-height:1.6;">
-        Se colleghi WhatsApp API (Meta) in <strong>Impostazioni</strong>, il sistema può inviare reminder automatici giornalieri degli appuntamenti prenotati.
+        In <strong>Impostazioni > Template e WhatsApp</strong> puo attivare l'invio automatico promemoria tramite Meta WhatsApp API.
       </p>
-      <ul style="margin:0 0 16px 18px;padding:0;font-size:14px;line-height:1.6;">
-        <li>Inserisci <strong>Phone Number ID</strong></li>
-        <li>Inserisci <strong>Access Token</strong></li>
-        <li>Conferma versione API (default suggerita)</li>
-        <li>Attiva l&apos;invio API</li>
-      </ul>
+      <ol style="margin:0 0 12px 18px;padding:0;font-size:14px;line-height:1.6;">
+        <li>Inserisca <strong>Phone Number ID</strong> del numero WhatsApp Business.</li>
+        <li>Inserisca <strong>Access Token</strong> generato su Meta.</li>
+        <li>Confermi la versione API proposta dal sistema.</li>
+        <li>Abiliti l'opzione <strong>Invio WhatsApp API</strong>.</li>
+      </ol>
+      <p style="margin:0 0 8px 0;font-size:14px;line-height:1.6;">
+        Il gestionale imposta gia un testo professionale predefinito (modificabile in qualsiasi momento):
+      </p>
+      <div style="margin:0 0 16px 0;border:1px solid #e5e7eb;border-radius:10px;background:#f8fafc;padding:12px 14px;font-size:13px;line-height:1.55;">
+        <strong>Template predefinito:</strong><br/>
+        Gentile %nome_cliente%, le inviamo un promemoria per l'appuntamento di %nome_pet% previsto per il giorno %data_appuntamento% alle ore %orario_appuntamento% presso %nome_attivita%, %indirizzo_attivita%. Per eventuali modifiche o disdette, risponda pure a questo messaggio. Grazie.
+      </div>
+      <p style="margin:0 0 16px 0;font-size:13px;line-height:1.6;color:#334155;">
+        Variabili disponibili: <strong>%nome_cliente%</strong>, <strong>%nome_pet%</strong>, <strong>%data_appuntamento%</strong>, <strong>%orario_appuntamento%</strong>, <strong>%nome_attivita%</strong>, <strong>%indirizzo_attivita%</strong>.
+      </p>
 
-      <h2 style="margin:0 0 8px 0;font-size:16px;">Import clienti</h2>
+      <h2 style="margin:0 0 8px 0;font-size:16px;">Import clienti e avvio assistito</h2>
       <p style="margin:0 0 16px 0;font-size:14px;line-height:1.6;">
-        Se hai già una lista clienti storica, scrivici a
-        <a href="mailto:${escapeHtml(supportEmail)}" style="color:#b45309;">${escapeHtml(supportEmail)}</a>.
-        Il team può assisterti nel caricamento iniziale per partire in modo pulito.
+        Se possiede gia un archivio clienti, puo contattare il nostro team per supporto import iniziale e verifica qualita dati:
+        <a href="mailto:${escapeHtml(supportEmail)}" style="color:#b45309;font-weight:700;">${escapeHtml(supportEmail)}</a>.
       </p>
 
-      <h2 style="margin:0 0 8px 0;font-size:16px;">Come funziona la logica appuntamenti</h2>
-      <ul style="margin:0 0 16px 18px;padding:0;font-size:14px;line-height:1.6;">
-        <li>Durata appuntamento stimata dal listino (servizio/taglia, eventuali regole extra).</li>
-        <li>Controllo sovrapposizioni in base alle regole sede/operatori.</li>
-        <li>Check-out con POS/CASH, mance e report automatici.</li>
-        <li>Dashboard e report multi-sede in tempo reale.</li>
-      </ul>
-
-      <h2 style="margin:0 0 8px 0;font-size:16px;">Desktop + smartphone</h2>
-      <p style="margin:0 0 18px 0;font-size:14px;line-height:1.6;">
-        Grooming Revolution è ottimizzato per uso quotidiano anche da smartphone:
-        agenda, clienti, incassi e messaggi sono gestibili in mobilità.
+      <h2 style="margin:0 0 8px 0;font-size:16px;">Supporto clienti</h2>
+      <p style="margin:0 0 16px 0;font-size:14px;line-height:1.6;">
+        In caso di dubbi tecnici o operativi, il servizio clienti e disponibile 24 ore su 24, 7 giorni su 7.
+        Ci scriva a <a href="mailto:${escapeHtml(supportEmail)}" style="color:#0b1f8f;font-weight:700;">${escapeHtml(supportEmail)}</a> indicando sede e recapito.
       </p>
 
       <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 12px 0;">
         <tr>
           <td style="border-radius:10px;background:#111827;">
             <a href="${appUrl}/login" style="display:inline-block;padding:12px 18px;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;">
-              Accedi e completa il setup
+              Acceda ora e completi la configurazione
             </a>
           </td>
         </tr>
       </table>
 
       <p style="margin:0;font-size:12px;color:#6b7280;">
-        Se non hai effettuato tu questa registrazione, ignora questa email e contattaci subito.
+        Se non ha effettuato Lei questa registrazione, ignori questa email e contatti subito il supporto.
       </p>
     `,
   });
 
   const text =
-    `Ciao,\n\n` +
-    `benvenuto in Grooming Revolution. Il tuo account è pronto.\n` +
-    `attività: ${input.businessName}\n` +
+    `Gentile Cliente,\n\n` +
+    `benvenuto in Grooming Revolution. Il suo account e attivo.\n` +
+    `Attivita: ${input.businessName}\n` +
     `Sede: ${input.branchName || "Sede principale"}\n\n` +
-    `Setup consigliato prima di partire:\n` +
-    `1) Configura il listino con prezzi e durata media per servizio/taglia.\n` +
-    `2) Imposta giorni/orari di apertura e pause della sede.\n` +
-    `3) Crea team (manager/staff) e operatori con disponibilità.\n` +
-    `4) Se hai più sedi, configura ciascuna sede (timezone/valuta).\n` +
-    `5) Configura template messaggi e WhatsApp API per reminder automatici.\n` +
-    `6) Se hai lista clienti, contattaci per supporto import.\n\n` +
+    `Passaggi obbligatori per il corretto funzionamento:\n` +
+    `1) Listino prezzi: configuri prezzo e durata media per ogni servizio.\n` +
+    `2) Operatori: crei gli operatori della sede (l'agenda e gestita esclusivamente dagli operatori presenti in sede).\n` +
+    `3) Disponibilita operatori: imposti giorni, orari, pause ed eccezioni.\n` +
+    `4) Team e ruoli: aggiunga manager/staff con permessi adeguati.\n` +
+    `5) Se multi-sede, verifichi timezone e configurazione per ogni sede.\n\n` +
+    `WhatsApp API (consigliata):\n` +
+    `- Inserisca Phone Number ID\n` +
+    `- Inserisca Access Token\n` +
+    `- Confermi versione API\n` +
+    `- Attivi invio WhatsApp API\n` +
+    `Template predefinito (modificabile):\n` +
+    `Gentile %nome_cliente%, le inviamo un promemoria per l'appuntamento di %nome_pet% previsto per il giorno %data_appuntamento% alle ore %orario_appuntamento% presso %nome_attivita%, %indirizzo_attivita%. Per eventuali modifiche o disdette, risponda pure a questo messaggio. Grazie.\n\n` +
     `Accesso: ${appUrl}/login\n` +
-    `Supporto: ${supportEmail}\n`;
+    `Supporto clienti H24/7: ${supportEmail}\n`;
 
   return sendEmail({ to: input.to, subject, text, html });
 }
@@ -253,7 +267,7 @@ export async function sendPasswordResetEmail(input: {
         Abbiamo ricevuto una richiesta di reimpostazione password per il tuo account.
       </p>
       <p style="margin:0 0 14px 0;font-size:14px;">
-        Il link seguente è valido per <strong>${input.expiresInMinutes} minuti</strong> e può essere usato una sola volta.
+        Il link seguente Ã¨ valido per <strong>${input.expiresInMinutes} minuti</strong> e puÃ² essere usato una sola volta.
       </p>
       <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 14px 0;">
         <tr>
@@ -294,7 +308,7 @@ export async function sendPasswordChangedEmail(input: {
     subtitle: "Conferma modifica credenziali",
     bodyHtml: `
       <p style="margin:0 0 12px 0;font-size:14px;">
-        Ti confermiamo che la password del tuo account è stata aggiornata${escapeHtml(by)}.
+        Ti confermiamo che la password del tuo account Ã¨ stata aggiornata${escapeHtml(by)}.
       </p>
       <p style="margin:0;font-size:13px;color:#6b7280;">
         Se non riconosci questa modifica, reimposta subito la password e contatta il supporto.
@@ -303,7 +317,7 @@ export async function sendPasswordChangedEmail(input: {
   });
 
   const text =
-    `La password del tuo account è stata aggiornata${by}.\n` +
+    `La password del tuo account Ã¨ stata aggiornata${by}.\n` +
     `Se non riconosci questa modifica, reimposta subito la password e contatta il supporto.\n`;
 
   return sendEmail({ to: input.to, subject, text, html });
@@ -333,7 +347,7 @@ export async function sendAccountDeletionRequestEmails(input: {
       <p style="margin:0 0 4px 0;font-size:14px;"><strong>Indirizzo:</strong> ${escapeHtml(input.salonAddress || "-")}</p>
       <p style="margin:0 0 4px 0;font-size:14px;"><strong>Paese:</strong> ${escapeHtml(input.country || "-")}</p>
       <p style="margin:0 0 4px 0;font-size:14px;"><strong>Timezone:</strong> ${escapeHtml(input.timezone || "-")}</p>
-      <p style="margin:0 0 4px 0;font-size:14px;"><strong>attività:</strong> ${escapeHtml(input.businessName)}</p>
+      <p style="margin:0 0 4px 0;font-size:14px;"><strong>attivitÃ :</strong> ${escapeHtml(input.businessName)}</p>
       <p style="margin:0 0 4px 0;font-size:14px;"><strong>Sede:</strong> ${escapeHtml(input.branchName || "Sede principale")}</p>
       <p style="margin:0;font-size:14px;"><strong>Salon ID:</strong> ${escapeHtml(input.salonId)}</p>
     `,
@@ -346,7 +360,7 @@ export async function sendAccountDeletionRequestEmails(input: {
     `Indirizzo: ${input.salonAddress || "-"}\n` +
     `Paese: ${input.country || "-"}\n` +
     `Timezone: ${input.timezone || "-"}\n` +
-    `attività: ${input.businessName}\n` +
+    `attivitÃ : ${input.businessName}\n` +
     `Sede: ${input.branchName || "Sede principale"}\n` +
     `Salon ID: ${input.salonId}\n`;
   const supportRes = await sendEmail({
@@ -368,14 +382,14 @@ export async function sendAccountDeletionRequestEmails(input: {
         Prima della chiusura definitiva, esporta la tua lista clienti in CSV da Impostazioni.
       </p>
       <p style="margin:0;font-size:14px;">
-        L'eliminazione è irreversibile. Il team supporto ti contatterà a breve per conferma.
+        L'eliminazione Ã¨ irreversibile. Il team supporto ti contatterÃ  a breve per conferma.
       </p>
     `,
   });
   const ownerText =
     `Richiesta eliminazione account ricevuta.\n` +
-    `attività: ${input.businessName}\n` +
-    `Prima di procedere esporta la lista clienti in CSV: l'eliminazione è irreversibile.\n`;
+    `attivitÃ : ${input.businessName}\n` +
+    `Prima di procedere esporta la lista clienti in CSV: l'eliminazione Ã¨ irreversibile.\n`;
   const ownerRes = await sendEmail({
     to: input.ownerEmail,
     subject: ownerSubject,
@@ -385,5 +399,6 @@ export async function sendAccountDeletionRequestEmails(input: {
 
   return { ok: supportRes.ok && ownerRes.ok, supportRes, ownerRes };
 }
+
 
 

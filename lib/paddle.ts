@@ -60,6 +60,15 @@ export function verifyPaddleSignature(rawBody: string, signatureHeader: string, 
   }
 
   if (!timestamp || signatures.length === 0) return false;
+  const timestampSeconds = Number.parseInt(timestamp, 10);
+  if (!Number.isFinite(timestampSeconds)) return false;
+
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  const maxSkewSeconds = 5 * 60;
+  if (Math.abs(nowSeconds - timestampSeconds) > maxSkewSeconds) {
+    return false;
+  }
+
   const expected = crypto
     .createHmac("sha256", secret)
     .update(`${timestamp}:${rawBody}`)
@@ -67,4 +76,3 @@ export function verifyPaddleSignature(rawBody: string, signatureHeader: string, 
 
   return signatures.some((signature) => safeEqualHex(signature, expected));
 }
-

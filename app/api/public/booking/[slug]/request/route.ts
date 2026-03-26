@@ -3,6 +3,9 @@ import { BookingTrustFlag, DogSize } from "@prisma/client";
 import { addDays, subMinutes } from "date-fns";
 import { prisma } from "@/lib/prisma";
 import { getBookingSlotOptions, isBookingSlotStillAvailable } from "@/lib/booking";
+import { getClientIp } from "@/lib/request";
+import { isRateLimited } from "@/lib/security-controls";
+import { assertCriticalEnv } from "@/lib/env-security";
 
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const RATE_LIMIT_MAX = 20;
@@ -12,7 +15,24 @@ function normalizePhone(value: string) {
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
+  try {
+    assertCriticalEnv("rateLimit");
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Configurazione sicurezza non valida";
+    return NextResponse.json({ error: message }, { status: 503 });
+  }
+
   const { slug } = await params;
+  const ip = getClientIp(req);
+  const ipLimited = await isRateLimited({
+    bucket: "booking-request-ip",
+    key: `${slug}:${ip}`,
+    limit: 12,
+    windowSec: 15 * 60,
+  });
+  if (ipLimited) {
+    return NextResponse.json({ error: "Troppi tentativi. Riprova tra qualche minuto." }, { status: 429 });
+  }
 
   const salon = await prisma.salon.findFirst({
     where: { bookingSlug: slug, bookingEnabled: true, subscriptionPlan: { not: "FREE" } },
@@ -42,6 +62,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   }
   if (!["XS", "S", "M", "L", "XL", "XXL"].includes(dogTaglia) || Number.isNaN(selectedStartAt.getTime())) {
     return NextResponse.json({ error: "Dati cane/data non validi" }, { status: 400 });
+  }
+  const phoneLimited = await isRateLimited({
+    bucket: "booking-request-phone",
+    key: `${slug}:${clientTelefono}`,
+    limit: 8,
+    windowSec: 15 * 60,
+  });
+  if (phoneLimited) {
+    return NextResponse.json({ error: "Troppi tentativi. Riprova tra qualche minuto." }, { status: 429 });
   }
 
   const recentByPhone = await prisma.bookingRequest.count({

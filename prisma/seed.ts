@@ -43,7 +43,7 @@ async function main() {
       telefono: "+39021234567",
       email: "info@groomingrevolution.local",
       whatsappTemplate:
-        "Ciao %nome_cliente%, promemoria per %nome_pet% il %data_appuntamento% alle %orario_appuntamento% presso %nome_attività% (%indirizzo_attività%).",
+        "Gentile %nome_cliente%, le inviamo un promemoria per l'appuntamento di %nome_pet% previsto per il giorno %data_appuntamento% alle ore %orario_appuntamento% presso %nome_attivita%, %indirizzo_attivita%. Per eventuali modifiche o disdette, risponda pure a questo messaggio. Grazie.",
       emailTemplate:
         "Gentile %nome_cliente%,\n\nricordiamo l'appuntamento di %nome_pet% in data %data_appuntamento% alle ore %orario_appuntamento%.\n\n%nome_attività%",
       workingHoursJson: {

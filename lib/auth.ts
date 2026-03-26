@@ -3,6 +3,10 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { clearLoginRateLimit, isLoginRateLimited, recordFailedLoginAttempt } from "@/lib/rate-limit";
+import { getClientIpFromHeaders } from "@/lib/request";
+import { assertCriticalEnv } from "@/lib/env-security";
+
+assertCriticalEnv("auth");
 
 export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt" },
@@ -14,15 +18,22 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         const email = credentials?.email?.toLowerCase().trim();
         const password = credentials?.password;
         if (!email || !password) return null;
-        if (isLoginRateLimited(email)) throw new Error("Troppi tentativi di login");
+
+        const ip = getClientIpFromHeaders(new Headers((req as { headers?: HeadersInit } | undefined)?.headers));
+        const limiterKey = `${email}:${ip}`;
+
+        if (isLoginRateLimited(limiterKey, 8, 15 * 60 * 1000) || isLoginRateLimited(email, 30, 15 * 60 * 1000)) {
+          throw new Error("Troppi tentativi di login");
+        }
 
         const users = await prisma.user.findMany({ where: { email } });
         if (users.length === 0) {
-          recordFailedLoginAttempt(email);
+          recordFailedLoginAttempt(limiterKey, 8, 15 * 60 * 1000);
+          recordFailedLoginAttempt(email, 30, 15 * 60 * 1000);
           return null;
         }
 
@@ -33,11 +44,13 @@ export const authOptions: NextAuthOptions = {
           }
         }
         if (matched.length !== 1) {
-          recordFailedLoginAttempt(email);
+          recordFailedLoginAttempt(limiterKey, 8, 15 * 60 * 1000);
+          recordFailedLoginAttempt(email, 30, 15 * 60 * 1000);
           return null;
         }
         const user = matched[0];
 
+        clearLoginRateLimit(limiterKey);
         clearLoginRateLimit(email);
 
         return {

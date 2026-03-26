@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/api-auth";
 import { canManageSettings } from "@/lib/rbac";
 import { paddleApiRequest, getRequiredPaddleEnv } from "@/lib/paddle";
+import { assertCriticalEnv } from "@/lib/env-security";
 
 type PaddleCustomer = { id: string };
 type PaddleTransaction = { checkout?: { url?: string } };
@@ -15,6 +16,8 @@ function resolveAppUrl(req: Request) {
 
 export async function POST(req: Request) {
   try {
+    assertCriticalEnv("paddle");
+
     const auth = await requireApiSession();
     if ("error" in auth) return auth.error;
     if (!canManageSettings(auth.session.user.role as any)) {

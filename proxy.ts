@@ -10,6 +10,8 @@ const publicRoutes = [
   "/api/auth",
   "/api/register",
   "/api/public",
+  "/api/paddle/webhook",
+  "/api/cron/whatsapp-reminders",
   "/book",
   "/legal",
   "/terms-and-conditions",
