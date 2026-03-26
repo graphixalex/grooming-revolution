@@ -32,6 +32,7 @@ export default async function SupportPage() {
         <p>
           Consulta le pagine <a href="/legal/privacy" className="text-cyan-700 hover:text-cyan-800">Privacy Policy</a>,{" "}
           <a href="/legal/terms" className="text-cyan-700 hover:text-cyan-800">Termini di Servizio</a> e{" "}
+          <a href="/dpa" className="text-cyan-700 hover:text-cyan-800">DPA</a>,{" "}
           <a href="/legal/cookies" className="text-cyan-700 hover:text-cyan-800">Cookie Policy</a>.
         </p>
       </Card>

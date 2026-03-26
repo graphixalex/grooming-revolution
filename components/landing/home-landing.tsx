@@ -1153,6 +1153,9 @@ export function HomeLanding() {
               <Link href="/legal/terms" className="transition-colors hover:text-cyan-400">
                 Termini di Servizio
               </Link>
+              <Link href="/dpa" className="transition-colors hover:text-cyan-400">
+                DPA
+              </Link>
               <Link href="/legal/cookies" className="transition-colors hover:text-cyan-400">
                 Cookie Policy
               </Link>

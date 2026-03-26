@@ -44,8 +44,9 @@ export default function RefundPolicyPage() {
 
         <h2 className="text-lg font-semibold">3. Regola generale sui rimborsi</h2>
         <p>
-          Salvo quanto previsto dai diritti obbligatori di legge, le transazioni digitali gia eseguite sono di norma non rimborsabili.
-          Rimangono comunque possibili rimborsi nei casi previsti dalle sezioni successive o quando richiesto dalla normativa.
+          Salvo quanto previsto dai diritti obbligatori di legge, i corrispettivi per servizi digitali gia erogati o gia fruiti
+          non sono di norma rimborsabili. Rimangono comunque possibili rimborsi nei casi previsti dalle sezioni successive
+          o quando richiesto dalla normativa.
         </p>
 
         <h2 className="text-lg font-semibold">4. Diritto di recesso e finestre temporali</h2>
@@ -68,6 +69,10 @@ export default function RefundPolicyPage() {
         <p>
           Quando il servizio digitale e gia stato attivato e utilizzato con consenso espresso all&apos;esecuzione immediata,
           il diritto di recesso puo risultare limitato o non applicabile, salvo diversi obblighi di legge locale.
+        </p>
+        <p>
+          L&apos;avvio del servizio e l&apos;uso effettivo delle funzionalita SaaS possono costituire inizio dell&apos;esecuzione del contratto
+          digitale ai sensi della normativa applicabile.
         </p>
 
         <h2 className="text-lg font-semibold">6. Casi in cui il rimborso puo essere riconosciuto</h2>

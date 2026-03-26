@@ -46,45 +46,70 @@ export default function TermsPage() {
           Salvo diverso accordo scritto, il salone Cliente agisce come Titolare del trattamento verso i propri clienti finali.
           Cecilia Luxury Grooming agisce come fornitore tecnico e Responsabile del trattamento.
         </p>
+        <p>
+          Le condizioni operative del trattamento per conto del Cliente sono disciplinate anche dal{" "}
+          <a className="underline" href="/dpa">
+            Data Processing Agreement (DPA)
+          </a>
+          .
+        </p>
 
-        <h2 className="text-lg font-semibold">6. Servizi e provider terzi</h2>
+        <h2 className="text-lg font-semibold">6. Proprieta dei dati del Cliente</h2>
+        <p>
+          Tutti i dati inseriti dal Cliente nella piattaforma (anagrafiche, appuntamenti, storico operazioni, configurazioni e contenuti)
+          restano di proprieta esclusiva del Cliente. Il Fornitore non acquisisce alcun diritto di proprieta su tali dati.
+        </p>
+
+        <h2 className="text-lg font-semibold">7. Portabilita ed esportazione dati</h2>
+        <p>
+          Il Cliente puo esportare i propri dati in formato leggibile secondo le funzionalita disponibili in piattaforma
+          (ad esempio CSV o formati equivalenti), durante il rapporto contrattuale.
+        </p>
+
+        <h2 className="text-lg font-semibold">8. Cessazione servizio e cancellazione dati</h2>
+        <p>
+          Alla cessazione del servizio, il Cliente puo richiedere esportazione finale dei dati entro un periodo tecnico ragionevole.
+          Decorso tale periodo, i dati possono essere cancellati o anonimizzati, salvo obblighi legali di conservazione.
+        </p>
+
+        <h2 className="text-lg font-semibold">9. Servizi e provider terzi</h2>
         <p>
           Alcune funzionalita dipendono da provider terzi (es. infrastruttura cloud, invio email, pagamenti, canali di messaggistica).
           Il Cliente resta responsabile dell&apos;uso conforme di tali canali e del rispetto delle policy dei singoli provider.
         </p>
 
-        <h2 className="text-lg font-semibold">7. Disponibilita e manutenzione</h2>
+        <h2 className="text-lg font-semibold">10. Disponibilita e manutenzione</h2>
         <p>
           Il Fornitore adotta misure ragionevoli per continuita e sicurezza del servizio, senza garanzia di disponibilita ininterrotta.
           Possono verificarsi sospensioni per manutenzione, aggiornamenti o cause di forza maggiore.
         </p>
 
-        <h2 className="text-lg font-semibold">8. Proprieta intellettuale</h2>
+        <h2 className="text-lg font-semibold">11. Proprieta intellettuale</h2>
         <p>
           Codice, interfaccia, marchio Grooming Revolution, documentazione e contenuti restano di proprieta di
           Cecilia Luxury Grooming
           o dei rispettivi titolari. Al Cliente e concessa una licenza d&apos;uso non esclusiva, non trasferibile e limitata alla durata del rapporto.
         </p>
 
-        <h2 className="text-lg font-semibold">9. Limitazione di responsabilita</h2>
+        <h2 className="text-lg font-semibold">12. Limitazione di responsabilita</h2>
         <p>
           Nei limiti di legge, la responsabilita complessiva del Fornitore per danni diretti e limitata ai canoni corrisposti dal Cliente
           nei 12 mesi precedenti l&apos;evento. Restano esclusi, ove consentito, danni indiretti e perdita di profitto o opportunita.
         </p>
 
-        <h2 className="text-lg font-semibold">10. Sospensione e risoluzione</h2>
+        <h2 className="text-lg font-semibold">13. Sospensione e risoluzione</h2>
         <p>
           Il Fornitore puo sospendere o risolvere l&apos;accesso in caso di violazioni rilevanti, rischio sicurezza o mancato pagamento.
           Il Cliente puo disdire secondo le modalita indicate nella sezione Billing.
         </p>
 
-        <h2 className="text-lg font-semibold">11. Legge applicabile e foro competente</h2>
+        <h2 className="text-lg font-semibold">14. Legge applicabile e foro competente</h2>
         <p>
           I presenti Termini sono regolati dal diritto svizzero, salvo norme imperative diverse. Foro competente: Svizzera,
           salva diversa inderogabile previsione di legge.
         </p>
 
-        <h2 className="text-lg font-semibold">12. Modifiche ai Termini</h2>
+        <h2 className="text-lg font-semibold">15. Modifiche ai Termini</h2>
         <p>
           I Termini possono essere aggiornati per esigenze tecniche, legali o organizzative. La versione vigente e sempre pubblicata
           su questa pagina con data di aggiornamento.

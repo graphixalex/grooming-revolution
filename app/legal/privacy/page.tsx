@@ -14,6 +14,13 @@ export default function PrivacyPage() {
           Per i dati dei clienti finali inseriti dai saloni, il salone Cliente agisce di norma come Titolare del trattamento.
           Cecilia Luxury Grooming agisce come fornitore tecnico e Responsabile del trattamento per conto del Cliente.
         </p>
+        <p>
+          Per dettagli operativi (istruzioni, misure, sub-responsabili, assistenza ai diritti), si applica il{" "}
+          <a className="underline" href="/dpa">
+            Data Processing Agreement (DPA)
+          </a>
+          .
+        </p>
 
         <h2 className="text-lg font-semibold">2. Categorie di dati trattati</h2>
         <p>
@@ -33,6 +40,9 @@ export default function PrivacyPage() {
           I dati sono conservati per il tempo necessario alle finalita contrattuali e agli obblighi normativi.
           In caso di cessazione, i dati vengono cancellati o anonimizzati entro tempi tecnici ragionevoli,
           salvo obblighi legali di conservazione.
+        </p>
+        <p>
+          Durante la durata del servizio, il Cliente puo esportare i dati disponibili tramite le funzioni di portabilita presenti in piattaforma.
         </p>
 
         <h2 className="text-lg font-semibold">5. Sub-responsabili e terze parti</h2>
