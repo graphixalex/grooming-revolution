@@ -38,8 +38,6 @@ export default async function SettingsPage() {
         workingHoursJson: true,
         holidaysJson: true,
         subscriptionPlan: true,
-        stripeCustomerId: true,
-        stripeSubscriptionId: true,
         billingVatNumber: true,
         billingCountry: true,
         bookingEnabled: true,

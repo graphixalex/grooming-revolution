@@ -20,7 +20,7 @@ EN: Multi-tenant SaaS management platform for dog grooming businesses, with Ital
 - PostgreSQL + Prisma
 - NextAuth Credentials + argon2
 - Zod validation
-- Stripe (billing base + webhook endpoint)
+- Paddle Billing (hosted checkout + webhook endpoint)
 
 ## Funzionalita / Features
 
@@ -107,9 +107,11 @@ Minimal example:
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/grooming_revolution?schema=public"
 NEXTAUTH_URL="http://localhost:3000"
 NEXTAUTH_SECRET="change-this-long-secret"
-STRIPE_SECRET_KEY="sk_test_xxx"
-STRIPE_WEBHOOK_SECRET="whsec_xxx"
-STRIPE_PRICE_ID_PRO="price_xxx"
+PADDLE_ENV="sandbox"
+PADDLE_API_KEY="pdl_sdbx_apikey_xxx"
+PADDLE_CLIENT_TOKEN="test_xxx"
+PADDLE_WEBHOOK_SECRET="pdl_ntfset_xxx"
+PADDLE_PRICE_ID_PRO="pri_xxx"
 UPSTASH_REDIS_REST_URL=""
 UPSTASH_REDIS_REST_TOKEN=""
 RESEND_API_KEY=""
@@ -164,14 +166,14 @@ npm run db:push
 - `GET /api/payments/export`
 - `POST/GET/PATCH /api/pricing-rules`
 - `POST /api/active-salon`
-- `POST /api/stripe/webhook`
+- `POST /api/paddle/webhook`
 - `POST /api/auth/forgot-password`
 - `POST /api/auth/reset-password`
 
 ## Billing Note
 
-IT: Trial fino a 100 clienti, poi FULL a 20 EUR/mese + IVA (addebito automatico Stripe previsto).
-EN: Trial up to 100 clients, then FULL at 20 EUR/month + VAT (Stripe automatic billing flow intended).
+IT: Trial fino a 100 clienti, poi FULL a 20 EUR/mese + IVA (addebito automatico Paddle con checkout ospitato).
+EN: Trial up to 100 clients, then FULL at 20 EUR/month + VAT (Paddle automatic billing with hosted checkout).
 
 ## Transactional Emails
 

@@ -10,7 +10,31 @@ export default async function BillingPage() {
     redirect("/planner");
   }
 
-  const salon = await prisma.salon.findUnique({ where: { id: session.user.salonId } });
+  const salon = await prisma.salon.findUnique({
+    where: { id: session.user.salonId },
+    select: {
+      id: true,
+      subscriptionPlan: true,
+      vatRate: true,
+      billingVatNumber: true,
+      billingCountry: true,
+    },
+  });
+
+  let paddleSubscriptionId: string | null = null;
+  try {
+    const rows = await prisma.$queryRaw<Array<{ paddleSubscriptionId: string | null }>>`
+      SELECT "paddleSubscriptionId"
+      FROM "Salon"
+      WHERE "id" = ${session.user.salonId}
+      LIMIT 1
+    `;
+    paddleSubscriptionId = rows[0]?.paddleSubscriptionId ?? null;
+  } catch {
+    paddleSubscriptionId = null;
+  }
+
+  const hasPaddleSubscription = Boolean(paddleSubscriptionId);
   const monthlyNet = 20;
   const vatPercent = Number(salon?.vatRate ?? 22);
   const monthlyGross = monthlyNet * (1 + vatPercent / 100);
@@ -27,12 +51,15 @@ export default async function BillingPage() {
         <p className="text-sm text-zinc-600">Totale indicativo mensile: EUR {monthlyGross.toFixed(2)} IVA inclusa.</p>
         <p className="text-sm text-zinc-600">Pagamento automatico mensile su carta tramite Paddle, finche non disdici.</p>
         <p className="text-sm text-zinc-600">
-          Stato addebito automatico: {salon?.stripeSubscriptionId ? "ATTIVO" : "NON ATTIVO"}
+          Stato addebito automatico: {hasPaddleSubscription ? "ATTIVO" : "NON ATTIVO"}
         </p>
         <p className="text-sm text-zinc-600">
           VAT: {salon?.billingVatNumber || "non impostata"} - Paese: {salon?.billingCountry || "-"}
         </p>
-        <ProConsentActions />
+        <ProConsentActions
+          currentPlan={(salon?.subscriptionPlan ?? "FREE") as "FREE" | "PRO"}
+          hasPaddleSubscription={hasPaddleSubscription}
+        />
       </Card>
 
       <Card>

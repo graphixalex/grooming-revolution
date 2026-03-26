@@ -30,7 +30,6 @@
     "@radix-ui/react-slot": "^1.2.4",
     "@radix-ui/react-switch": "^1.2.6",
     "@radix-ui/react-tabs": "^1.1.13",
-    "@stripe/stripe-js": "^8.9.0",
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.36.3",
     "argon2": "^0.44.0",
@@ -48,7 +47,6 @@
     "react-dom": "19.2.3",
     "react-hook-form": "^7.71.2",
     "resend": "^6.9.4",
-    "stripe": "^20.4.0",
     "tailwind-merge": "^3.5.0",
     "zod": "^4.3.6"
   },

@@ -596,7 +596,7 @@ export function SettingsClient({ initial }: { initial: any }) {
                 </Button>
               </div>
               <p className="text-xs text-zinc-600">
-                Qui puoi inserire eccezioni per una data precisa (es. un sabato del mese). Se disattivi "Attivo" blocchi quel giorno.
+                Qui puoi inserire eccezioni per una data precisa (es. un sabato del mese). Se disattivi &quot;Attivo&quot; blocchi quel giorno.
               </p>
               {(op.exceptions || []).length === 0 ? (
                 <p className="text-xs text-zinc-500">Nessuna eccezione configurata.</p>
