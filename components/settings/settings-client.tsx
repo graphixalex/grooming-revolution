@@ -322,36 +322,6 @@ export function SettingsClient({ initial }: { initial: any }) {
           placeholder="Descrizione breve pagina booking"
         />
         <div className="space-y-3 rounded-xl border border-zinc-200 bg-zinc-50 p-3">
-          <div className="rounded-lg border border-zinc-200 bg-white p-3">
-            <label className="flex items-start gap-2 text-sm text-zinc-800">
-              <input
-                type="checkbox"
-                checked={Boolean(salon.firstVisitAnamnesisEnabled)}
-                onChange={(e) => setSalon({ ...salon, firstVisitAnamnesisEnabled: e.target.checked })}
-                className="mt-1"
-              />
-              <span>
-                <span className="font-medium">Attiva modulo &quot;Anamnesi prima volta&quot;</span>
-                <br />
-                Se attivo, nella scheda cliente compare il modulo firmabile su tablet. Se disattivo, resta nascosto.
-              </span>
-            </label>
-          </div>
-          <div className="rounded-lg border border-zinc-200 bg-white p-3">
-            <label className="flex items-start gap-2 text-sm text-zinc-800">
-              <input
-                type="checkbox"
-                checked={Boolean(salon.mattingConsentEnabled)}
-                onChange={(e) => setSalon({ ...salon, mattingConsentEnabled: e.target.checked })}
-                className="mt-1"
-              />
-              <span>
-                <span className="font-medium">Attiva modulo &quot;In caso di nodi&quot;</span>
-                <br />
-                Se attivo, nella scheda cliente compare il modulo di consenso per snodatura/tosatura sotto i nodi.
-              </span>
-            </label>
-          </div>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <p className="text-sm font-semibold text-zinc-900">Booking online pubblico</p>

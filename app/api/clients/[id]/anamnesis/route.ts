@@ -22,27 +22,12 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
   const { id } = await params;
   const salonId = auth.session.user.salonId;
 
-  const [client, salon] = await Promise.all([
-    prisma.client.findFirst({
-      where: { id, salonId, deletedAt: null },
-      select: { id: true },
-    }),
-    prisma.salon.findUnique({
-      where: { id: salonId },
-      select: { firstVisitAnamnesisEnabled: true },
-    }),
-  ]);
+  const client = await prisma.client.findFirst({
+    where: { id, salonId, deletedAt: null },
+    select: { id: true },
+  });
 
   if (!client) return NextResponse.json({ error: "Cliente non trovato" }, { status: 404 });
-
-  if (!salon?.firstVisitAnamnesisEnabled) {
-    return NextResponse.json({
-      enabled: false,
-      template: null,
-      history: [],
-      active: null,
-    });
-  }
 
   const [template, history] = await Promise.all([
     getActiveFirstVisitAnamnesisTemplate(salonId),
@@ -98,21 +83,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const { id } = await params;
   const salonId = auth.session.user.salonId;
 
-  const [client, salon] = await Promise.all([
-    prisma.client.findFirst({
-      where: { id, salonId, deletedAt: null },
-      select: { id: true, nome: true, cognome: true, telefono: true },
-    }),
-    prisma.salon.findUnique({
-      where: { id: salonId },
-      select: { firstVisitAnamnesisEnabled: true },
-    }),
-  ]);
+  const client = await prisma.client.findFirst({
+    where: { id, salonId, deletedAt: null },
+    select: { id: true, nome: true, cognome: true, telefono: true },
+  });
 
   if (!client) return NextResponse.json({ error: "Cliente non trovato" }, { status: 404 });
-  if (!salon?.firstVisitAnamnesisEnabled) {
-    return NextResponse.json({ error: "Modulo anamnesi prima volta disattivato in impostazioni." }, { status: 400 });
-  }
 
   const body = await req.json();
   const parsed = signFirstVisitAnamnesisSchema.safeParse(body);
