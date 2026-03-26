@@ -68,6 +68,7 @@ export function PublicBookingClient({ slug }: { slug: string }) {
   const [estimatedDuration, setEstimatedDuration] = useState<number | null>(null);
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [sending, setSending] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
   const [searchAnchorIso, setSearchAnchorIso] = useState<string>("");
   const [alternativesUsed, setAlternativesUsed] = useState(false);
   const [selectedWeek, setSelectedWeek] = useState<string>(getIsoWeekString());
@@ -128,6 +129,7 @@ export function PublicBookingClient({ slug }: { slug: string }) {
       alert(data.error || "Errore calcolo slot");
       return;
     }
+    setHasSearched(true);
     setEstimatedDuration(data.estimatedDurationMin || null);
     setSlots(data.slots || []);
     setSelectedSlotKey("");
@@ -195,7 +197,7 @@ export function PublicBookingClient({ slug }: { slug: string }) {
                 Prenota il tuo appuntamento in modo smart e veloce
               </h1>
               <p className="max-w-3xl text-sm text-zinc-200 md:text-base">
-                Scegli servizio e dati del cane, ottieni 6 orari disponibili reali e invia la richiesta in meno di 1 minuto.
+                Scegli servizio e dati del cane, ottieni fino a 6 orari disponibili reali e invia la richiesta in meno di 1 minuto.
                 Il team conferma in base alle regole del salone.
               </p>
               <p className="text-sm font-semibold text-amber-300">{displayName}</p>
@@ -247,13 +249,14 @@ export function PublicBookingClient({ slug }: { slug: string }) {
                 onChange={(e) => {
                   setSelectedWeek(e.target.value);
                   setAlternativesUsed(false);
+                  setHasSearched(false);
                   setSlots([]);
                   setSelectedSlotKey("");
                 }}
               />
             </div>
             <Button className="h-11 w-full sm:w-auto" onClick={() => void loadSlots("initial")} disabled={slotsLoading}>
-              {slotsLoading ? "Calcolo opzioni..." : "Trova 6 opzioni disponibili"}
+              {slotsLoading ? "Calcolo opzioni..." : "Trova fino a 6 opzioni disponibili"}
             </Button>
             <p className="text-xs text-zinc-600">
               Dopo aver compilato i dati e premuto il bottone, il sistema mostra solo slot reali disponibili in agenda.
@@ -280,16 +283,24 @@ export function PublicBookingClient({ slug }: { slug: string }) {
                 })}
               </div>
             ) : (
-              <p className="text-sm text-zinc-600">Le opzioni orarie appariranno qui.</p>
+              <p className="text-sm text-zinc-600">
+                {hasSearched
+                  ? "Nessuno slot trovato in questa settimana. Prova con la ricerca nella settimana successiva."
+                  : "Le opzioni orarie appariranno qui."}
+              </p>
             )}
-            {slots.length > 0 && !alternativesUsed ? (
+            {hasSearched && !alternativesUsed ? (
               <Button
                 variant="outline"
                 className="h-10 w-full sm:w-auto"
                 onClick={() => void loadSlots("alternative")}
                 disabled={slotsLoading}
               >
-                {slotsLoading ? "Generazione..." : "Genera altre 6 alternative"}
+                {slotsLoading
+                  ? "Generazione..."
+                  : slots.length > 0
+                    ? "Genera altre 6 alternative"
+                    : "Cerca nella settimana successiva"}
               </Button>
             ) : null}
             {alternativesUsed ? (

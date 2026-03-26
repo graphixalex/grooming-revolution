@@ -96,6 +96,15 @@ function getDayKeyAndMinutesInTimeZone(date: Date, timeZone: string) {
   };
 }
 
+function shuffleArray<T>(items: T[]) {
+  const out = [...items];
+  for (let i = out.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
 export function slugifyBooking(value: string) {
   return value
     .toLowerCase()
@@ -189,7 +198,7 @@ export async function getBookingSlotOptions(params: {
 
   if (!salon) return { durationMin, slots: [] as SlotOption[] };
 
-  const results: SlotOption[] = [];
+  const candidateSlotsByDay = new Map<string, SlotOption[]>();
   const operatorsEnabled = operators.length > 0;
   const now = new Date();
   const timeZone = salon.timezone || "Europe/Zurich";
@@ -201,11 +210,9 @@ export async function getBookingSlotOptions(params: {
     day: startParts.day || nowParts.day,
   };
 
-  for (let dayOffset = 0; dayOffset <= 20 && results.length < maxOptions; dayOffset += 1) {
+  // Cerca fino a 8 settimane per non rimanere bloccati se la prima settimana e piena.
+  for (let dayOffset = 0; dayOffset <= 55; dayOffset += 1) {
     const ymd = addDaysToYmd(baseYmd, dayOffset);
-
-    let dayAdded = 0;
-    let firstDayStartMin: number | null = null;
 
     if (!operatorsEnabled) continue;
     for (const op of operators) {
@@ -225,7 +232,7 @@ export async function getBookingSlotOptions(params: {
       const startMin = toMinutes(row.start);
       const endMin = toMinutes(row.end);
 
-      for (let m = startMin; m + durationMin <= endMin && results.length < maxOptions && dayAdded < 2; m += 30) {
+      for (let m = startMin; m + durationMin <= endMin; m += 30) {
         const slotStart = zonedDateTimeToUtc(
           {
             year: ymd.year,
@@ -240,28 +247,50 @@ export async function getBookingSlotOptions(params: {
         if (slotStart <= now) continue;
         const slotEnd = addMinutes(slotStart, durationMin);
         if (!isInsideRowByMinutes(row, m, m + durationMin)) continue;
-        if (dayAdded >= 1 && firstDayStartMin !== null) {
-          const minGap = 180;
-          const preferFrom = Math.max(firstDayStartMin + minGap, 13 * 60);
-          if (m < preferFrom) continue;
-        }
         const overlapOperator = appointments.some((a) => a.operatorId === op.id && overlaps(slotStart, slotEnd, a.startAt, a.endAt));
         if (overlapOperator) continue;
         const overlapSalon = appointments.some((a) => overlaps(slotStart, slotEnd, a.startAt, a.endAt));
         if (overlapSalon) continue;
-        results.push({
+        const slot: SlotOption = {
           startAt: slotStart,
           endAt: slotEnd,
           operatorId: op.id,
           operatorName: op.nome,
-        });
-        if (firstDayStartMin === null) firstDayStartMin = m;
-        dayAdded += 1;
+        };
+        const dayKey = `${ymd.year}-${String(ymd.month).padStart(2, "0")}-${String(ymd.day).padStart(2, "0")}`;
+        const dayList = candidateSlotsByDay.get(dayKey) ?? [];
+        dayList.push(slot);
+        candidateSlotsByDay.set(dayKey, dayList);
       }
     }
   }
 
-  return { durationMin, slots: results.slice(0, maxOptions) };
+  const dayKeys = [...candidateSlotsByDay.keys()].sort();
+  const dayQueues = dayKeys.map((dayKey) => shuffleArray(candidateSlotsByDay.get(dayKey) ?? []));
+  const selected: SlotOption[] = [];
+
+  // Round-robin tra i giorni: distribuzione migliore delle opzioni nel calendario.
+  while (selected.length < maxOptions) {
+    let addedInCycle = 0;
+    for (const queue of dayQueues) {
+      if (!queue.length || selected.length >= maxOptions) continue;
+      selected.push(queue.shift() as SlotOption);
+      addedInCycle += 1;
+    }
+    if (addedInCycle === 0) break;
+  }
+
+  // Se mancano slot, completa con il resto in ordine casuale.
+  if (selected.length < maxOptions) {
+    const remaining = shuffleArray(dayQueues.flat());
+    for (const slot of remaining) {
+      if (selected.length >= maxOptions) break;
+      selected.push(slot);
+    }
+  }
+
+  selected.sort((a, b) => a.startAt.getTime() - b.startAt.getTime());
+  return { durationMin, slots: selected };
 }
 
 export async function isBookingSlotStillAvailable(params: {
