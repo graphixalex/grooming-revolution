@@ -288,9 +288,9 @@ export function SettingsClient({ initial }: { initial: any }) {
   return (
     <div className="space-y-4">
       <Card className="space-y-2">
-        <h2 className="font-semibold">Dati attivita</h2>
+        <h2 className="font-semibold">Dati attività</h2>
         <div className="grid gap-2 md:grid-cols-2">
-          <Input value={salon.nomeAttivita || ""} onChange={(e) => setSalon({ ...salon, nomeAttivita: e.target.value })} placeholder="Nome attivita" />
+          <Input value={salon.nomeAttivita || ""} onChange={(e) => setSalon({ ...salon, nomeAttivita: e.target.value })} placeholder="Nome attività" />
           <select
             className="h-10 rounded-md border border-zinc-300 bg-white px-3 text-sm"
             value={salon.paese || "IT"}
@@ -367,7 +367,7 @@ export function SettingsClient({ initial }: { initial: any }) {
             </p>
           )}
         </div>
-        <Button onClick={() => saveSection("salon", salon)}>Salva dati attivita</Button>
+        <Button onClick={() => saveSection("salon", salon)}>Salva dati attività</Button>
       </Card>
 
       <Card className="space-y-3">
@@ -891,7 +891,7 @@ export function SettingsClient({ initial }: { initial: any }) {
           </p>
         ) : null}
         {initial.role !== "OWNER" ? (
-          <p className="text-xs text-zinc-500">Solo l&apos;owner puo creare/modificare/eliminare membri team.</p>
+          <p className="text-xs text-zinc-500">Solo l&apos;owner può creare/modificare/eliminare membri team.</p>
         ) : null}
         <div className="space-y-2">
           {staff.map((s: any) => (
@@ -1052,7 +1052,7 @@ export function SettingsClient({ initial }: { initial: any }) {
             <strong> Esporta clienti CSV</strong>.
           </p>
           <p className="text-sm text-red-700">
-            L&apos;eliminazione account e irreversibile. Il team ti dara conferma a breve prima della chiusura definitiva.
+            L&apos;eliminazione account è irreversibile. Il team ti darà conferma a breve prima della chiusura definitiva.
           </p>
           <div className="max-w-sm space-y-2">
             <p className="text-xs font-medium text-red-800">Digita ELIMINA per confermare la richiesta</p>
@@ -1070,4 +1070,5 @@ export function SettingsClient({ initial }: { initial: any }) {
     </div>
   );
 }
+
 

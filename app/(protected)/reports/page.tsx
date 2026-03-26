@@ -279,12 +279,12 @@ export default async function ReportsPage({
 
       <div className="grid gap-3 md:grid-cols-2">
         <Card>
-          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">Giorno piu profittevole</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">Giorno più profittevole</p>
           <p className="mt-1 text-2xl font-semibold">{bestWeekdayEntry ? WEEKDAY_LABELS[bestWeekdayEntry[0]] : "-"}</p>
           <p className="text-xs text-zinc-500">{bestWeekdayEntry ? `Importo aggregato EUR ${bestWeekdayEntry[1].toFixed(2)}` : "Nessun incasso nel periodo"}</p>
         </Card>
         <Card>
-          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">Ora piu profittevole</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">Ora più profittevole</p>
           <p className="mt-1 text-2xl font-semibold">{bestHourEntry ? `${String(bestHourEntry[0]).padStart(2, "0")}:00` : "-"}</p>
           <p className="text-xs text-zinc-500">{bestHourEntry ? `Importo aggregato EUR ${bestHourEntry[1].toFixed(2)}` : "Nessun incasso nel periodo"}</p>
         </Card>
@@ -353,3 +353,4 @@ export default async function ReportsPage({
     </div>
   );
 }
+

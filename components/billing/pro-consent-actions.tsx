@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useState } from "react";
@@ -123,7 +123,7 @@ export function ProConsentActions({
           </Button>
         ) : (
           <Button className="h-auto whitespace-normal py-3 text-center leading-tight" disabled>
-            Piano FULL gia attivo
+            Piano FULL già attivo
           </Button>
         )}
         <Button
@@ -142,3 +142,4 @@ export function ProConsentActions({
     </div>
   );
 }
+

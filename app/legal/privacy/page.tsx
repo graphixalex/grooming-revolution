@@ -1,4 +1,4 @@
-﻿import { LegalShell } from "@/components/legal/legal-shell";
+import { LegalShell } from "@/components/legal/legal-shell";
 
 export default function PrivacyPage() {
   return (
@@ -12,7 +12,7 @@ export default function PrivacyPage() {
         <h2 className="text-lg font-semibold">1. Ruoli privacy</h2>
         <p>
           Per i dati dei clienti finali inseriti dai saloni, il salone Cliente agisce di norma come Titolare del trattamento.
-          Cecilia Luxury Grooming agisce come fornitore tecnico e Responsabile del trattamento per conto del Cliente.
+          Cecilia Luxury Grooming agisce come fornitore tecnico e responsabile del trattamento per conto del Cliente.
         </p>
         <p>
           Per dettagli operativi (istruzioni, misure, sub-responsabili, assistenza ai diritti), si applica il{" "}
@@ -28,7 +28,7 @@ export default function PrivacyPage() {
           log tecnici e dati di sicurezza necessari all&apos;erogazione del servizio.
         </p>
 
-        <h2 className="text-lg font-semibold">3. Finalita e basi giuridiche</h2>
+        <h2 className="text-lg font-semibold">3. finalità e basi giuridiche</h2>
         <p>
           Erogazione del servizio, sicurezza, supporto, prevenzione abusi, adempimenti legali e fiscali,
           miglioramento della piattaforma. Le basi giuridiche includono esecuzione contrattuale, obbligo legale,
@@ -37,17 +37,17 @@ export default function PrivacyPage() {
 
         <h2 className="text-lg font-semibold">4. Conservazione dei dati</h2>
         <p>
-          I dati sono conservati per il tempo necessario alle finalita contrattuali e agli obblighi normativi.
+          I dati sono conservati per il tempo necessario alle finalità contrattuali e agli obblighi normativi.
           In caso di cessazione, i dati vengono cancellati o anonimizzati entro tempi tecnici ragionevoli,
           salvo obblighi legali di conservazione.
         </p>
         <p>
-          Durante la durata del servizio, il Cliente puo esportare i dati disponibili tramite le funzioni di portabilita presenti in piattaforma.
+          Durante la durata del servizio, il Cliente può esportare i dati disponibili tramite le funzioni di portabilità presenti in piattaforma.
         </p>
 
         <h2 className="text-lg font-semibold">5. Sub-responsabili e terze parti</h2>
         <p>
-          Il servizio puo coinvolgere fornitori terzi qualificati (hosting, email, pagamenti, messaggistica, infrastruttura).
+          Il servizio può coinvolgere fornitori terzi qualificati (hosting, email, pagamenti, messaggistica, infrastruttura).
           Tali fornitori operano con accordi contrattuali, istruzioni documentate e misure di sicurezza adeguate.
         </p>
 
@@ -72,7 +72,7 @@ export default function PrivacyPage() {
         <h2 className="text-lg font-semibold">9. Diritti degli interessati</h2>
         <p>
           Nei limiti di legge, gli interessati possono esercitare i diritti di accesso, rettifica, cancellazione, limitazione,
-          opposizione e portabilita. Per i dati dei clienti finali, la richiesta va presentata in prima istanza al salone Titolare.
+          opposizione e portabilità. Per i dati dei clienti finali, la richiesta va presentata in prima istanza al salone Titolare.
         </p>
 
         <h2 className="text-lg font-semibold">10. Data breach</h2>
@@ -83,13 +83,14 @@ export default function PrivacyPage() {
 
         <h2 className="text-lg font-semibold">11. Aggiornamenti della policy</h2>
         <p>
-          Questa informativa puo essere aggiornata per esigenze tecniche, legali o organizzative. La versione aggiornata
-          e sempre pubblicata su questa pagina con data di revisione.
+          Questa informativa può essere aggiornata per esigenze tecniche, legali o organizzative. La versione aggiornata
+          è sempre pubblicata su questa pagina con data di revisione.
         </p>
       </div>
     </LegalShell>
   );
 }
+
 
 
 

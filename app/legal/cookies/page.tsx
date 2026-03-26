@@ -1,4 +1,4 @@
-﻿import { LegalShell } from "@/components/legal/legal-shell";
+import { LegalShell } from "@/components/legal/legal-shell";
 
 export default function CookiesPage() {
   return (
@@ -17,14 +17,14 @@ export default function CookiesPage() {
 
         <h2 className="text-lg font-semibold">2. Tipologie di cookie</h2>
         <p>
-          Cookie necessari: indispensabili per autenticazione, sessione, sicurezza e stabilita del servizio.
+          Cookie necessari: indispensabili per autenticazione, sessione, sicurezza e stabilità del servizio.
         </p>
         <p>
           Cookie funzionali: opzionali, usati per preferenze di interfaccia quando attivati.
         </p>
         <p>
           Cookie analitici: eventualmente utilizzati in forma aggregata per analisi prestazioni,
-          senza finalita di profilazione pubblicitaria dei clienti finali.
+          senza finalità di profilazione pubblicitaria dei clienti finali.
         </p>
 
         <h2 className="text-lg font-semibold">3. Base giuridica</h2>
@@ -36,7 +36,7 @@ export default function CookiesPage() {
         <h2 className="text-lg font-semibold">4. Durata</h2>
         <p>
           Alcuni cookie sono di sessione e scadono alla chiusura del browser; altri possono restare per un periodo limitato,
-          proporzionato alla finalita tecnica.
+          proporzionato alla finalità tecnica.
         </p>
 
         <h2 className="text-lg font-semibold">5. Fornitori terzi</h2>
@@ -47,13 +47,13 @@ export default function CookiesPage() {
 
         <h2 className="text-lg font-semibold">6. Gestione preferenze</h2>
         <p>
-          L&apos;utente puo gestire i cookie non necessari tramite browser o strumenti di consenso disponibili.
-          La disattivazione dei cookie necessari puo compromettere l&apos;uso della piattaforma.
+          L&apos;utente può gestire i cookie non necessari tramite browser o strumenti di consenso disponibili.
+          La disattivazione dei cookie necessari può compromettere l&apos;uso della piattaforma.
         </p>
 
         <h2 className="text-lg font-semibold">7. Aggiornamenti</h2>
         <p>
-          La policy puo essere aggiornata per esigenze tecniche o normative. La versione corrente e pubblicata su questa pagina.
+          La policy può essere aggiornata per esigenze tecniche o normative. La versione corrente è pubblicata su questa pagina.
         </p>
 
         <h2 className="text-lg font-semibold">8. Contatti</h2>
@@ -64,3 +64,4 @@ export default function CookiesPage() {
     </LegalShell>
   );
 }
+

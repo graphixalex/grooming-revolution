@@ -743,7 +743,7 @@ export function PlannerClient({
           durataMinuti: durata,
           noteAppuntamento: note.trim(),
         },
-        "Esiste gia un appuntamento in questo orario. Vuoi salvare comunque la nota in sovrapposizione?",
+        "Esiste già un appuntamento in questo orario. Vuoi salvare comunque la nota in sovrapposizione?",
       );
       if (!res.ok) {
         alert(data.error || "Errore creazione nota");
@@ -774,7 +774,7 @@ export function PlannerClient({
         noteAppuntamento: note,
         trattamentiIds: selectedTreatments,
       },
-      "Operatore gia occupato in questo orario. Vuoi salvare comunque l'appuntamento in sovrapposizione?",
+      "Operatore già occupato in questo orario. Vuoi salvare comunque l'appuntamento in sovrapposizione?",
     );
     if (!res.ok) {
       alert(data.error || "Errore creazione appuntamento");
@@ -825,7 +825,7 @@ export function PlannerClient({
         startAt: targetStart.toISOString(),
         operatorId: targetOperatorId,
       },
-      "Lo slot di destinazione e gia occupato. Vuoi spostare comunque in sovrapposizione?",
+      "Lo slot di destinazione e già occupato. Vuoi spostare comunque in sovrapposizione?",
     );
     if (!res.ok) {
       alert(data.error || "Errore spostamento appuntamento");
@@ -852,7 +852,7 @@ export function PlannerClient({
           durataMinuti,
           noteAppuntamento: source.noteAppuntamento || "Nota personale",
         },
-        "Lo slot e gia occupato. Vuoi incollare comunque la nota in sovrapposizione?",
+        "Lo slot e già occupato. Vuoi incollare comunque la nota in sovrapposizione?",
       );
       if (!res.ok) {
         alert(data.error || "Errore incolla appuntamento");
@@ -870,7 +870,7 @@ export function PlannerClient({
           noteAppuntamento: source.noteAppuntamento || "",
           trattamentiIds: source.trattamentiSelezionati.map((t) => t.treatment.id),
         },
-        "Lo slot e gia occupato. Vuoi incollare comunque l'appuntamento in sovrapposizione?",
+        "Lo slot e già occupato. Vuoi incollare comunque l'appuntamento in sovrapposizione?",
       );
       if (!res.ok) {
         alert(data.error || "Errore incolla appuntamento");
@@ -1864,3 +1864,4 @@ export function PlannerClient({
     </Card>
   );
 }
+

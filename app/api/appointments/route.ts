@@ -131,7 +131,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Orario fuori fascia lavorativa sede" }, { status: 400 });
     }
     if (operator?.workingHoursJson && !isInsideWorkingHours(operator.workingHoursJson, startAt, endAt, salonTimeZone)) {
-      return NextResponse.json({ error: "Orario fuori disponibilita operatore" }, { status: 400 });
+      return NextResponse.json({ error: "Orario fuori disponibilità operatore" }, { status: 400 });
     }
 
     if (!allowOverlap && !salon.overlapAllowed && (await hasOverlap(salonId, startAt, endAt, undefined, body.operatorId || null))) {
@@ -182,7 +182,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Orario fuori fascia lavorativa sede" }, { status: 400 });
   }
   if (operator?.workingHoursJson && !isInsideWorkingHours(operator.workingHoursJson, startAt, endAt, salonTimeZone)) {
-    return NextResponse.json({ error: "Orario fuori disponibilita operatore" }, { status: 400 });
+    return NextResponse.json({ error: "Orario fuori disponibilità operatore" }, { status: 400 });
   }
 
   if (!allowOverlap && !salon.overlapAllowed && (await hasOverlap(salonId, startAt, endAt, undefined, operatorId))) {
@@ -301,7 +301,7 @@ export async function PATCH(req: NextRequest) {
     });
 
     if (!tx) {
-      return NextResponse.json({ error: "Incasso gia registrato per questo appuntamento" }, { status: 409 });
+      return NextResponse.json({ error: "Incasso già registrato per questo appuntamento" }, { status: 409 });
     }
 
     return NextResponse.json(tx);
@@ -365,7 +365,7 @@ export async function PATCH(req: NextRequest) {
       candidateOperator?.workingHoursJson &&
       !isInsideWorkingHours(candidateOperator.workingHoursJson, startAt, endAt, salonTimeZone)
     ) {
-      return NextResponse.json({ error: "Orario fuori disponibilita operatore" }, { status: 400 });
+      return NextResponse.json({ error: "Orario fuori disponibilità operatore" }, { status: 400 });
     }
 
     if (!allowOverlap && !salon.overlapAllowed && (await hasOverlap(salonId, startAt, endAt, appointmentId, candidateOperatorId))) {
@@ -404,4 +404,5 @@ export async function PATCH(req: NextRequest) {
 
   return NextResponse.json(updated);
 }
+
 

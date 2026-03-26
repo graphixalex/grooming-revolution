@@ -1,4 +1,4 @@
-﻿import { LegalShell } from "@/components/legal/legal-shell";
+import { LegalShell } from "@/components/legal/legal-shell";
 
 export default function TermsPage() {
   return (
@@ -6,19 +6,19 @@ export default function TermsPage() {
       <div className="space-y-4">
         <p>
           I presenti Termini disciplinano l&apos;uso della piattaforma SaaS Grooming Revolution da parte di professionisti della toelettatura
-          e relative organizzazioni. Grooming Revolution e un prodotto software di
+          e relative organizzazioni. Grooming Revolution è un prodotto software di
           <strong> Cecilia Luxury Grooming</strong>.
         </p>
 
         <h2 className="text-lg font-semibold">1. Oggetto del servizio</h2>
         <p>
           Il servizio include gestione agenda, clienti e cani, operatori, report, booking online, comunicazioni operative e funzioni di
-          amministrazione del salone. Il Fornitore puo aggiornare il software per motivi tecnici, di sicurezza, normativi o di miglioramento prodotto.
+          amministrazione del salone. Il Fornitore può aggiornare il software per motivi tecnici, di sicurezza, normativi o di miglioramento prodotto.
         </p>
 
         <h2 className="text-lg font-semibold">2. Account, ruoli e sicurezza</h2>
         <p>
-          Il Cliente e responsabile della custodia delle credenziali, della corretta assegnazione dei ruoli utente e dell&apos;uso del servizio
+          Il Cliente è responsabile della custodia delle credenziali, della corretta assegnazione dei ruoli utente e dell&apos;uso del servizio
           da parte dei propri collaboratori. In caso di accessi non autorizzati, il Cliente deve avvisare immediatamente il supporto.
         </p>
 
@@ -37,14 +37,14 @@ export default function TermsPage() {
 
         <h2 className="text-lg font-semibold">4. Uso consentito e divieti</h2>
         <p>
-          E vietato usare la piattaforma per attivita illecite, invii non autorizzati, trattamenti dati contrari alla normativa, accessi abusivi,
-          reverse engineering o compromissione dell&apos;integrita del servizio.
+          E vietato usare la piattaforma per attività illecite, invii non autorizzati, trattamenti dati contrari alla normativa, accessi abusivi,
+          reverse engineering o compromissione dell&apos;integrità del servizio.
         </p>
 
         <h2 className="text-lg font-semibold">5. Dati personali e ruoli privacy</h2>
         <p>
           Salvo diverso accordo scritto, il salone Cliente agisce come Titolare del trattamento verso i propri clienti finali.
-          Cecilia Luxury Grooming agisce come fornitore tecnico e Responsabile del trattamento.
+          Cecilia Luxury Grooming agisce come fornitore tecnico e responsabile del trattamento.
         </p>
         <p>
           Le condizioni operative del trattamento per conto del Cliente sono disciplinate anche dal{" "}
@@ -54,53 +54,53 @@ export default function TermsPage() {
           .
         </p>
 
-        <h2 className="text-lg font-semibold">6. Proprieta dei dati del Cliente</h2>
+        <h2 className="text-lg font-semibold">6. proprietà dei dati del Cliente</h2>
         <p>
           Tutti i dati inseriti dal Cliente nella piattaforma (anagrafiche, appuntamenti, storico operazioni, configurazioni e contenuti)
-          restano di proprieta esclusiva del Cliente. Il Fornitore non acquisisce alcun diritto di proprieta su tali dati.
+          restano di proprietà esclusiva del Cliente. Il Fornitore non acquisisce alcun diritto di proprietà su tali dati.
         </p>
 
-        <h2 className="text-lg font-semibold">7. Portabilita ed esportazione dati</h2>
+        <h2 className="text-lg font-semibold">7. portabilità ed esportazione dati</h2>
         <p>
-          Il Cliente puo esportare i propri dati in formato leggibile secondo le funzionalita disponibili in piattaforma
+          Il Cliente può esportare i propri dati in formato leggibile secondo le funzionalità disponibili in piattaforma
           (ad esempio CSV o formati equivalenti), durante il rapporto contrattuale.
         </p>
 
         <h2 className="text-lg font-semibold">8. Cessazione servizio e cancellazione dati</h2>
         <p>
-          Alla cessazione del servizio, il Cliente puo richiedere esportazione finale dei dati entro un periodo tecnico ragionevole.
+          Alla cessazione del servizio, il Cliente può richiedere esportazione finale dei dati entro un periodo tecnico ragionevole.
           Decorso tale periodo, i dati possono essere cancellati o anonimizzati, salvo obblighi legali di conservazione.
         </p>
 
         <h2 className="text-lg font-semibold">9. Servizi e provider terzi</h2>
         <p>
-          Alcune funzionalita dipendono da provider terzi (es. infrastruttura cloud, invio email, pagamenti, canali di messaggistica).
+          Alcune funzionalità dipendono da provider terzi (es. infrastruttura cloud, invio email, pagamenti, canali di messaggistica).
           Il Cliente resta responsabile dell&apos;uso conforme di tali canali e del rispetto delle policy dei singoli provider.
         </p>
 
-        <h2 className="text-lg font-semibold">10. Disponibilita e manutenzione</h2>
+        <h2 className="text-lg font-semibold">10. disponibilità e manutenzione</h2>
         <p>
-          Il Fornitore adotta misure ragionevoli per continuita e sicurezza del servizio, senza garanzia di disponibilita ininterrotta.
+          Il Fornitore adotta misure ragionevoli per continuità e sicurezza del servizio, senza garanzia di disponibilità ininterrotta.
           Possono verificarsi sospensioni per manutenzione, aggiornamenti o cause di forza maggiore.
         </p>
 
-        <h2 className="text-lg font-semibold">11. Proprieta intellettuale</h2>
+        <h2 className="text-lg font-semibold">11. proprietà intellettuale</h2>
         <p>
-          Codice, interfaccia, marchio Grooming Revolution, documentazione e contenuti restano di proprieta di
+          Codice, interfaccia, marchio Grooming Revolution, documentazione e contenuti restano di proprietà di
           Cecilia Luxury Grooming
-          o dei rispettivi titolari. Al Cliente e concessa una licenza d&apos;uso non esclusiva, non trasferibile e limitata alla durata del rapporto.
+          o dei rispettivi titolari. Al Cliente è concessa una licenza d&apos;uso non esclusiva, non trasferibile e limitata alla durata del rapporto.
         </p>
 
-        <h2 className="text-lg font-semibold">12. Limitazione di responsabilita</h2>
+        <h2 className="text-lg font-semibold">12. Limitazione di responsabilità</h2>
         <p>
-          Nei limiti di legge, la responsabilita complessiva del Fornitore per danni diretti e limitata ai canoni corrisposti dal Cliente
-          nei 12 mesi precedenti l&apos;evento. Restano esclusi, ove consentito, danni indiretti e perdita di profitto o opportunita.
+          Nei limiti di legge, la responsabilità complessiva del Fornitore per danni diretti è limitata ai canoni corrisposti dal Cliente
+          nei 12 mesi precedenti l&apos;evento. Restano esclusi, ove consentito, danni indiretti e perdita di profitto o opportunità.
         </p>
 
         <h2 className="text-lg font-semibold">13. Sospensione e risoluzione</h2>
         <p>
-          Il Fornitore puo sospendere o risolvere l&apos;accesso in caso di violazioni rilevanti, rischio sicurezza o mancato pagamento.
-          Il Cliente puo disdire secondo le modalita indicate nella sezione Billing.
+          Il Fornitore può sospendere o risolvere l&apos;accesso in caso di violazioni rilevanti, rischio sicurezza o mancato pagamento.
+          Il Cliente può disdire secondo le modalita indicate nella sezione Billing.
         </p>
 
         <h2 className="text-lg font-semibold">14. Legge applicabile e foro competente</h2>
@@ -111,13 +111,14 @@ export default function TermsPage() {
 
         <h2 className="text-lg font-semibold">15. Modifiche ai Termini</h2>
         <p>
-          I Termini possono essere aggiornati per esigenze tecniche, legali o organizzative. La versione vigente e sempre pubblicata
+          I Termini possono essere aggiornati per esigenze tecniche, legali o organizzative. La versione vigente è sempre pubblicata
           su questa pagina con data di aggiornamento.
         </p>
       </div>
     </LegalShell>
   );
 }
+
 
 
 

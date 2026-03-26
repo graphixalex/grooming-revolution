@@ -65,7 +65,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     select: { id: true },
   });
   if (recentDuplicate) {
-    return NextResponse.json({ error: "Richiesta gia inviata da poco per questo slot." }, { status: 409 });
+    return NextResponse.json({ error: "Richiesta già inviata da poco per questo slot." }, { status: 409 });
   }
 
   const treatment = await prisma.treatment.findFirst({
@@ -92,7 +92,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
       (s.operatorId || null) === (selectedOperatorIdRaw || null),
   );
   if (!matchedSlot) {
-    return NextResponse.json({ error: "Lo slot scelto non e piu disponibile. Aggiorna le opzioni." }, { status: 409 });
+    return NextResponse.json({ error: "Lo slot scelto non e più disponibile. Aggiorna le opzioni." }, { status: 409 });
   }
 
   const existingClient = await prisma.client.findFirst({
@@ -260,7 +260,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   });
 
   if (!created) {
-    return NextResponse.json({ error: "Lo slot scelto non e piu disponibile. Aggiorna le opzioni." }, { status: 409 });
+    return NextResponse.json({ error: "Lo slot scelto non e più disponibile. Aggiorna le opzioni." }, { status: 409 });
   }
 
   return NextResponse.json({
@@ -271,6 +271,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     message:
       created.status === "AUTO_CONFIRMED"
         ? "Prenotazione confermata automaticamente."
-        : "Richiesta inviata. Il team ti contattera per conferma.",
+        : "Richiesta inviata. Il team ti contatterà per conferma.",
   });
 }

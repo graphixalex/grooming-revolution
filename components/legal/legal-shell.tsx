@@ -1,4 +1,4 @@
-﻿import Image from "next/image";
+import Image from "next/image";
 import Link from "next/link";
 import { ReactNode } from "react";
 
@@ -34,7 +34,7 @@ export function LegalShell({ title, updatedAt, children }: LegalShellProps) {
             <p className="text-lg font-bold text-zinc-900">{title}</p>
             <p className="text-sm text-zinc-600">Ultimo aggiornamento: {updatedAt}</p>
             <p className="mt-2 text-sm text-zinc-700">
-              Grooming Revolution e il brand del servizio SaaS sviluppato, gestito e commercializzato da
+              Grooming Revolution è il brand del servizio SaaS sviluppato, gestito e commercializzato da
               Cecilia Luxury Grooming.
             </p>
           </div>

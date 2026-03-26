@@ -145,10 +145,10 @@ export async function sendRegistrationWelcomeEmail(input: {
     bodyHtml: `
       <p style="margin:0 0 12px 0;font-size:14px;">
         Ciao, grazie per aver scelto Grooming Revolution.
-        Il tuo account e pronto.
+        Il tuo account è pronto.
       </p>
       <p style="margin:0 0 16px 0;font-size:14px;">
-        <strong>Attivita:</strong> ${escapeHtml(input.businessName)}<br/>
+        <strong>attività:</strong> ${escapeHtml(input.businessName)}<br/>
         <strong>Sede:</strong> ${escapeHtml(input.branchName || "Sede principale")}
       </p>
 
@@ -164,14 +164,14 @@ export async function sendRegistrationWelcomeEmail(input: {
         <li><strong>Listino prezzi:</strong> vai su <strong>Listino</strong> e configura prezzo + durata media per servizio/taglia/razza (se vuoi). Questo guida stime e slot.</li>
         <li><strong>Orari sede:</strong> in <strong>Impostazioni</strong> imposta giorni di apertura, orari e pause.</li>
         <li><strong>Team:</strong> in <strong>Team e ruoli</strong> crea manager/staff e assegna sede/permessi.</li>
-        <li><strong>Operatori:</strong> configura operatori, disponibilita e KPI per monitorare produzione.</li>
-        <li><strong>Sedi multiple:</strong> se hai piu sedi, crea/gestisci sedi da <strong>Sedi</strong> e verifica timezone/valuta per ognuna.</li>
+        <li><strong>Operatori:</strong> configura operatori, disponibilità e KPI per monitorare produzione.</li>
+        <li><strong>Sedi multiple:</strong> se hai più sedi, crea/gestisci sedi da <strong>Sedi</strong> e verifica timezone/valuta per ognuna.</li>
         <li><strong>Template messaggi:</strong> aggiorna testo WhatsApp/email in <strong>Impostazioni</strong>.</li>
       </ol>
 
       <h2 style="margin:0 0 8px 0;font-size:16px;">WhatsApp automatico e reminder</h2>
       <p style="margin:0 0 8px 0;font-size:14px;line-height:1.6;">
-        Se colleghi WhatsApp API (Meta) in <strong>Impostazioni</strong>, il sistema puo inviare reminder automatici giornalieri degli appuntamenti prenotati.
+        Se colleghi WhatsApp API (Meta) in <strong>Impostazioni</strong>, il sistema può inviare reminder automatici giornalieri degli appuntamenti prenotati.
       </p>
       <ul style="margin:0 0 16px 18px;padding:0;font-size:14px;line-height:1.6;">
         <li>Inserisci <strong>Phone Number ID</strong></li>
@@ -182,9 +182,9 @@ export async function sendRegistrationWelcomeEmail(input: {
 
       <h2 style="margin:0 0 8px 0;font-size:16px;">Import clienti</h2>
       <p style="margin:0 0 16px 0;font-size:14px;line-height:1.6;">
-        Se hai gia una lista clienti storica, scrivici a
+        Se hai già una lista clienti storica, scrivici a
         <a href="mailto:${escapeHtml(supportEmail)}" style="color:#b45309;">${escapeHtml(supportEmail)}</a>.
-        Il team puo assisterti nel caricamento iniziale per partire in modo pulito.
+        Il team può assisterti nel caricamento iniziale per partire in modo pulito.
       </p>
 
       <h2 style="margin:0 0 8px 0;font-size:16px;">Come funziona la logica appuntamenti</h2>
@@ -197,8 +197,8 @@ export async function sendRegistrationWelcomeEmail(input: {
 
       <h2 style="margin:0 0 8px 0;font-size:16px;">Desktop + smartphone</h2>
       <p style="margin:0 0 18px 0;font-size:14px;line-height:1.6;">
-        Grooming Revolution e ottimizzato per uso quotidiano anche da smartphone:
-        agenda, clienti, incassi e messaggi sono gestibili in mobilita.
+        Grooming Revolution è ottimizzato per uso quotidiano anche da smartphone:
+        agenda, clienti, incassi e messaggi sono gestibili in mobilità.
       </p>
 
       <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 12px 0;">
@@ -219,14 +219,14 @@ export async function sendRegistrationWelcomeEmail(input: {
 
   const text =
     `Ciao,\n\n` +
-    `benvenuto in Grooming Revolution. Il tuo account e pronto.\n` +
-    `Attivita: ${input.businessName}\n` +
+    `benvenuto in Grooming Revolution. Il tuo account è pronto.\n` +
+    `attività: ${input.businessName}\n` +
     `Sede: ${input.branchName || "Sede principale"}\n\n` +
     `Setup consigliato prima di partire:\n` +
     `1) Configura il listino con prezzi e durata media per servizio/taglia.\n` +
     `2) Imposta giorni/orari di apertura e pause della sede.\n` +
-    `3) Crea team (manager/staff) e operatori con disponibilita.\n` +
-    `4) Se hai piu sedi, configura ciascuna sede (timezone/valuta).\n` +
+    `3) Crea team (manager/staff) e operatori con disponibilità.\n` +
+    `4) Se hai più sedi, configura ciascuna sede (timezone/valuta).\n` +
     `5) Configura template messaggi e WhatsApp API per reminder automatici.\n` +
     `6) Se hai lista clienti, contattaci per supporto import.\n\n` +
     `Accesso: ${appUrl}/login\n` +
@@ -253,7 +253,7 @@ export async function sendPasswordResetEmail(input: {
         Abbiamo ricevuto una richiesta di reimpostazione password per il tuo account.
       </p>
       <p style="margin:0 0 14px 0;font-size:14px;">
-        Il link seguente e valido per <strong>${input.expiresInMinutes} minuti</strong> e puo essere usato una sola volta.
+        Il link seguente è valido per <strong>${input.expiresInMinutes} minuti</strong> e può essere usato una sola volta.
       </p>
       <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 14px 0;">
         <tr>
@@ -294,7 +294,7 @@ export async function sendPasswordChangedEmail(input: {
     subtitle: "Conferma modifica credenziali",
     bodyHtml: `
       <p style="margin:0 0 12px 0;font-size:14px;">
-        Ti confermiamo che la password del tuo account e stata aggiornata${escapeHtml(by)}.
+        Ti confermiamo che la password del tuo account è stata aggiornata${escapeHtml(by)}.
       </p>
       <p style="margin:0;font-size:13px;color:#6b7280;">
         Se non riconosci questa modifica, reimposta subito la password e contatta il supporto.
@@ -303,7 +303,7 @@ export async function sendPasswordChangedEmail(input: {
   });
 
   const text =
-    `La password del tuo account e stata aggiornata${by}.\n` +
+    `La password del tuo account è stata aggiornata${by}.\n` +
     `Se non riconosci questa modifica, reimposta subito la password e contatta il supporto.\n`;
 
   return sendEmail({ to: input.to, subject, text, html });
@@ -333,7 +333,7 @@ export async function sendAccountDeletionRequestEmails(input: {
       <p style="margin:0 0 4px 0;font-size:14px;"><strong>Indirizzo:</strong> ${escapeHtml(input.salonAddress || "-")}</p>
       <p style="margin:0 0 4px 0;font-size:14px;"><strong>Paese:</strong> ${escapeHtml(input.country || "-")}</p>
       <p style="margin:0 0 4px 0;font-size:14px;"><strong>Timezone:</strong> ${escapeHtml(input.timezone || "-")}</p>
-      <p style="margin:0 0 4px 0;font-size:14px;"><strong>Attivita:</strong> ${escapeHtml(input.businessName)}</p>
+      <p style="margin:0 0 4px 0;font-size:14px;"><strong>attività:</strong> ${escapeHtml(input.businessName)}</p>
       <p style="margin:0 0 4px 0;font-size:14px;"><strong>Sede:</strong> ${escapeHtml(input.branchName || "Sede principale")}</p>
       <p style="margin:0;font-size:14px;"><strong>Salon ID:</strong> ${escapeHtml(input.salonId)}</p>
     `,
@@ -346,7 +346,7 @@ export async function sendAccountDeletionRequestEmails(input: {
     `Indirizzo: ${input.salonAddress || "-"}\n` +
     `Paese: ${input.country || "-"}\n` +
     `Timezone: ${input.timezone || "-"}\n` +
-    `Attivita: ${input.businessName}\n` +
+    `attività: ${input.businessName}\n` +
     `Sede: ${input.branchName || "Sede principale"}\n` +
     `Salon ID: ${input.salonId}\n`;
   const supportRes = await sendEmail({
@@ -368,14 +368,14 @@ export async function sendAccountDeletionRequestEmails(input: {
         Prima della chiusura definitiva, esporta la tua lista clienti in CSV da Impostazioni.
       </p>
       <p style="margin:0;font-size:14px;">
-        L'eliminazione e irreversibile. Il team supporto ti contattera a breve per conferma.
+        L'eliminazione è irreversibile. Il team supporto ti contatterà a breve per conferma.
       </p>
     `,
   });
   const ownerText =
     `Richiesta eliminazione account ricevuta.\n` +
-    `Attivita: ${input.businessName}\n` +
-    `Prima di procedere esporta la lista clienti in CSV: l'eliminazione e irreversibile.\n`;
+    `attività: ${input.businessName}\n` +
+    `Prima di procedere esporta la lista clienti in CSV: l'eliminazione è irreversibile.\n`;
   const ownerRes = await sendEmail({
     to: input.ownerEmail,
     subject: ownerSubject,
@@ -385,4 +385,5 @@ export async function sendAccountDeletionRequestEmails(input: {
 
   return { ok: supportRes.ok && ownerRes.ok, supportRes, ownerRes };
 }
+
 

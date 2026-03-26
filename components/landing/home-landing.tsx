@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Image from "next/image";
 import Link from "next/link";
@@ -82,7 +82,7 @@ const setup = [
   "Crea il listino con prezzi e durata media per taglia e servizio.",
   "Configura team, turni e giorni di apertura per ogni sede.",
   "Attiva WhatsApp per conferme e reminder automatici ai clienti.",
-  "Importa i clienti: se hai gia una lista, contattaci e la carichiamo noi.",
+  "Importa i clienti: se hai già una lista, contattaci e la carichiamo noi.",
   "Inizia la gestione completa da agenda, clienti, incassi e report.",
 ];
 
@@ -93,14 +93,14 @@ const faqs = [
   },
   {
     q: "Posso usarlo da telefono?",
-    a: "Si. L'interfaccia e progettata per uso operativo quotidiano anche da smartphone.",
+    a: "Si. L'interfaccia è progettata per uso operativo quotidiano anche da smartphone.",
   },
   {
-    q: "Gestisce piu sedi?",
+    q: "Gestisce più sedi?",
     a: "Si. Ogni sede mantiene dati separati, con controllo aggregato per owner e manager.",
   },
   {
-    q: "Ho gia una lista clienti, va reinserita?",
+    q: "Ho già una lista clienti, va reinserita?",
     a: "No. Ti supportiamo nella migrazione da CSV o Excel in fase di onboarding.",
   },
 ];
@@ -114,12 +114,12 @@ const testimonials = [
   },
   {
     name: "Marco, Manager",
-    quote: "Ogni operatore ha una colonna chiara. Meno caos, meno errori, piu puntualita.",
+    quote: "Ogni operatore ha una colonna chiara. Meno caos, meno errori, più puntualita.",
     result: "+5h/sett recuperate",
   },
   {
     name: "Alessio, Multi-sede",
-    quote: "Gestiamo piu sedi con ordine reale e controllo centralizzato su KPI e incassi.",
+    quote: "Gestiamo più sedi con ordine reale e controllo centralizzato su KPI e incassi.",
     result: "Controllo centralizzato",
   },
 ];
@@ -461,7 +461,7 @@ export function HomeLanding() {
             <span className="font-bold text-purple-400">WhatsApp automatico</span> e{" "}
             <span className="font-bold text-orange-400">KPI in tempo reale</span>.
             <br />
-            <span className="text-zinc-600">Meno caos. Piu controllo. Piu guadagno.</span>
+            <span className="text-zinc-600">Meno caos. più controllo. più guadagno.</span>
           </motion.p>
 
           {/* CTA Buttons ULTRA */}
@@ -830,7 +830,7 @@ export function HomeLanding() {
               Prenotazioni clienti sicure e sotto controllo
             </h3>
             <p className="mt-3 text-base leading-relaxed text-zinc-700">
-              Ogni prenotazione passa da regole reali: durata servizio, taglia, disponibilita operatore,
+              Ogni prenotazione passa da regole reali: durata servizio, taglia, disponibilità operatore,
               sede attiva e orari consentiti. Niente slot incoerenti, niente overbooking nascosto.
             </p>
             <ul className="mt-5 space-y-2 text-sm text-zinc-700">
@@ -856,7 +856,7 @@ export function HomeLanding() {
             </h3>
             <p className="mt-3 text-base leading-relaxed text-zinc-700">
               Il booking evita collisioni con orari non validi e tutela il calendario operativo. Se hai
-              gia una base clienti, il team puo importarla per partire senza reinserimenti manuali.
+              già una base clienti, il team può importarla per partire senza reinserimenti manuali.
             </p>
             <ul className="mt-5 space-y-2 text-sm text-zinc-700">
               <li className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />Blocchi non prenotabili fuori orario</li>
@@ -1126,7 +1126,7 @@ export function HomeLanding() {
               />
             </div>
             <p className="mt-4 text-sm text-zinc-600">
-              Grooming Revolution e un brand software gestito da Cecilia Luxury Grooming.
+              Grooming Revolution è un brand software gestito da Cecilia Luxury Grooming.
               <br />
               Sede legale: Via Ernesto Bosia 4, 6900 Paradiso (CH).
             </p>
@@ -1182,3 +1182,4 @@ export function HomeLanding() {
     </main>
   );
 }
+

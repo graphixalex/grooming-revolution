@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/api-auth";
 import { canManageSettings } from "@/lib/rbac";
@@ -43,7 +43,7 @@ export async function POST(req: Request) {
     }
     if (salon.paddleSubscriptionId) {
       return NextResponse.json(
-        { error: "Abbonamento Paddle gia attivo: usa il portale gestione." },
+        { error: "Abbonamento Paddle già attivo: usa il portale gestione." },
         { status: 409 },
       );
     }
@@ -51,7 +51,7 @@ export async function POST(req: Request) {
       return NextResponse.json(
         {
           error:
-            "Questo account e gia in piano PRO manuale. Checkout disabilitato per evitare duplicazioni.",
+            "Questo account e già in piano PRO manuale. Checkout disabilitato per evitare duplicazioni.",
         },
         { status: 409 },
       );
@@ -98,3 +98,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }
+

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/api-auth";
 import { estimateBookingDuration, isBookingSlotStillAvailable } from "@/lib/booking";
@@ -51,7 +51,7 @@ export async function PATCH(req: NextRequest) {
   });
   if (!request) return NextResponse.json({ error: "Richiesta non trovata" }, { status: 404 });
   if (request.status !== "PENDING") {
-    return NextResponse.json({ error: "Richiesta gia processata" }, { status: 400 });
+    return NextResponse.json({ error: "Richiesta già processata" }, { status: 400 });
   }
 
   if (action === "update") {
@@ -208,7 +208,7 @@ export async function PATCH(req: NextRequest) {
   });
 
   if (!approved) {
-    return NextResponse.json({ error: "Slot non piu disponibile: aggiorna le opzioni o scegli un altro orario." }, { status: 409 });
+    return NextResponse.json({ error: "Slot non più disponibile: aggiorna le opzioni o scegli un altro orario." }, { status: 409 });
   }
 
   return NextResponse.json(approved);
@@ -230,9 +230,10 @@ export async function DELETE(req: NextRequest) {
   });
   if (!request) return NextResponse.json({ error: "Richiesta non trovata" }, { status: 404 });
   if (request.status === "PENDING") {
-    return NextResponse.json({ error: "Puoi eliminare solo messaggi gia processati." }, { status: 400 });
+    return NextResponse.json({ error: "Puoi eliminare solo messaggi già processati." }, { status: 400 });
   }
 
   await prisma.bookingRequest.delete({ where: { id: request.id } });
   return NextResponse.json({ ok: true });
 }
+

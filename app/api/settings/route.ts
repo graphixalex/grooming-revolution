@@ -147,7 +147,7 @@ export async function PATCH(req: NextRequest) {
 
   if (body.section === "accountDeletionRequest") {
     if (auth.session.user.role !== "OWNER") {
-      return NextResponse.json({ error: "Solo owner puo richiedere eliminazione account" }, { status: 403 });
+      return NextResponse.json({ error: "Solo owner può richiedere eliminazione account" }, { status: 403 });
     }
 
     const confirmWord = String(body.confirmWord || "").trim().toUpperCase();
@@ -201,7 +201,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({
       ok: true,
       message:
-        "Richiesta inviata. Prima di procedere esporta i clienti in CSV: l'eliminazione account e irreversibile.",
+        "Richiesta inviata. Prima di procedere esporta i clienti in CSV: l'eliminazione account è irreversibile.",
     });
   }
 
@@ -232,7 +232,7 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json(salon);
     } catch (error: unknown) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-        return NextResponse.json({ error: "Slug booking gia in uso. Scegline uno diverso." }, { status: 400 });
+        return NextResponse.json({ error: "Slug booking già in uso. Scegline uno diverso." }, { status: 400 });
       }
       throw error;
     }
@@ -354,7 +354,7 @@ export async function PATCH(req: NextRequest) {
     const normalizedEmail = email.toLowerCase().trim();
     const existsEmail = await prisma.user.findFirst({ where: { email: normalizedEmail }, select: { id: true } });
     if (existsEmail) {
-      return NextResponse.json({ error: "Email gia in uso. Usa una email diversa per questo dipendente." }, { status: 400 });
+      return NextResponse.json({ error: "Email già in uso. Usa una email diversa per questo dipendente." }, { status: 400 });
     }
 
     const passwordHash = await bcrypt.hash(password, 12);
@@ -404,7 +404,7 @@ export async function PATCH(req: NextRequest) {
       select: { id: true },
     });
     if (existsEmail) {
-      return NextResponse.json({ error: "Email gia in uso. Inserisci una email diversa." }, { status: 400 });
+      return NextResponse.json({ error: "Email già in uso. Inserisci una email diversa." }, { status: 400 });
     }
 
     const nextRole = body.role === "MANAGER" ? "MANAGER" : "STAFF";
@@ -559,4 +559,5 @@ export async function PATCH(req: NextRequest) {
 
   return NextResponse.json({ error: "Sezione non supportata" }, { status: 400 });
 }
+
 

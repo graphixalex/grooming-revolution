@@ -1,4 +1,4 @@
-﻿import { getRequiredSession } from "@/lib/session";
+import { getRequiredSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { Card } from "@/components/ui/card";
 import { ProConsentActions } from "@/components/billing/pro-consent-actions";
@@ -46,7 +46,7 @@ export default async function BillingPage() {
         <p className="text-sm text-zinc-600">Trial: fino a 50 clienti inclusi.</p>
         <p className="text-sm text-zinc-600">Piano FULL: a partire da EUR 20,00 / mese.</p>
         <p className="text-sm text-zinc-600">
-          Imposte (IVA/VAT/sales tax) calcolate automaticamente da Paddle in base a paese e localita del cliente.
+          Imposte (IVA/VAT/sales tax) calcolate automaticamente da Paddle in base a paese e località del cliente.
         </p>
         <p className="text-sm text-zinc-600">
           Pagamento automatico mensile su carta tramite Paddle, finche non disdici.

@@ -17,7 +17,7 @@ export default function RegisterPage() {
         />
       </div>
       <h1 className="text-2xl font-semibold">Crea account</h1>
-      <p className="mb-4 text-sm text-zinc-600">Configura subito attivita, sede, paese e valuta.</p>
+      <p className="mb-4 text-sm text-zinc-600">Configura subito attività, sede, paese e valuta.</p>
       <RegisterForm />
       <div className="mt-4 flex flex-wrap gap-3 text-sm">
         <Link href="/login" className="text-zinc-900 underline">

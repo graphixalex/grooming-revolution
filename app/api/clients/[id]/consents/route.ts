@@ -97,7 +97,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const signatureDataUrl = parsed.data.signatureDataUrl;
   if (signatureDataUrl.length > 500_000) {
-    return NextResponse.json({ error: "Firma troppo grande, riprova con una firma piu semplice." }, { status: 400 });
+    return NextResponse.json({ error: "Firma troppo grande, riprova con una firma più semplice." }, { status: 400 });
   }
 
   const signedAt = new Date();

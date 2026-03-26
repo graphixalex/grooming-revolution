@@ -52,7 +52,7 @@ export function RegisterForm() {
 
   return (
     <form className="space-y-3" onSubmit={onSubmit}>
-      <Input name="nomeAttivita" placeholder="Nome attivita" required />
+      <Input name="nomeAttivita" placeholder="Nome attività" required />
       <Input name="nomeSede" placeholder="Nome sede (es. Centro)" required />
       <Input name="indirizzo" placeholder="Indirizzo sede" required />
 

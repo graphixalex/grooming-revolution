@@ -35,7 +35,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   });
 
   if (!active) {
-    return NextResponse.json({ error: "Nessun consenso attivo da revocare per questa finalita" }, { status: 404 });
+    return NextResponse.json({ error: "Nessun consenso attivo da revocare per questa finalità" }, { status: 404 });
   }
 
   const revokedAt = new Date();

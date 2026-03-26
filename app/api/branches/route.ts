@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/api-auth";
 import { getCountryMeta } from "@/lib/geo";
@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
   const auth = await requireApiSession();
   if ("error" in auth) return auth.error;
   if (auth.session.user.role !== "OWNER") {
-    return NextResponse.json({ error: "Solo owner puo creare sedi" }, { status: 403 });
+    return NextResponse.json({ error: "Solo owner può creare sedi" }, { status: 403 });
   }
 
   const body = (await req.json()) as {
@@ -137,7 +137,7 @@ export async function PATCH(req: NextRequest) {
   const auth = await requireApiSession();
   if ("error" in auth) return auth.error;
   if (auth.session.user.role !== "OWNER") {
-    return NextResponse.json({ error: "Solo owner puo modificare sedi" }, { status: 403 });
+    return NextResponse.json({ error: "Solo owner può modificare sedi" }, { status: 403 });
   }
 
   const body = (await req.json()) as {
@@ -194,7 +194,7 @@ export async function DELETE(req: NextRequest) {
   const auth = await requireApiSession();
   if ("error" in auth) return auth.error;
   if (auth.session.user.role !== "OWNER") {
-    return NextResponse.json({ error: "Solo owner puo eliminare sedi" }, { status: 403 });
+    return NextResponse.json({ error: "Solo owner può eliminare sedi" }, { status: 403 });
   }
 
   const body = (await req.json()) as {
@@ -232,3 +232,4 @@ export async function DELETE(req: NextRequest) {
   await prisma.salon.delete({ where: { id: target.id } });
   return NextResponse.json({ ok: true });
 }
+

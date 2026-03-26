@@ -203,7 +203,7 @@ export function PricingClient({
       <Card className="space-y-3">
         <h2 className="font-semibold">Nuova regola prezzo</h2>
         <p className="text-sm text-zinc-600">
-          I campi servono a creare regole specifiche per taglia/razza, con durata e periodo di validita.
+          I campi servono a creare regole specifiche per taglia/razza, con durata e periodo di validità.
         </p>
         <div className="grid gap-3 md:grid-cols-3">
           <div className="space-y-1">
@@ -391,7 +391,7 @@ export function PricingClient({
                   </p>
                   <p>Taglia: {r.dogSize ?? "qualsiasi"} | Razza: {r.razzaPattern || "-"}</p>
                   <p>
-                    Validita: {new Date(r.validoDa).toLocaleString("it-IT")} - {r.validoA ? new Date(r.validoA).toLocaleString("it-IT") : "aperta"}
+                    validità: {new Date(r.validoDa).toLocaleString("it-IT")} - {r.validoA ? new Date(r.validoA).toLocaleString("it-IT") : "aperta"}
                   </p>
                   <p>Stato: {r.attiva ? "Attiva" : "Disattivata"}</p>
                   {canEdit ? (

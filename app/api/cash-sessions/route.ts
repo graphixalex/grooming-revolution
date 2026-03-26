@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/api-auth";
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 
   const existingOpen = await prisma.cashSession.findFirst({ where: { salonId, status: "OPEN" }, select: { id: true } });
-  if (existingOpen) return NextResponse.json({ error: "Esiste gia una cassa aperta" }, { status: 400 });
+  if (existingOpen) return NextResponse.json({ error: "Esiste già una cassa aperta" }, { status: 400 });
 
   const created = await prisma.cashSession.create({
     data: {
@@ -70,7 +70,7 @@ export async function PATCH(req: NextRequest) {
   const cashSession = await prisma.cashSession.findFirst({
     where: { id: body.cashSessionId, salonId, status: "OPEN" },
   });
-  if (!cashSession) return NextResponse.json({ error: "Cassa non trovata o gia chiusa" }, { status: 404 });
+  if (!cashSession) return NextResponse.json({ error: "Cassa non trovata o già chiusa" }, { status: 404 });
 
   const cashTx = await prisma.transaction.aggregate({
     where: { salonId, method: "CASH", cashSessionId: cashSession.id },
@@ -95,3 +95,4 @@ export async function PATCH(req: NextRequest) {
 
   return NextResponse.json(updated);
 }
+

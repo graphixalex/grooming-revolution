@@ -1,4 +1,4 @@
-﻿import { LegalShell } from "@/components/legal/legal-shell";
+import { LegalShell } from "@/components/legal/legal-shell";
 
 export default function RefundPolicyPage() {
   return (
@@ -44,7 +44,7 @@ export default function RefundPolicyPage() {
 
         <h2 className="text-lg font-semibold">3. Regola generale sui rimborsi</h2>
         <p>
-          Salvo quanto previsto dai diritti obbligatori di legge, i corrispettivi per servizi digitali gia erogati o gia fruiti
+          Salvo quanto previsto dai diritti obbligatori di legge, i corrispettivi per servizi digitali già erogati o già fruiti
           non sono di norma rimborsabili. Rimangono comunque possibili rimborsi nei casi previsti dalle sezioni successive
           o quando richiesto dalla normativa.
         </p>
@@ -52,31 +52,31 @@ export default function RefundPolicyPage() {
         <h2 className="text-lg font-semibold">4. Diritto di recesso e finestre temporali</h2>
         <p>
           Per i clienti consumatori in UE/SEE/Svizzera/Regno Unito, il periodo standard per richiedere il recesso, ove applicabile,
-          e di <strong>14 giorni di calendario</strong> dalla transazione.
+          è di <strong>14 giorni di calendario</strong> dalla transazione.
         </p>
         <p>Per abbonamenti:</p>
         <ul className="list-disc space-y-1 pl-5">
           <li>la finestra si applica al primo pagamento dell&apos;abbonamento;</li>
-          <li>in presenza di prova gratuita, la finestra puo decorrere dal primo addebito successivo alla trial;</li>
+          <li>in presenza di prova gratuita, la finestra può decorrere dal primo addebito successivo alla trial;</li>
           <li>i rinnovi successivi seguono le regole previste da legge applicabile e termini di acquisto.</li>
         </ul>
         <p>
           In alcuni Paesi extra-UE possono valere finestre diverse (ad esempio 5 o 7 giorni). In caso di dubbio, viene applicato il livello
-          di tutela piu favorevole richiesto dalle norme obbligatorie.
+          di tutela più favorevole richiesto dalle norme obbligatorie.
         </p>
 
-        <h2 className="text-lg font-semibold">5. Eccezioni al recesso per contenuti digitali gia fruiti</h2>
+        <h2 className="text-lg font-semibold">5. Eccezioni al recesso per contenuti digitali già fruiti</h2>
         <p>
-          Quando il servizio digitale e gia stato attivato e utilizzato con consenso espresso all&apos;esecuzione immediata,
-          il diritto di recesso puo risultare limitato o non applicabile, salvo diversi obblighi di legge locale.
+          Quando il servizio digitale e già stato attivato e utilizzato con consenso espresso all&apos;esecuzione immediata,
+          il diritto di recesso può risultare limitato o non applicabile, salvo diversi obblighi di legge locale.
         </p>
         <p>
-          L&apos;avvio del servizio e l&apos;uso effettivo delle funzionalita SaaS possono costituire inizio dell&apos;esecuzione del contratto
+          L&apos;avvio del servizio e l&apos;uso effettivo delle funzionalità SaaS possono costituire inizio dell&apos;esecuzione del contratto
           digitale ai sensi della normativa applicabile.
         </p>
 
-        <h2 className="text-lg font-semibold">6. Casi in cui il rimborso puo essere riconosciuto</h2>
-        <p>Il rimborso puo essere riconosciuto, anche oltre i casi di recesso, ad esempio quando:</p>
+        <h2 className="text-lg font-semibold">6. Casi in cui il rimborso può essere riconosciuto</h2>
+        <p>Il rimborso può essere riconosciuto, anche oltre i casi di recesso, ad esempio quando:</p>
         <ul className="list-disc space-y-1 pl-5">
           <li>si verifica addebito duplicato o importo non dovuto;</li>
           <li>e riscontrato un errore tecnico materiale che impedisce l&apos;uso del servizio in modo sostanziale;</li>
@@ -85,7 +85,7 @@ export default function RefundPolicyPage() {
         </ul>
 
         <h2 className="text-lg font-semibold">7. Come richiedere il rimborso</h2>
-        <p>La richiesta puo essere inoltrata con uno dei seguenti canali:</p>
+        <p>La richiesta può essere inoltrata con uno dei seguenti canali:</p>
         <ol className="list-decimal space-y-1 pl-5">
           <li>link “View receipt” o “Manage subscription” presenti nella ricevuta di pagamento;</li>
           <li>pagina assistenza Paddle su paddle.net con opzione di richiesta rimborso;</li>
@@ -102,7 +102,7 @@ export default function RefundPolicyPage() {
           storico utilizzo, natura della contestazione, esiti delle verifiche tecniche e diritti inderogabili applicabili.
         </p>
         <p>
-          L&apos;accoglimento puo essere totale, parziale oppure negato con motivazione. L&apos;eventuale rimborso discrezionale non costituisce
+          L&apos;accoglimento può essere totale, parziale oppure negato con motivazione. L&apos;eventuale rimborso discrezionale non costituisce
           un precedente vincolante per richieste future.
         </p>
 
@@ -114,26 +114,26 @@ export default function RefundPolicyPage() {
 
         <h2 className="text-lg font-semibold">10. Effetti del rimborso sul servizio</h2>
         <p>
-          In caso di rimborso approvato, l&apos;accesso al piano rimborsato puo essere sospeso o terminato.
-          Eventuali funzionalita premium vengono disattivate alla data di efficacia del rimborso.
+          In caso di rimborso approvato, l&apos;accesso al piano rimborsato può essere sospeso o terminato.
+          Eventuali funzionalità premium vengono disattivate alla data di efficacia del rimborso.
         </p>
 
         <h2 className="text-lg font-semibold">11. Cancellazione abbonamento e non rinnovo</h2>
         <p>
-          La cancellazione interrompe i rinnovi futuri. L&apos;accesso resta attivo fino alla fine del periodo gia pagato,
+          La cancellazione interrompe i rinnovi futuri. L&apos;accesso resta attivo fino alla fine del periodo già pagato,
           salvo diversa disposizione di legge.
         </p>
-        <p>La cancellazione dell&apos;abbonamento non equivale automaticamente a rimborso per periodi gia addebitati.</p>
+        <p>La cancellazione dell&apos;abbonamento non equivale automaticamente a rimborso per periodi già addebitati.</p>
 
         <h2 className="text-lg font-semibold">12. Chargeback e contestazioni bancarie</h2>
         <p>
           Prima di avviare un chargeback, raccomandiamo di aprire una richiesta diretta di supporto/rimborso.
-          In caso di contestazione bancaria attiva, l&apos;accesso al servizio puo essere temporaneamente limitato fino alla chiusura verifica.
+          In caso di contestazione bancaria attiva, l&apos;accesso al servizio può essere temporaneamente limitato fino alla chiusura verifica.
         </p>
 
         <h2 className="text-lg font-semibold">13. Aggiornamenti della policy</h2>
         <p>
-          Questa policy puo essere aggiornata per esigenze operative, normative o contrattuali.
+          Questa policy può essere aggiornata per esigenze operative, normative o contrattuali.
           La versione valida per ciascuna transazione e quella pubblicata al momento dell&apos;acquisto.
         </p>
 
@@ -149,3 +149,4 @@ export default function RefundPolicyPage() {
     </LegalShell>
   );
 }
+

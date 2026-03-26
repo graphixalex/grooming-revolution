@@ -15,9 +15,9 @@ export default function DpaPage() {
           Il Fornitore agisce come Responsabile del trattamento ai sensi della normativa applicabile.
         </p>
 
-        <h2 className="text-lg font-semibold">2. Oggetto e finalita del trattamento</h2>
+        <h2 className="text-lg font-semibold">2. Oggetto e finalità del trattamento</h2>
         <p>
-          Il trattamento e limitato all&apos;erogazione del servizio SaaS, alla sicurezza, al supporto tecnico,
+          Il trattamento è limitato all&apos;erogazione del servizio SaaS, alla sicurezza, al supporto tecnico,
           alla manutenzione, al monitoraggio operativo e agli adempimenti legali collegati al servizio.
         </p>
 
@@ -41,7 +41,7 @@ export default function DpaPage() {
 
         <h2 className="text-lg font-semibold">6. Sub-responsabili</h2>
         <p>
-          Il Fornitore puo avvalersi di sub-responsabili qualificati per infrastruttura, email, pagamenti e servizi tecnici.
+          Il Fornitore può avvalersi di sub-responsabili qualificati per infrastruttura, email, pagamenti e servizi tecnici.
           L&apos;elenco aggiornato e disponibile nella pagina{" "}
           <a className="underline" href="/legal/subprocessors">
             Subprocessors
@@ -58,7 +58,7 @@ export default function DpaPage() {
         <h2 className="text-lg font-semibold">8. Assistenza ai diritti degli interessati</h2>
         <p>
           Il Fornitore assiste il Cliente, per quanto ragionevolmente possibile, nella gestione di richieste di accesso, rettifica,
-          cancellazione, limitazione, opposizione e portabilita.
+          cancellazione, limitazione, opposizione e portabilità.
         </p>
 
         <h2 className="text-lg font-semibold">9. Data breach</h2>
@@ -69,13 +69,13 @@ export default function DpaPage() {
 
         <h2 className="text-lg font-semibold">10. Restituzione e cancellazione dati</h2>
         <p>
-          Alla cessazione del servizio, il Cliente puo richiedere esportazione dei dati disponibili entro un periodo tecnico ragionevole.
+          Alla cessazione del servizio, il Cliente può richiedere esportazione dei dati disponibili entro un periodo tecnico ragionevole.
           Trascorso tale periodo, i dati possono essere cancellati o anonimizzati, salvo obblighi legali di conservazione.
         </p>
 
         <h2 className="text-lg font-semibold">11. Audit e verifiche</h2>
         <p>
-          Il Cliente puo richiedere informazioni ragionevoli sulle misure di sicurezza applicate.
+          Il Cliente può richiedere informazioni ragionevoli sulle misure di sicurezza applicate.
           Eventuali audit specifici sono soggetti a pianificazione, riservatezza e limiti tecnici/organizzativi.
         </p>
 
@@ -88,4 +88,5 @@ export default function DpaPage() {
     </LegalShell>
   );
 }
+
 

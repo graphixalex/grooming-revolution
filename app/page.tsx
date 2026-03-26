@@ -72,7 +72,7 @@ export default async function HomePage() {
         name: "Quanto costa il gestionale?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Gratis fino a 50 clienti. Oltre i 50 clienti il piano FULL e 20 EUR/mese piu imposte applicabili.",
+          text: "Gratis fino a 50 clienti. Oltre i 50 clienti il piano FULL e 20 EUR/mese più imposte applicabili.",
         },
       },
       {
@@ -80,12 +80,12 @@ export default async function HomePage() {
         name: "Posso usarlo da telefono?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Si, l'interfaccia e progettata per uso operativo quotidiano anche da smartphone.",
+          text: "Si, l'interfaccia è progettata per uso operativo quotidiano anche da smartphone.",
         },
       },
       {
         "@type": "Question",
-        name: "Gestisce piu sedi?",
+        name: "Gestisce più sedi?",
         acceptedAnswer: {
           "@type": "Answer",
           text: "Si, ogni sede mantiene dati separati con controllo aggregato per owner e manager.",
@@ -116,3 +116,4 @@ export default async function HomePage() {
     </>
   );
 }
+

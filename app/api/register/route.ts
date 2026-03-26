@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
     const limiterKey = `${getClientIp(req)}:${normalizedEmail}`;
 
     if (isRegisterRateLimited(limiterKey)) {
-      return NextResponse.json({ error: "Troppi tentativi di registrazione. Riprova piu tardi." }, { status: 429 });
+      return NextResponse.json({ error: "Troppi tentativi di registrazione. Riprova più tardi." }, { status: 429 });
     }
     recordRegisterAttempt(limiterKey);
 
@@ -129,3 +129,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Errore server registrazione" }, { status: 500 });
   }
 }
+

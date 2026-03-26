@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -169,7 +169,7 @@ export function ClientsClient() {
     <div className="space-y-4">
       <Card className="space-y-3">
         <h2 className="font-semibold">Nuovo cliente</h2>
-        <p className="text-sm text-zinc-600">Compila i dati cliente e aggiungi subito uno o piu cani.</p>
+        <p className="text-sm text-zinc-600">Compila i dati cliente e aggiungi subito uno o più cani.</p>
         <div className="grid gap-2 md:grid-cols-2">
           <Input placeholder="Nome" value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} />
           <Input placeholder="Cognome" value={form.cognome} onChange={(e) => setForm({ ...form, cognome: e.target.value })} />
@@ -311,4 +311,5 @@ export function ClientsClient() {
     </div>
   );
 }
+
 
