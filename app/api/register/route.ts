@@ -7,7 +7,10 @@ import { getCountryMeta } from "@/lib/geo";
 import { getClientIp } from "@/lib/request";
 import { clearRegisterRateLimit, isRegisterRateLimited, recordRegisterAttempt } from "@/lib/rate-limit";
 import { sendRegistrationWelcomeEmail } from "@/lib/email";
-import { DEFAULT_WHATSAPP_REMINDER_TEMPLATE } from "@/lib/default-templates";
+import {
+  DEFAULT_WHATSAPP_BOOKING_CONFIRM_TEMPLATE,
+  DEFAULT_WHATSAPP_REMINDER_TEMPLATE,
+} from "@/lib/default-templates";
 
 const defaultTreatments = [
   "Bagno",
@@ -79,6 +82,7 @@ export async function POST(req: NextRequest) {
           create: defaultTreatments.map((nome, ordine) => ({ nome, ordine, attivo: true })),
         },
         whatsappTemplate: DEFAULT_WHATSAPP_REMINDER_TEMPLATE,
+        whatsappBookingTemplate: DEFAULT_WHATSAPP_BOOKING_CONFIRM_TEMPLATE,
         emailTemplate:
           "Gentile %nome_cliente%,\nricordiamo l'appuntamento di %nome_pet% in data %data_appuntamento% alle %orario_appuntamento%.\n%nome_attivita%",
       },

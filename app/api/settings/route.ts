@@ -10,6 +10,7 @@ import { slugifyBooking } from "@/lib/booking";
 import { sendAccountDeletionRequestEmails, sendPasswordChangedEmail } from "@/lib/email";
 import {
   DEFAULT_WHATSAPP_BIRTHDAY_TEMPLATE,
+  DEFAULT_WHATSAPP_BOOKING_CONFIRM_TEMPLATE,
   DEFAULT_WHATSAPP_ONE_HOUR_TEMPLATE,
   DEFAULT_WHATSAPP_REMINDER_TEMPLATE,
 } from "@/lib/default-templates";
@@ -81,6 +82,7 @@ export async function GET() {
           telefono: true,
           email: true,
           whatsappTemplate: true,
+          whatsappBookingTemplate: true,
           whatsappOneHourTemplate: true,
           whatsappBirthdayTemplate: true,
           whatsappDayBeforeEnabled: true,
@@ -142,6 +144,7 @@ export async function GET() {
         return legacy
           ? {
               ...legacy,
+              whatsappBookingTemplate: DEFAULT_WHATSAPP_BOOKING_CONFIRM_TEMPLATE,
               whatsappOneHourTemplate: DEFAULT_WHATSAPP_ONE_HOUR_TEMPLATE,
               whatsappBirthdayTemplate: DEFAULT_WHATSAPP_BIRTHDAY_TEMPLATE,
               whatsappDayBeforeEnabled: true,
@@ -196,6 +199,10 @@ export async function GET() {
             typeof salon.whatsappTemplate === "string" && salon.whatsappTemplate.trim().length > 0
               ? salon.whatsappTemplate
               : DEFAULT_WHATSAPP_REMINDER_TEMPLATE,
+          whatsappBookingTemplate:
+            typeof salon.whatsappBookingTemplate === "string" && salon.whatsappBookingTemplate.trim().length > 0
+              ? salon.whatsappBookingTemplate
+              : DEFAULT_WHATSAPP_BOOKING_CONFIRM_TEMPLATE,
           whatsappOneHourTemplate:
             typeof salon.whatsappOneHourTemplate === "string" && salon.whatsappOneHourTemplate.trim().length > 0
               ? salon.whatsappOneHourTemplate
@@ -390,6 +397,10 @@ export async function PATCH(req: NextRequest) {
             typeof body.whatsappTemplate === "string" && body.whatsappTemplate.trim().length > 0
               ? body.whatsappTemplate
               : DEFAULT_WHATSAPP_REMINDER_TEMPLATE,
+          whatsappBookingTemplate:
+            typeof body.whatsappBookingTemplate === "string" && body.whatsappBookingTemplate.trim().length > 0
+              ? body.whatsappBookingTemplate
+              : DEFAULT_WHATSAPP_BOOKING_CONFIRM_TEMPLATE,
           whatsappOneHourTemplate:
             typeof body.whatsappOneHourTemplate === "string" && body.whatsappOneHourTemplate.trim().length > 0
               ? body.whatsappOneHourTemplate
@@ -432,6 +443,7 @@ export async function PATCH(req: NextRequest) {
         });
         return NextResponse.json({
           ...legacy,
+          whatsappBookingTemplate: DEFAULT_WHATSAPP_BOOKING_CONFIRM_TEMPLATE,
           whatsappOneHourTemplate: DEFAULT_WHATSAPP_ONE_HOUR_TEMPLATE,
           whatsappBirthdayTemplate: DEFAULT_WHATSAPP_BIRTHDAY_TEMPLATE,
           whatsappDayBeforeEnabled: true,

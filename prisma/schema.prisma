@@ -111,6 +111,7 @@ model Salon {
   telefono              String?
   email                 String?
   whatsappTemplate      String?              @db.Text
+  whatsappBookingTemplate String?            @db.Text
   whatsappOneHourTemplate String?            @db.Text
   whatsappBirthdayTemplate String?           @db.Text
   whatsappDayBeforeEnabled Boolean           @default(true)

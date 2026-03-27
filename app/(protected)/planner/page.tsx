@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { getRequiredSession } from "@/lib/session";
 import { PlannerClient } from "@/components/planner/planner-client";
 import { Prisma } from "@prisma/client";
+import { DEFAULT_WHATSAPP_BOOKING_CONFIRM_TEMPLATE } from "@/lib/default-templates";
 
 export default async function PlannerPage() {
   const session = await getRequiredSession();
@@ -49,12 +50,48 @@ export default async function PlannerPage() {
       throw error;
     }
   })();
+  const salonPromise = (async () => {
+    try {
+      return await prisma.salon.findUnique({
+        where: { id: session.user.salonId },
+        select: {
+          workingHoursJson: true,
+          whatsappTemplate: true,
+          whatsappBookingTemplate: true,
+          nomeAttivita: true,
+          nomeSede: true,
+          indirizzo: true,
+          salonGroupId: true,
+          valuta: true,
+          timezone: true,
+        },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        (error.code === "P2021" || error.code === "P2022")
+      ) {
+        const legacySalon = await prisma.salon.findUnique({
+          where: { id: session.user.salonId },
+          select: {
+            workingHoursJson: true,
+            whatsappTemplate: true,
+            nomeAttivita: true,
+            nomeSede: true,
+            indirizzo: true,
+            salonGroupId: true,
+            valuta: true,
+            timezone: true,
+          },
+        });
+        return legacySalon ? { ...legacySalon, whatsappBookingTemplate: null } : legacySalon;
+      }
+      throw error;
+    }
+  })();
   const [treatments, salon, operators] = await Promise.all([
     treatmentsPromise,
-    prisma.salon.findUnique({
-      where: { id: session.user.salonId },
-      select: { workingHoursJson: true, whatsappTemplate: true, nomeAttivita: true, nomeSede: true, indirizzo: true, salonGroupId: true, valuta: true, timezone: true },
-    }),
+    salonPromise,
     operatorsPromise,
   ]);
   const branches =
@@ -73,7 +110,7 @@ export default async function PlannerPage() {
         treatments={treatments}
         workingHoursJson={(salon?.workingHoursJson as Prisma.JsonObject | null) ?? null}
         whatsappConfig={{
-          template: salon?.whatsappTemplate || null,
+          template: salon?.whatsappBookingTemplate || salon?.whatsappTemplate || DEFAULT_WHATSAPP_BOOKING_CONFIRM_TEMPLATE,
           nomeAttivita: salon?.nomeAttivita || "",
           indirizzoAttivita: salon?.indirizzo || "",
         }}

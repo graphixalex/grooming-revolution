@@ -28,6 +28,8 @@ type CampaignRow = {
 
 const RECOMMENDED_TEMPLATE =
   "Gentile %nome_cliente%, con piacere Le ricordiamo l'appuntamento di %nome_pet% previsto per %data_appuntamento% alle ore %orario_appuntamento%, presso %nome_attivita% (%indirizzo_attivita%). Saremo felici di accoglierLa. Per modifiche o disdette può rispondere direttamente a questo messaggio. Grazie.";
+const RECOMMENDED_BOOKING_TEMPLATE =
+  "Gentile %nome_cliente%, La ringraziamo per la prenotazione. Confermiamo l'appuntamento di %nome_pet% per %data_appuntamento% alle ore %orario_appuntamento% presso %nome_attivita% (%indirizzo_attivita%). Saremo lieti di accoglierLa.";
 const RECOMMENDED_ONE_HOUR_TEMPLATE =
   "Gentile %nome_cliente%, Le ricordiamo che oggi alle ore %orario_appuntamento% è previsto l'appuntamento di %nome_pet% presso %nome_attivita% (%indirizzo_attivita%). La aspettiamo con piacere. Se desidera aggiornare l'orario, può rispondere a questo messaggio.";
 const RECOMMENDED_BIRTHDAY_TEMPLATE =
@@ -60,6 +62,7 @@ export function WhatsAppClient({ initialSalon }: { initialSalon: any }) {
       body: JSON.stringify({
         section: "templates",
         whatsappTemplate: salon.whatsappTemplate,
+        whatsappBookingTemplate: salon.whatsappBookingTemplate,
         whatsappOneHourTemplate: salon.whatsappOneHourTemplate,
         whatsappBirthdayTemplate: salon.whatsappBirthdayTemplate,
         whatsappDayBeforeEnabled: Boolean(salon.whatsappDayBeforeEnabled),
@@ -176,6 +179,15 @@ export function WhatsAppClient({ initialSalon }: { initialSalon: any }) {
           Placeholder disponibili: %nome_cliente% %nome_pet% %data_appuntamento% %orario_appuntamento% %nome_attivita% %indirizzo_attivita%
         </p>
         <div className="space-y-2 rounded-md border border-zinc-200 p-3">
+          <p className="text-xs font-medium text-zinc-700">Messaggio conferma immediata dopo prenotazione</p>
+          <Textarea
+            value={salon.whatsappBookingTemplate || ""}
+            onChange={(e) => setSalon({ ...salon, whatsappBookingTemplate: e.target.value })}
+            placeholder={RECOMMENDED_BOOKING_TEMPLATE}
+            className="min-h-[100px]"
+          />
+        </div>
+        <div className="space-y-2 rounded-md border border-zinc-200 p-3">
           <label className="flex items-center gap-2 text-sm font-medium">
             <input
               type="checkbox"
@@ -233,6 +245,7 @@ export function WhatsAppClient({ initialSalon }: { initialSalon: any }) {
               setSalon({
                 ...salon,
                 whatsappTemplate: RECOMMENDED_TEMPLATE,
+                whatsappBookingTemplate: RECOMMENDED_BOOKING_TEMPLATE,
                 whatsappOneHourTemplate: RECOMMENDED_ONE_HOUR_TEMPLATE,
                 whatsappBirthdayTemplate: RECOMMENDED_BIRTHDAY_TEMPLATE,
               })
@@ -417,5 +430,3 @@ export function WhatsAppClient({ initialSalon }: { initialSalon: any }) {
     </div>
   );
 }
-
-
