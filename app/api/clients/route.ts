@@ -24,6 +24,17 @@ export async function GET(req: NextRequest) {
             { cognome: { contains: q, mode: "insensitive" } },
             { telefono: { contains: q, mode: "insensitive" } },
             { email: { contains: q, mode: "insensitive" } },
+            {
+              dogs: {
+                some: {
+                  deletedAt: null,
+                  OR: [
+                    { nome: { contains: q, mode: "insensitive" } },
+                    { razza: { contains: q, mode: "insensitive" } },
+                  ],
+                },
+              },
+            },
           ]
         : undefined,
     },

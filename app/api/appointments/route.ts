@@ -10,6 +10,7 @@ const INTERNAL_NOTE_EMAIL = "note@sistema.local";
 const INTERNAL_NOTE_CLIENT_NAME = "Nota";
 const INTERNAL_NOTE_CLIENT_SURNAME = "Personale";
 const INTERNAL_NOTE_DOG_NAME = "Nota personale";
+const MAX_BULK_APPOINTMENTS = 24;
 
 async function ensurePersonalNoteEntities(salonId: string) {
   let client = await prisma.client.findFirst({
@@ -155,6 +156,120 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json(appointment, { status: 201 });
+  }
+
+  if (body.modalita === "BULK_APPOINTMENT") {
+    const startAtListRaw: unknown[] = Array.isArray(body.startsAt) ? body.startsAt : [];
+    const startAtList = startAtListRaw
+      .map((value: unknown) => new Date(String(value)))
+      .filter((value: Date) => Number.isFinite(value.getTime()))
+      .sort((a, b) => a.getTime() - b.getTime());
+    if (!startAtList.length) {
+      return NextResponse.json({ error: "Seleziona almeno una data/ora valida per la sequenza" }, { status: 400 });
+    }
+    if (startAtList.length > MAX_BULK_APPOINTMENTS) {
+      return NextResponse.json({ error: `Puoi creare al massimo ${MAX_BULK_APPOINTMENTS} appuntamenti in sequenza` }, { status: 400 });
+    }
+
+    const uniqueStartAtMap = new Map<string, Date>();
+    for (const startAt of startAtList) {
+      uniqueStartAtMap.set(startAt.toISOString(), startAt);
+    }
+    const uniqueStartAtList = Array.from(uniqueStartAtMap.values()).sort((a, b) => a.getTime() - b.getTime());
+
+    const parsed = appointmentSchema.safeParse({
+      clienteId: body.clienteId,
+      caneId: body.caneId,
+      startAt: uniqueStartAtList[0].toISOString(),
+      durataMinuti: body.durataMinuti,
+      noteAppuntamento: body.noteAppuntamento,
+      trattamentiIds: body.trattamentiIds,
+    });
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+    }
+
+    const operatorId = typeof body.operatorId === "string" && body.operatorId ? body.operatorId : null;
+    if (!operatorId && activeOperatorsCount > 0) {
+      return NextResponse.json({ error: "Seleziona un operatore" }, { status: 400 });
+    }
+    const operator = operatorId
+      ? await prisma.operator.findFirst({
+          where: { id: operatorId, salonId, attivo: true },
+          select: { id: true, workingHoursJson: true },
+        })
+      : null;
+    if (operatorId && !operator) return NextResponse.json({ error: "Operatore non valido" }, { status: 400 });
+
+    const useSalonHoursCheck = !operatorId && activeOperatorsCount === 0;
+    const slotRanges = uniqueStartAtList.map((startAt) => ({
+      startAt,
+      endAt: computeEndAt(startAt, parsed.data.durataMinuti),
+    }));
+
+    for (const range of slotRanges) {
+      if (useSalonHoursCheck && !isInsideWorkingHours(salon.workingHoursJson, range.startAt, range.endAt, salonTimeZone)) {
+        return NextResponse.json(
+          { error: `Orario fuori fascia lavorativa sede: ${range.startAt.toLocaleString("it-IT")}` },
+          { status: 400 },
+        );
+      }
+      if (operator?.workingHoursJson && !isInsideWorkingHours(operator.workingHoursJson, range.startAt, range.endAt, salonTimeZone)) {
+        return NextResponse.json(
+          { error: `Orario fuori disponibilita operatore: ${range.startAt.toLocaleString("it-IT")}` },
+          { status: 400 },
+        );
+      }
+    }
+
+    for (let i = 0; i < slotRanges.length; i += 1) {
+      for (let j = i + 1; j < slotRanges.length; j += 1) {
+        if (slotRanges[i].startAt < slotRanges[j].endAt && slotRanges[i].endAt > slotRanges[j].startAt) {
+          return NextResponse.json(
+            { error: `Sovrapposizione tra date selezionate: ${slotRanges[j].startAt.toLocaleString("it-IT")}` },
+            { status: 400 },
+          );
+        }
+      }
+    }
+
+    if (!allowOverlap && !salon.overlapAllowed) {
+      for (const range of slotRanges) {
+        if (await hasOverlap(salonId, range.startAt, range.endAt, undefined, operatorId)) {
+          return NextResponse.json(
+            { error: `Sovrapposizione con altro appuntamento: ${range.startAt.toLocaleString("it-IT")}` },
+            { status: 400 },
+          );
+        }
+      }
+    }
+
+    const createdIds = await prisma.$transaction(async (trx) => {
+      const ids: string[] = [];
+      for (const range of slotRanges) {
+        const created = await trx.appointment.create({
+          data: {
+            salonId,
+            operatorId,
+            clienteId: parsed.data.clienteId,
+            caneId: parsed.data.caneId,
+            startAt: range.startAt,
+            endAt: range.endAt,
+            durataMinuti: parsed.data.durataMinuti,
+            noteAppuntamento: parsed.data.noteAppuntamento || null,
+            createdById: auth.session.user.id,
+            trattamentiSelezionati: {
+              create: parsed.data.trattamentiIds.map((treatmentId) => ({ treatmentId })),
+            },
+          },
+          select: { id: true },
+        });
+        ids.push(created.id);
+      }
+      return ids;
+    });
+
+    return NextResponse.json({ createdCount: createdIds.length, ids: createdIds }, { status: 201 });
   }
 
   const parsed = appointmentSchema.safeParse(body);

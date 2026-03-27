@@ -338,12 +338,12 @@ export function ClientAnamnesisCard({ clientId }: { clientId: string }) {
 
       {showModal ? (
         <div
-          className="fixed inset-0 z-50 overflow-y-auto bg-black/50 p-2 md:p-6"
+          className="fixed inset-0 z-50 overflow-y-auto bg-black/60 p-0 md:p-4"
           onClick={(event) => {
             if (event.target === event.currentTarget) setShowModal(false);
           }}
         >
-          <Card className="mx-auto max-w-4xl space-y-4 p-4 md:p-6">
+          <Card className="mx-auto flex h-full w-full max-w-none flex-col space-y-4 rounded-none p-4 md:h-[calc(100vh-2rem)] md:rounded-2xl md:p-6">
             <div className="flex items-start justify-between gap-2">
               <h3 className="text-xl font-semibold">Firma anamnesi prima volta</h3>
               <Button variant="outline" onClick={() => setShowModal(false)}>
@@ -356,11 +356,11 @@ export function ClientAnamnesisCard({ clientId }: { clientId: string }) {
                 <p className="font-medium">
                   {data.template.title} (v{data.template.version})
                 </p>
-                <Textarea className="mt-2 min-h-40 text-xs leading-relaxed" value={data.template.legalText} readOnly />
+                <Textarea className="mt-2 min-h-64 text-sm leading-relaxed" value={data.template.legalText} readOnly />
               </div>
             ) : null}
 
-            <div className="grid gap-2 md:grid-cols-2">
+            <div className="grid gap-2 md:grid-cols-2 overflow-y-auto pr-1">
               <Input placeholder="Nome e cognome proprietario" value={ownerFullName} onChange={(event) => setOwnerFullName(event.target.value)} />
               <Input placeholder="Numero di cellulare" value={ownerPhone} onChange={(event) => setOwnerPhone(event.target.value)} />
               <Input placeholder="Nome cane/gatto" value={petName} onChange={(event) => setPetName(event.target.value)} />
@@ -426,7 +426,7 @@ export function ClientAnamnesisCard({ clientId }: { clientId: string }) {
               <p className="mb-2 text-sm font-medium">Firma</p>
               <canvas
                 ref={signatureCanvasRef}
-                className="h-44 w-full touch-none rounded-lg border border-zinc-300 bg-white"
+                className="h-56 w-full touch-none rounded-lg border border-zinc-300 bg-white"
                 onPointerDown={onPointerDown}
                 onPointerMove={onPointerMove}
                 onPointerUp={onPointerUp}

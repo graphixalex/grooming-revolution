@@ -342,6 +342,8 @@ export function PlannerClient({
   const [slotStart, setSlotStart] = useState<Date | null>(null);
   const [slotDateInput, setSlotDateInput] = useState("");
   const [slotTimeInput, setSlotTimeInput] = useState("");
+  const [sequenceEnabled, setSequenceEnabled] = useState(false);
+  const [sequenceSlots, setSequenceSlots] = useState<Array<{ date: string; time: string }>>([]);
   const [selectedClient, setSelectedClient] = useState<Cliente | null>(null);
   const [selectedDog, setSelectedDog] = useState<Cane | null>(null);
   const [search, setSearch] = useState("");
@@ -414,6 +416,8 @@ export function PlannerClient({
     setNote("");
     setSelectedTreatments([]);
     setListinoQuote(null);
+    setSequenceEnabled(false);
+    setSequenceSlots([]);
     setModalMode("APPOINTMENT");
     setNewClientForm({ nome: "", cognome: "", telefono: "", email: "", noteCliente: "", consensoPromemoria: true });
     setNewDogForm({ nome: "", razza: "", taglia: "M", noteCane: "", tagRapidiIds: [] });
@@ -636,6 +640,15 @@ export function PlannerClient({
     setSlotTimeInput(toTimeInputValue(slotStart));
   }, [slotStart]);
 
+  useEffect(() => {
+    if (!sequenceEnabled) return;
+    if (!slotDateInput || !slotTimeInput) return;
+    setSequenceSlots((prev) => {
+      if (!prev.length) return [{ date: slotDateInput, time: slotTimeInput }];
+      return [{ ...prev[0], date: slotDateInput, time: slotTimeInput }, ...prev.slice(1)];
+    });
+  }, [sequenceEnabled, slotDateInput, slotTimeInput]);
+
   async function loadDogs(clienteId: string) {
     const res = await fetch(`/api/dogs?clienteId=${clienteId}`);
     const data = await res.json();
@@ -760,6 +773,46 @@ export function PlannerClient({
     }
 
     if (!selectedClient || !selectedDog) return;
+    if (sequenceEnabled) {
+      const startsAt = sequenceSlots
+        .map((slot) => buildLocalDateTime(slot.date, slot.time))
+        .filter((slot): slot is Date => Boolean(slot))
+        .map((slot) => slot.toISOString());
+
+      if (!startsAt.length) {
+        alert("Inserisci almeno una data/ora valida per la sequenza");
+        return;
+      }
+
+      const { res, data } = await requestAppointmentWithOptionalOverlap(
+        "POST",
+        {
+          modalita: "BULK_APPOINTMENT",
+          operatorId: operatorIdForSave || null,
+          clienteId: selectedClient.id,
+          caneId: selectedDog.id,
+          startsAt,
+          durataMinuti: durata,
+          noteAppuntamento: note,
+          trattamentiIds: selectedTreatments,
+        },
+        "Una o più date sono in sovrapposizione. Vuoi salvare comunque la sequenza?",
+      );
+      if (!res.ok) {
+        alert(data.error || "Errore creazione sequenza appuntamenti");
+        return;
+      }
+
+      alert(`Sequenza salvata: ${data.createdCount || startsAt.length} appuntamenti creati.`);
+      closeAppointmentModal();
+      if (visibleRange) {
+        await loadAppointments(visibleRange.from, visibleRange.to);
+      } else {
+        await loadAppointments();
+      }
+      return;
+    }
+
     const startForMessage = slotStart;
     const clientForMessage = selectedClient;
     const dogForMessage = selectedDog;
@@ -814,6 +867,36 @@ export function PlannerClient({
       await loadAppointments();
     }
   }
+
+  function addSequenceSlotFromLast() {
+    setSequenceSlots((prev) => {
+      if (!prev.length) {
+        return slotDateInput && slotTimeInput ? [{ date: slotDateInput, time: slotTimeInput }] : prev;
+      }
+      const last = prev[prev.length - 1];
+      if (!last?.date || !last?.time) return prev;
+      const lastDate = buildLocalDateTime(last.date, last.time);
+      if (!lastDate) return prev;
+      const nextDate = new Date(lastDate);
+      nextDate.setMonth(nextDate.getMonth() + 1);
+      return [...prev, { date: toDateInputValue(nextDate), time: toTimeInputValue(nextDate) }];
+    });
+  }
+
+  function addEmptySequenceSlot() {
+    setSequenceSlots((prev) => [...prev, { date: slotDateInput, time: slotTimeInput }]);
+  }
+
+  function updateSequenceSlot(index: number, patch: Partial<{ date: string; time: string }>) {
+    setSequenceSlots((prev) => prev.map((slot, i) => (i === index ? { ...slot, ...patch } : slot)));
+  }
+
+  function removeSequenceSlot(index: number) {
+    setSequenceSlots((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  const hasValidSequenceSlot = sequenceSlots.some((slot) => Boolean(buildLocalDateTime(slot.date, slot.time)));
+  const sequenceReady = Boolean(selectedClient && selectedDog);
 
   async function moveAppointmentToSlot(appointmentId: string, targetStart: Date, targetOperatorId: string | null) {
     const appointment = appointments.find((a) => a.id === appointmentId);
@@ -1553,6 +1636,68 @@ export function PlannerClient({
               </Button>
             </div>
 
+            {modalMode === "APPOINTMENT" ? (
+              <div className="mb-3 space-y-2 rounded-xl border-2 border-amber-300 bg-amber-50 p-3">
+                <label className="flex items-center gap-2 text-sm font-semibold text-amber-900">
+                  <input
+                    type="checkbox"
+                    checked={sequenceEnabled}
+                    onChange={(e) => {
+                      const enabled = e.target.checked;
+                      setSequenceEnabled(enabled);
+                      if (enabled) {
+                        setSequenceSlots((prev) =>
+                          prev.length ? prev : slotDateInput && slotTimeInput ? [{ date: slotDateInput, time: slotTimeInput }] : prev,
+                        );
+                      }
+                    }}
+                  />
+                  Prenotazione in sequenza (date multiple)
+                </label>
+                <p className="text-xs text-amber-900">
+                  {sequenceReady
+                    ? "Modalita sequenza pronta: inserisci tutte le date (es. 10/03, 20/04, 25/05...)."
+                    : "Seleziona prima cliente e cane, poi salva la sequenza."}
+                </p>
+                {sequenceEnabled ? (
+                  <div className="space-y-2">
+                    <div className="space-y-2">
+                      {sequenceSlots.map((slot, index) => (
+                        <div key={`seq-top-${index}`} className="grid gap-2 md:grid-cols-[1fr_1fr_auto]">
+                          <Input
+                            type="date"
+                            value={slot.date}
+                            onChange={(e) => updateSequenceSlot(index, { date: e.target.value })}
+                          />
+                          <Input
+                            type="time"
+                            value={slot.time}
+                            onChange={(e) => updateSequenceSlot(index, { time: e.target.value })}
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => removeSequenceSlot(index)}
+                            disabled={sequenceSlots.length <= 1}
+                          >
+                            Rimuovi
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button type="button" variant="outline" onClick={addEmptySequenceSlot}>
+                        Aggiungi data
+                      </Button>
+                      <Button type="button" variant="outline" onClick={addSequenceSlotFromLast}>
+                        Aggiungi +1 mese
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+
             {modalMode === "NOTE" ? (
               <div className="space-y-2 border-t border-zinc-200 pt-3">
                 <label className="text-sm font-medium">Durata nota</label>
@@ -1617,7 +1762,7 @@ export function PlannerClient({
             {modalMode === "APPOINTMENT" && isNewClient === false ? (
               <div className="space-y-2">
                 <h4 className="font-medium">1) Cerca Cliente</h4>
-                <Input placeholder="Nome, telefono o email" value={search} onChange={(e) => setSearch(e.target.value)} />
+                <Input placeholder="Nome, telefono, email, nome cane o razza" value={search} onChange={(e) => setSearch(e.target.value)} />
                 <div className="max-h-36 overflow-y-auto rounded border border-zinc-200">
                   {results.map((c) => (
                     <button
@@ -1706,10 +1851,10 @@ export function PlannerClient({
               <Button
                 onClick={saveAppointment}
                 disabled={
-                  (modalMode === "APPOINTMENT" ? !selectedClient || !selectedDog : !note.trim())
+                  (modalMode === "APPOINTMENT" ? !selectedClient || !selectedDog || (sequenceEnabled && !hasValidSequenceSlot) : !note.trim())
                 }
               >
-                {modalMode === "NOTE" ? "Salva nota" : "Salva appuntamento"}
+                {modalMode === "NOTE" ? "Salva nota" : sequenceEnabled ? "Salva sequenza" : "Salva appuntamento"}
               </Button>
             </div>
           </Card>
