@@ -377,6 +377,7 @@ export function PlannerClient({
   const [sequencePreviewAppointments, setSequencePreviewAppointments] = useState<Appointment[]>([]);
   const [sequenceServicePickerIndex, setSequenceServicePickerIndex] = useState<number | null>(null);
   const [showMainServicePicker, setShowMainServicePicker] = useState(false);
+  const [isPassingClient, setIsPassingClient] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Cliente | null>(null);
   const [selectedDog, setSelectedDog] = useState<Cane | null>(null);
   const [search, setSearch] = useState("");
@@ -428,6 +429,7 @@ export function PlannerClient({
 
   const [newClientForm, setNewClientForm] = useState({ nome: "", cognome: "", telefono: "", email: "", noteCliente: "", consensoPromemoria: true });
   const [newDogForm, setNewDogForm] = useState({ nome: "", razza: "", taglia: "M", noteCane: "", tagRapidiIds: [] as string[] });
+  const [passingClientForm, setPassingClientForm] = useState({ telefono: "", dogNome: "", dogRazza: "", dogTaglia: "M" });
   const [lastTap, setLastTap] = useState<{ appointmentId: string; at: number } | null>(null);
 
   function humanAppointmentStatus(status: string) {
@@ -457,9 +459,11 @@ export function PlannerClient({
     setSequencePreviewAppointments([]);
     setSequenceServicePickerIndex(null);
     setShowMainServicePicker(false);
+    setIsPassingClient(false);
     setModalMode("APPOINTMENT");
     setNewClientForm({ nome: "", cognome: "", telefono: "", email: "", noteCliente: "", consensoPromemoria: true });
     setNewDogForm({ nome: "", razza: "", taglia: "M", noteCane: "", tagRapidiIds: [] });
+    setPassingClientForm({ telefono: "", dogNome: "", dogRazza: "", dogTaglia: "M" });
   }
 
   function closeAppointmentModal() {
@@ -641,14 +645,14 @@ export function PlannerClient({
   }, []);
 
   useEffect(() => {
-    if (!search || isNewClient !== false) return;
+    if (!search || isNewClient !== false || isPassingClient) return;
     const timer = setTimeout(async () => {
       const res = await fetch(`/api/clients?q=${encodeURIComponent(search)}`);
       const data = await res.json();
       setResults(data);
     }, 250);
     return () => clearTimeout(timer);
-  }, [search, isNewClient]);
+  }, [search, isNewClient, isPassingClient]);
 
   useEffect(() => {
     if (!showModal || !selectedDog) return;
@@ -729,6 +733,55 @@ export function PlannerClient({
 
     setSelectedDog(dogData);
     alert("Cliente e cane creati. Completa ora l'appuntamento.");
+  }
+
+  async function createPassingClientThenDog() {
+    const phone = passingClientForm.telefono.trim();
+    const dogName = passingClientForm.dogNome.trim();
+    if (!phone || !dogName) {
+      alert("Per cliente di passaggio inserisci almeno telefono e nome cane");
+      return;
+    }
+
+    const cRes = await fetch("/api/clients", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        nome: "Cliente",
+        cognome: "Di passaggio",
+        telefono: phone,
+        email: "",
+        noteCliente: "Cliente di passaggio",
+        consensoPromemoria: false,
+      }),
+    });
+    const clientData = await cRes.json();
+    if (!cRes.ok) {
+      alert(clientData.error || "Errore creazione cliente di passaggio");
+      return;
+    }
+
+    setSelectedClient(clientData);
+
+    const dRes = await fetch("/api/dogs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        clienteId: clientData.id,
+        nome: dogName,
+        razza: passingClientForm.dogRazza.trim(),
+        taglia: passingClientForm.dogTaglia,
+        noteCane: "Cane cliente di passaggio",
+      }),
+    });
+    const dogData = await dRes.json();
+    if (!dRes.ok) {
+      alert(dogData.error || "Errore creazione cane di passaggio");
+      return;
+    }
+
+    setSelectedDog(dogData);
+    alert("Cliente di passaggio e cane creati. Completa ora l'appuntamento.");
   }
 
   async function computeListinoQuote(caneId: string, trattamentoIds: string[]) {
@@ -2006,16 +2059,80 @@ export function PlannerClient({
 
             {modalMode === "APPOINTMENT" ? (
             <div className="my-3 flex flex-wrap gap-2">
-              <Button variant={isNewClient === true ? "default" : "outline"} onClick={() => setIsNewClient(true)}>
+              <Button
+                variant={isNewClient === true && !isPassingClient ? "default" : "outline"}
+                onClick={() => {
+                  setIsPassingClient(false);
+                  setIsNewClient(true);
+                }}
+              >
                 E un nuovo cliente? SI
               </Button>
-              <Button variant={isNewClient === false ? "default" : "outline"} onClick={() => setIsNewClient(false)}>
+              <Button
+                variant={isNewClient === false && !isPassingClient ? "default" : "outline"}
+                onClick={() => {
+                  setIsPassingClient(false);
+                  setIsNewClient(false);
+                }}
+              >
                 E un nuovo cliente? NO
+              </Button>
+              <Button
+                variant={isPassingClient ? "default" : "outline"}
+                onClick={() => {
+                  setIsPassingClient(true);
+                  setIsNewClient(true);
+                  setSelectedClient(null);
+                  setSelectedDog(null);
+                }}
+              >
+                Cliente di passaggio
               </Button>
             </div>
             ) : null}
 
-            {modalMode === "APPOINTMENT" && isNewClient === true ? (
+            {modalMode === "APPOINTMENT" && isPassingClient ? (
+              <div className="space-y-2">
+                <h4 className="font-medium">Cliente di passaggio</h4>
+                <p className="text-xs text-zinc-600">
+                  Compila solo telefono e dati cane. Il cliente viene salvato come &quot;Cliente Di passaggio&quot;.
+                </p>
+                <div className="grid gap-2 md:grid-cols-2">
+                  <Input
+                    placeholder="Telefono"
+                    value={passingClientForm.telefono}
+                    onChange={(e) => setPassingClientForm((prev) => ({ ...prev, telefono: e.target.value }))}
+                  />
+                  <Input
+                    placeholder="Nome cane"
+                    value={passingClientForm.dogNome}
+                    onChange={(e) => setPassingClientForm((prev) => ({ ...prev, dogNome: e.target.value }))}
+                  />
+                  <Input
+                    placeholder="Razza"
+                    value={passingClientForm.dogRazza}
+                    onChange={(e) => setPassingClientForm((prev) => ({ ...prev, dogRazza: e.target.value }))}
+                  />
+                  <select
+                    className="h-10 rounded-md border border-zinc-300 px-3 text-sm"
+                    value={passingClientForm.dogTaglia}
+                    onChange={(e) => setPassingClientForm((prev) => ({ ...prev, dogTaglia: e.target.value }))}
+                  >
+                    <option value="XS">Taglia XS</option>
+                    <option value="S">Taglia S</option>
+                    <option value="M">Taglia M</option>
+                    <option value="L">Taglia L</option>
+                    <option value="XL">Taglia XL</option>
+                    <option value="XXL">Taglia XXL</option>
+                  </select>
+                </div>
+                <Button type="button" onClick={createPassingClientThenDog}>
+                  Salva cliente di passaggio e cane
+                </Button>
+              </div>
+            ) : null}
+
+            {modalMode === "APPOINTMENT" && isNewClient === true && !isPassingClient ? (
               <div className="space-y-2">
                 <h4 className="font-medium">1) Crea Cliente</h4>
                 <div className="grid gap-2 md:grid-cols-2">
@@ -2045,7 +2162,7 @@ export function PlannerClient({
               </div>
             ) : null}
 
-            {modalMode === "APPOINTMENT" && isNewClient === false ? (
+            {modalMode === "APPOINTMENT" && isNewClient === false && !isPassingClient ? (
               <div className="space-y-2">
                 <h4 className="font-medium">1) Cerca Cliente</h4>
                 <Input placeholder="Nome, telefono, email, nome cane o razza" value={search} onChange={(e) => setSearch(e.target.value)} />

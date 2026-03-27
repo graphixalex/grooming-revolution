@@ -402,19 +402,24 @@ export function SettingsClient({ initial }: { initial: any }) {
                 />
                 <span className="text-xs text-zinc-500">Colore agenda</span>
               </div>
-              <Input
-                type="number"
-                min="1"
-                max="10"
-                step="1"
-                placeholder="Colonne agenda (1-10)"
-                value={op.agendaColumns ?? "1"}
-                onChange={(e) =>
-                  setOperators((prev: any[]) =>
-                    prev.map((x, i) => (i === opIndex ? { ...x, agendaColumns: e.target.value } : x)),
-                  )
-                }
-              />
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-zinc-700">
+                  Vuoi espandere l&apos;agenda per questo operatore? Scegli da 1 a 10 colonne per giorno.
+                </p>
+                <Input
+                  type="number"
+                  min="1"
+                  max="10"
+                  step="1"
+                  placeholder="Colonne agenda (1-10)"
+                  value={op.agendaColumns ?? "1"}
+                  onChange={(e) =>
+                    setOperators((prev: any[]) =>
+                      prev.map((x, i) => (i === opIndex ? { ...x, agendaColumns: e.target.value } : x)),
+                    )
+                  }
+                />
+              </div>
               <Input
                 type="number"
                 min="0"
