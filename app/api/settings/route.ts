@@ -506,6 +506,7 @@ export async function PATCH(req: NextRequest) {
       nome: string;
       attivo: boolean;
       ordine: number;
+      agendaColumns?: number | string | null;
       color?: string | null;
       workingHoursJson?: unknown;
       kpiTargetRevenue?: number | string | null;
@@ -540,6 +541,7 @@ export async function PATCH(req: NextRequest) {
         nome: o.nome.trim(),
         attivo: Boolean(o.attivo),
         ordine: o.ordine,
+        agendaColumns: Math.max(1, Math.min(10, Number(o.agendaColumns) || 1)),
         color: o.color || "#2563eb",
         workingHoursJson: o.workingHoursJson ?? Prisma.JsonNull,
         kpiTargetRevenue:

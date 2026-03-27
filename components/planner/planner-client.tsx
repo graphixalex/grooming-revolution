@@ -18,7 +18,17 @@ type Operator = {
   nome: string;
   attivo?: boolean;
   color?: string | null;
+  agendaColumns?: number | null;
   workingHoursJson?: WorkingHoursJson | null;
+};
+type MatrixOperator = {
+  virtualId: string;
+  operatorId: string | null;
+  nome: string;
+  start: string;
+  end: string;
+  columnIndex: number;
+  columnCount: number;
 };
 type DayKey = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
 
@@ -299,13 +309,28 @@ function getItalianHolidayEvents(fromIso: string, toIso: string) {
   return events;
 }
 
-function getOperatorsForDate(operators: Operator[], date: Date, timeZone: string) {
+function clampAgendaColumns(raw: number | null | undefined) {
+  return Math.max(1, Math.min(10, Number(raw) || 1));
+}
+
+function getOperatorsForDate(operators: Operator[], date: Date, timeZone: string): MatrixOperator[] {
   return operators
     .filter((op) => Boolean(op.attivo ?? true))
     .flatMap((op) => {
       const row = getWorkingHoursRowForDate(op.workingHoursJson as any, date, timeZone);
       if (!row?.enabled || !row.start || !row.end) return [];
-      return [{ id: op.id, nome: op.nome, start: row.start, end: row.end }];
+      const start = row.start;
+      const end = row.end;
+      const columnCount = clampAgendaColumns(op.agendaColumns);
+      return Array.from({ length: columnCount }, (_, index) => ({
+        virtualId: `${op.id}__col_${index + 1}`,
+        operatorId: op.id,
+        nome: op.nome,
+        start,
+        end,
+        columnIndex: index,
+        columnCount,
+      }));
     });
 }
 
@@ -1248,6 +1273,15 @@ export function PlannerClient({
       operators: getOperatorsForDate(operators, d.date, plannerTimeZone),
     }));
   }, [matrixDays, operators, plannerTimeZone]);
+  const noOperatorColumn: MatrixOperator = {
+    virtualId: "none",
+    operatorId: null,
+    nome: "Nessuno",
+    start: "--:--",
+    end: "--:--",
+    columnIndex: 0,
+    columnCount: 1,
+  };
   const matrixSlots = useMemo(() => {
     const times = matrixColumns.flatMap((d) => d.operators.flatMap((op) => [toMinutes(op.start), toMinutes(op.end)]));
     if (!times.length) return [];
@@ -1415,9 +1449,10 @@ export function PlannerClient({
                     style={{ minWidth: `${matrixDayMinWidths[dayIndex]}px` }}
                   >
                     <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${Math.max(1, day.operators.length)}, minmax(0, 1fr))` }}>
-                      {(day.operators.length ? day.operators : [{ id: "none", nome: "Nessuno", start: "--:--", end: "--:--" }]).map((op) => (
-                        <div key={`${day.date.toISOString()}-${op.id}`} className="rounded border border-zinc-200 bg-white px-1.5 py-1 text-[11px]">
+                      {(day.operators.length ? day.operators : [noOperatorColumn]).map((op) => (
+                        <div key={`${day.date.toISOString()}-${op.virtualId}`} className="rounded border border-zinc-200 bg-white px-1.5 py-1 text-[11px]">
                           <div className="font-semibold">{op.nome}</div>
+                          {op.columnCount > 1 ? <div className="text-zinc-500">Colonna {op.columnIndex + 1}/{op.columnCount}</div> : null}
                           <div className="text-zinc-500">{op.start}-{op.end}</div>
                         </div>
                       ))}
@@ -1437,7 +1472,7 @@ export function PlannerClient({
                       style={{ minWidth: `${matrixDayMinWidths[dayIndex]}px` }}
                     >
                       <div className="grid gap-0" style={{ gridTemplateColumns: `repeat(${Math.max(1, day.operators.length)}, minmax(0, 1fr))` }}>
-                        {(day.operators.length ? day.operators : [{ id: "none", nome: "Nessuno", start: "--:--", end: "--:--" }]).map((op) => {
+                        {(day.operators.length ? day.operators : [noOperatorColumn]).map((op) => {
                           const slotStart = new Date(day.date);
                           slotStart.setHours(Math.floor(slotMin / 60), slotMin % 60, 0, 0);
                           const slotTime = slotStart.getTime();
@@ -1451,53 +1486,72 @@ export function PlannerClient({
                               endMs: new Date(appointment.endAt).getTime(),
                             };
                           };
+                          const operatorAppointments = op.operatorId ? appointments.filter((a) => a.operator?.id === op.operatorId) : [];
+                          const getLaneMeta = (appointment: Appointment) => {
+                            const { startMs: apptStartMs, endMs: apptEndMs } = getRenderBounds(appointment);
+                            const laneAppointments = operatorAppointments
+                              .filter((other) => {
+                                const { startMs: otherStart, endMs: otherEnd } = getRenderBounds(other);
+                                return otherStart < apptEndMs && otherEnd > apptStartMs;
+                              })
+                              .sort((a, b) => {
+                                const aStart = new Date(a.startAt).getTime();
+                                const bStart = new Date(b.startAt).getTime();
+                                if (aStart !== bStart) return aStart - bStart;
+                                return a.id.localeCompare(b.id);
+                              });
+                            return {
+                              laneCount: Math.max(1, laneAppointments.length),
+                              laneIndex: Math.max(0, laneAppointments.findIndex((x) => x.id === appointment.id)),
+                            };
+                          };
                           const slotAppointments = appointments.filter((a) => {
-                            if (a.operator?.id !== op.id) return false;
+                            if (!op.operatorId || a.operator?.id !== op.operatorId) return false;
                             const { startMs: aStart, endMs: aEnd } = getRenderBounds(a);
-                            return slotTime >= aStart && slotTime < aEnd;
+                            if (!(slotTime >= aStart && slotTime < aEnd)) return false;
+                            const lane = getLaneMeta(a);
+                            return (lane.laneIndex % op.columnCount) === op.columnIndex;
                           });
                           const orderedSlotAppointments = [...slotAppointments].sort(
                             (a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime(),
                           );
-                          const row = day.operators.find((o) => o.id === op.id);
-                          const inShift = row ? slotMin >= toMinutes(row.start) && slotMin < toMinutes(row.end) : false;
-                          const operatorAppointments = appointments.filter((a) => a.operator?.id === op.id);
+                          const inShift = Boolean(op.operatorId) && slotMin >= toMinutes(op.start) && slotMin < toMinutes(op.end);
                           return (
                             <div
-                              key={`${day.date.toISOString()}-${op.id}-${slotMin}`}
+                              key={`${day.date.toISOString()}-${op.virtualId}-${slotMin}`}
                               className={`relative h-9 w-full ${
                                 inShift ? "border border-zinc-200 bg-white" : "border border-zinc-100 bg-zinc-50"
                               }`}
                               onDragOver={(event) => {
-                                if (!inShift || op.id === "none") return;
+                                if (!inShift || !op.operatorId) return;
                                 event.preventDefault();
                                 event.dataTransfer.dropEffect = "move";
                               }}
                               onDrop={async (event) => {
-                                if (!inShift || op.id === "none") return;
+                                if (!inShift || !op.operatorId) return;
                                 event.preventDefault();
                                 const draggedAppointmentId = event.dataTransfer.getData("text/plain");
                                 if (!draggedAppointmentId) return;
-                                await moveAppointmentToSlot(draggedAppointmentId, slotStart, op.id || null);
+                                await moveAppointmentToSlot(draggedAppointmentId, slotStart, op.operatorId);
                               }}
                               onClick={() => {
                                 if (resizeDrag) return;
-                                if ((!inShift && orderedSlotAppointments.length === 0) || op.id === "none") return;
+                                if ((!inShift && orderedSlotAppointments.length === 0) || !op.operatorId) return;
                                 if (pendingMoveAppointmentId) {
-                                  void moveAppointmentToSlot(pendingMoveAppointmentId, slotStart, op.id || null);
+                                  void moveAppointmentToSlot(pendingMoveAppointmentId, slotStart, op.operatorId);
                                   setPendingMoveAppointmentId(null);
                                   return;
                                 }
                                 if (copiedAppointmentId) {
-                                  void pasteAppointmentToSlot(copiedAppointmentId, slotStart, op.id || null);
+                                  void pasteAppointmentToSlot(copiedAppointmentId, slotStart, op.operatorId);
                                   return;
                                 }
                                 if (orderedSlotAppointments.length === 0) {
-                                  openNewAppointmentModal(slotStart, op.id);
+                                  openNewAppointmentModal(slotStart, op.operatorId);
                                 }
                               }}
                             >
-                              {orderedSlotAppointments.map((appt, idx) => {
+                              {orderedSlotAppointments.map((appt) => {
                                 const { startMs: apptStartMs, endMs: apptEndMs } = getRenderBounds(appt);
                                 const apptStartsHere = apptStartMs === slotTime;
                                 const apptContinuesBefore = apptStartMs < slotTime;
@@ -1515,19 +1569,9 @@ export function PlannerClient({
                                   appt.stato ? `Stato: ${appt.stato}` : null,
                                 ].filter(Boolean) as string[];
                                 const hoverPreviewText = previewLines.join("\n");
-                                const laneAppointments = operatorAppointments
-                                  .filter((other) => {
-                                    const { startMs: otherStart, endMs: otherEnd } = getRenderBounds(other);
-                                    return otherStart < apptEndMs && otherEnd > apptStartMs;
-                                  })
-                                  .sort((a, b) => {
-                                    const aStart = new Date(a.startAt).getTime();
-                                    const bStart = new Date(b.startAt).getTime();
-                                    if (aStart !== bStart) return aStart - bStart;
-                                    return a.id.localeCompare(b.id);
-                                  });
-                                const laneCount = Math.max(1, laneAppointments.length);
-                                const laneIndex = Math.max(0, laneAppointments.findIndex((x) => x.id === appt.id));
+                                const lane = getLaneMeta(appt);
+                                const laneCount = lane.laneCount;
+                                const laneIndex = lane.laneIndex;
                                 const widthPct = 100 / laneCount;
                                 const blockHeightPx = Math.max(36, ((apptEndMs - apptStartMs) / (30 * 60 * 1000)) * 36);
                                 const borderColor = "rgba(255,255,255,0.55)";
@@ -1566,7 +1610,7 @@ export function PlannerClient({
                                     }}
                                     onClick={(event) => {
                                       event.stopPropagation();
-                                      handleAppointmentTap(appt, op.id);
+                                      handleAppointmentTap(appt, op.operatorId || "");
                                     }}
                                     title={hoverPreviewText}
                                   >

@@ -433,6 +433,7 @@ model Operator {
   nome                String
   attivo              Boolean     @default(true)
   ordine              Int         @default(0)
+  agendaColumns       Int         @default(1)
   color               String?     @default("#2563eb")
   workingHoursJson    Json?
   kpiTargetRevenue    Decimal?    @db.Decimal(10, 2)

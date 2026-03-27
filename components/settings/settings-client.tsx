@@ -136,6 +136,7 @@ export function SettingsClient({ initial }: { initial: any }) {
       attivo: Boolean(o.attivo),
       ordine: o.ordine ?? idx,
       color: o.color || "#2563eb",
+      agendaColumns: String(Math.max(1, Math.min(10, Number(o.agendaColumns) || 1))),
       kpiTargetRevenue: o.kpiTargetRevenue != null ? String(o.kpiTargetRevenue) : "",
       kpiTargetAppointments: o.kpiTargetAppointments != null ? String(o.kpiTargetAppointments) : "",
       workingHours: normalizeWorkingHours(o.workingHoursJson),
@@ -381,7 +382,7 @@ export function SettingsClient({ initial }: { initial: any }) {
         </label>
         {operators.map((op: any, opIndex: number) => (
           <div key={op.id || opIndex} className="space-y-3 rounded-md border border-zinc-200 p-3">
-            <div className="grid gap-2 md:grid-cols-6">
+            <div className="grid gap-2 md:grid-cols-7">
               <Input
                 placeholder="Nome operatore"
                 value={op.nome}
@@ -401,6 +402,19 @@ export function SettingsClient({ initial }: { initial: any }) {
                 />
                 <span className="text-xs text-zinc-500">Colore agenda</span>
               </div>
+              <Input
+                type="number"
+                min="1"
+                max="10"
+                step="1"
+                placeholder="Colonne agenda (1-10)"
+                value={op.agendaColumns ?? "1"}
+                onChange={(e) =>
+                  setOperators((prev: any[]) =>
+                    prev.map((x, i) => (i === opIndex ? { ...x, agendaColumns: e.target.value } : x)),
+                  )
+                }
+              />
               <Input
                 type="number"
                 min="0"
@@ -778,6 +792,7 @@ export function SettingsClient({ initial }: { initial: any }) {
                 attivo: true,
                 ordine: prev.length,
                 color: "#2563eb",
+                agendaColumns: "1",
                 kpiTargetRevenue: "",
                 kpiTargetAppointments: "",
                 workingHours: normalizeWorkingHours(operators[0]?.workingHours ? toWorkingHoursJson(operators[0].workingHours) : undefined),
@@ -797,6 +812,7 @@ export function SettingsClient({ initial }: { initial: any }) {
                 attivo: o.attivo,
                 ordine: i,
                 color: o.color,
+                agendaColumns: Math.max(1, Math.min(10, Number(o.agendaColumns) || 1)),
                 kpiTargetRevenue: o.kpiTargetRevenue === "" ? null : Number(o.kpiTargetRevenue),
                 kpiTargetAppointments: o.kpiTargetAppointments === "" ? null : Number(o.kpiTargetAppointments),
                 workingHoursJson: toWorkingHoursJson(o.workingHours, o.exceptions || []),

@@ -14,7 +14,7 @@ export default async function PlannerPage() {
     prisma.operator.findMany({
       where: { salonId: session.user.salonId, attivo: true },
       orderBy: { ordine: "asc" },
-      select: { id: true, nome: true, color: true, workingHoursJson: true },
+      select: { id: true, nome: true, color: true, workingHoursJson: true, agendaColumns: true },
     }),
   ]);
   const branches =
