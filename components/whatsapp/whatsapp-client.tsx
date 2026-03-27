@@ -27,7 +27,11 @@ type CampaignRow = {
 };
 
 const RECOMMENDED_TEMPLATE =
-  "Gentile %nome_cliente%, Le ricordiamo con piacere l'appuntamento di %nome_pet% per il giorno %data_appuntamento% alle ore %orario_appuntamento% presso %nome_attivita% (%indirizzo_attivita%). Saremo felici di prenderci cura del Suo amico a quattro zampe. Per eventuali modifiche, può rispondere direttamente a questo messaggio. A presto.";
+  "Gentile %nome_cliente%, Le ricordiamo con piacere l'appuntamento di %nome_pet% per il giorno %data_appuntamento% alle ore %orario_appuntamento% presso %nome_attivita% (%indirizzo_attivita%). Saremo felici di prenderci cura del Suo amico a quattro zampe. Per eventuali modifiche, puo rispondere direttamente a questo messaggio. A presto.";
+const RECOMMENDED_ONE_HOUR_TEMPLATE =
+  "Ciao %nome_cliente%, promemoria veloce: oggi alle %orario_appuntamento% ci prendiamo cura di %nome_pet% da %nome_attivita% (%indirizzo_attivita%). Se hai bisogno scrivici qui.";
+const RECOMMENDED_BIRTHDAY_TEMPLATE =
+  "Buon compleanno %nome_pet%! Da tutto lo staff di %nome_attivita% tantissimi auguri e coccole speciali.";
 
 export function WhatsAppClient({ initialSalon }: { initialSalon: any }) {
   const [salon, setSalon] = useState(initialSalon);
@@ -56,6 +60,11 @@ export function WhatsAppClient({ initialSalon }: { initialSalon: any }) {
       body: JSON.stringify({
         section: "templates",
         whatsappTemplate: salon.whatsappTemplate,
+        whatsappOneHourTemplate: salon.whatsappOneHourTemplate,
+        whatsappBirthdayTemplate: salon.whatsappBirthdayTemplate,
+        whatsappDayBeforeEnabled: Boolean(salon.whatsappDayBeforeEnabled),
+        whatsappOneHourEnabled: Boolean(salon.whatsappOneHourEnabled),
+        whatsappBirthdayEnabled: Boolean(salon.whatsappBirthdayEnabled),
         whatsappApiEnabled: Boolean(salon.whatsappApiEnabled),
         whatsappApiPhoneNumberId: salon.whatsappApiPhoneNumberId || "",
         whatsappApiVersion: salon.whatsappApiVersion || "v23.0",
@@ -162,22 +171,74 @@ export function WhatsAppClient({ initialSalon }: { initialSalon: any }) {
   return (
     <div className="space-y-4">
       <Card className="space-y-3">
-        <h2 className="font-semibold">Template promemoria WhatsApp</h2>
+        <h2 className="font-semibold">Template automazioni WhatsApp</h2>
         <p className="text-xs text-zinc-500">
           Placeholder disponibili: %nome_cliente% %nome_pet% %data_appuntamento% %orario_appuntamento% %nome_attivita% %indirizzo_attivita%
         </p>
-        <div className="space-y-1">
-          <p className="text-xs font-medium text-zinc-700">Messaggio promemoria</p>
+        <div className="space-y-2 rounded-md border border-zinc-200 p-3">
+          <label className="flex items-center gap-2 text-sm font-medium">
+            <input
+              type="checkbox"
+              checked={Boolean(salon.whatsappDayBeforeEnabled)}
+              onChange={(e) => setSalon({ ...salon, whatsappDayBeforeEnabled: e.target.checked })}
+            />
+            Invia reminder automatico il giorno prima
+          </label>
+          <p className="text-xs font-medium text-zinc-700">Messaggio reminder giorno prima</p>
           <Textarea
             value={salon.whatsappTemplate || ""}
             onChange={(e) => setSalon({ ...salon, whatsappTemplate: e.target.value })}
             placeholder={RECOMMENDED_TEMPLATE}
-            className="min-h-[140px]"
+            className="min-h-[110px]"
+          />
+        </div>
+        <div className="space-y-2 rounded-md border border-zinc-200 p-3">
+          <label className="flex items-center gap-2 text-sm font-medium">
+            <input
+              type="checkbox"
+              checked={Boolean(salon.whatsappOneHourEnabled)}
+              onChange={(e) => setSalon({ ...salon, whatsappOneHourEnabled: e.target.checked })}
+            />
+            Invia reminder automatico 1 ora prima
+          </label>
+          <p className="text-xs font-medium text-zinc-700">Messaggio reminder 1 ora prima</p>
+          <Textarea
+            value={salon.whatsappOneHourTemplate || ""}
+            onChange={(e) => setSalon({ ...salon, whatsappOneHourTemplate: e.target.value })}
+            placeholder={RECOMMENDED_ONE_HOUR_TEMPLATE}
+            className="min-h-[100px]"
+          />
+        </div>
+        <div className="space-y-2 rounded-md border border-zinc-200 p-3">
+          <label className="flex items-center gap-2 text-sm font-medium">
+            <input
+              type="checkbox"
+              checked={Boolean(salon.whatsappBirthdayEnabled)}
+              onChange={(e) => setSalon({ ...salon, whatsappBirthdayEnabled: e.target.checked })}
+            />
+            Invia auguri automatici il compleanno del cane
+          </label>
+          <p className="text-xs font-medium text-zinc-700">Messaggio auguri compleanno</p>
+          <Textarea
+            value={salon.whatsappBirthdayTemplate || ""}
+            onChange={(e) => setSalon({ ...salon, whatsappBirthdayTemplate: e.target.value })}
+            placeholder={RECOMMENDED_BIRTHDAY_TEMPLATE}
+            className="min-h-[90px]"
           />
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => setSalon({ ...salon, whatsappTemplate: RECOMMENDED_TEMPLATE })}>
-            Usa modello consigliato
+          <Button
+            variant="outline"
+            onClick={() =>
+              setSalon({
+                ...salon,
+                whatsappTemplate: RECOMMENDED_TEMPLATE,
+                whatsappOneHourTemplate: RECOMMENDED_ONE_HOUR_TEMPLATE,
+                whatsappBirthdayTemplate: RECOMMENDED_BIRTHDAY_TEMPLATE,
+              })
+            }
+          >
+            Usa modelli consigliati
           </Button>
           <Button onClick={saveTemplates}>Salva configurazione WhatsApp</Button>
         </div>
@@ -197,7 +258,7 @@ export function WhatsAppClient({ initialSalon }: { initialSalon: any }) {
             <li>Attivi la checkbox e salvi la configurazione.</li>
           </ol>
           <p className="mt-2">
-            Con API attiva, il sistema invia reminder automatici il giorno prima dell&apos;appuntamento e abilita le campagne massivo.
+            Con API attiva, il sistema invia reminder automatici (giorno prima e 1 ora prima), auguri compleanno cane e abilita le campagne massivo.
             Se credenziali o permessi non sono validi, la piattaforma torna al metodo manuale (wa.me) senza bloccare l&apos;operatività.
           </p>
         </div>
@@ -356,3 +417,5 @@ export function WhatsAppClient({ initialSalon }: { initialSalon: any }) {
     </div>
   );
 }
+
+

@@ -156,6 +156,7 @@ export const signFirstVisitAnamnesisSchema = z.object({
   petType: z.string().max(20).optional().or(z.literal("")),
   petBreed: z.string().max(120).optional().or(z.literal("")),
   petAge: z.string().max(80).optional().or(z.literal("")),
+  petBirthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().or(z.literal("")),
   isSeniorDeclared: z.boolean(),
   diseasesDeclared: z.string().max(2000).optional().or(z.literal("")),
   veterinarianName: z.string().max(120).optional().or(z.literal("")),

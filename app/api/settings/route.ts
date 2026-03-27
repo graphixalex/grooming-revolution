@@ -8,7 +8,11 @@ import { canManageSettings } from "@/lib/rbac";
 import { createStaffSchema } from "@/lib/validators";
 import { slugifyBooking } from "@/lib/booking";
 import { sendAccountDeletionRequestEmails, sendPasswordChangedEmail } from "@/lib/email";
-import { DEFAULT_WHATSAPP_REMINDER_TEMPLATE } from "@/lib/default-templates";
+import {
+  DEFAULT_WHATSAPP_BIRTHDAY_TEMPLATE,
+  DEFAULT_WHATSAPP_ONE_HOUR_TEMPLATE,
+  DEFAULT_WHATSAPP_REMINDER_TEMPLATE,
+} from "@/lib/default-templates";
 
 export async function GET() {
   const auth = await requireApiSession();
@@ -59,6 +63,96 @@ export async function GET() {
       throw error;
     }
   })();
+  const salonPromise = (async () => {
+    try {
+      return await prisma.salon.findUnique({
+        where: { id: salonId },
+        select: {
+          id: true,
+          salonGroupId: true,
+          nomeAttivita: true,
+          nomeSede: true,
+          paese: true,
+          timezone: true,
+          valuta: true,
+          vatRate: true,
+          vatIncluded: true,
+          indirizzo: true,
+          telefono: true,
+          email: true,
+          whatsappTemplate: true,
+          whatsappOneHourTemplate: true,
+          whatsappBirthdayTemplate: true,
+          whatsappDayBeforeEnabled: true,
+          whatsappOneHourEnabled: true,
+          whatsappBirthdayEnabled: true,
+          emailTemplate: true,
+          overlapAllowed: true,
+          workingHoursJson: true,
+          holidaysJson: true,
+          subscriptionPlan: true,
+          billingVatNumber: true,
+          billingCountry: true,
+          bookingEnabled: true,
+          bookingSlug: true,
+          bookingDisplayName: true,
+          bookingDescription: true,
+          bookingLogoUrl: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        (error.code === "P2021" || error.code === "P2022")
+      ) {
+        const legacy = await prisma.salon.findUnique({
+          where: { id: salonId },
+          select: {
+            id: true,
+            salonGroupId: true,
+            nomeAttivita: true,
+            nomeSede: true,
+            paese: true,
+            timezone: true,
+            valuta: true,
+            vatRate: true,
+            vatIncluded: true,
+            indirizzo: true,
+            telefono: true,
+            email: true,
+            whatsappTemplate: true,
+            emailTemplate: true,
+            overlapAllowed: true,
+            workingHoursJson: true,
+            holidaysJson: true,
+            subscriptionPlan: true,
+            billingVatNumber: true,
+            billingCountry: true,
+            bookingEnabled: true,
+            bookingSlug: true,
+            bookingDisplayName: true,
+            bookingDescription: true,
+            bookingLogoUrl: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        });
+        return legacy
+          ? {
+              ...legacy,
+              whatsappOneHourTemplate: DEFAULT_WHATSAPP_ONE_HOUR_TEMPLATE,
+              whatsappBirthdayTemplate: DEFAULT_WHATSAPP_BIRTHDAY_TEMPLATE,
+              whatsappDayBeforeEnabled: true,
+              whatsappOneHourEnabled: true,
+              whatsappBirthdayEnabled: true,
+            }
+          : legacy;
+      }
+      throw error;
+    }
+  })();
   const treatmentsPromise = (async () => {
     try {
       return await prisma.treatment.findMany({
@@ -83,38 +177,7 @@ export async function GET() {
   })();
 
   const [salon, tags, treatments, staff, operators] = await Promise.all([
-    prisma.salon.findUnique({
-      where: { id: salonId },
-      select: {
-        id: true,
-        salonGroupId: true,
-        nomeAttivita: true,
-        nomeSede: true,
-        paese: true,
-        timezone: true,
-        valuta: true,
-        vatRate: true,
-        vatIncluded: true,
-        indirizzo: true,
-        telefono: true,
-        email: true,
-        whatsappTemplate: true,
-        emailTemplate: true,
-        overlapAllowed: true,
-        workingHoursJson: true,
-        holidaysJson: true,
-        subscriptionPlan: true,
-        billingVatNumber: true,
-        billingCountry: true,
-        bookingEnabled: true,
-        bookingSlug: true,
-        bookingDisplayName: true,
-        bookingDescription: true,
-        bookingLogoUrl: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    }),
+    salonPromise,
     prisma.quickTag.findMany({ where: { salonId }, orderBy: { ordine: "asc" } }),
     treatmentsPromise,
     prisma.user.findMany({
@@ -133,6 +196,17 @@ export async function GET() {
             typeof salon.whatsappTemplate === "string" && salon.whatsappTemplate.trim().length > 0
               ? salon.whatsappTemplate
               : DEFAULT_WHATSAPP_REMINDER_TEMPLATE,
+          whatsappOneHourTemplate:
+            typeof salon.whatsappOneHourTemplate === "string" && salon.whatsappOneHourTemplate.trim().length > 0
+              ? salon.whatsappOneHourTemplate
+              : DEFAULT_WHATSAPP_ONE_HOUR_TEMPLATE,
+          whatsappBirthdayTemplate:
+            typeof salon.whatsappBirthdayTemplate === "string" && salon.whatsappBirthdayTemplate.trim().length > 0
+              ? salon.whatsappBirthdayTemplate
+              : DEFAULT_WHATSAPP_BIRTHDAY_TEMPLATE,
+          whatsappDayBeforeEnabled: Boolean(salon.whatsappDayBeforeEnabled ?? true),
+          whatsappOneHourEnabled: Boolean(salon.whatsappOneHourEnabled ?? true),
+          whatsappBirthdayEnabled: Boolean(salon.whatsappBirthdayEnabled ?? true),
           // Never expose stored token in clear text to the client.
           whatsappApiAccessToken: "",
         }
@@ -316,6 +390,17 @@ export async function PATCH(req: NextRequest) {
             typeof body.whatsappTemplate === "string" && body.whatsappTemplate.trim().length > 0
               ? body.whatsappTemplate
               : DEFAULT_WHATSAPP_REMINDER_TEMPLATE,
+          whatsappOneHourTemplate:
+            typeof body.whatsappOneHourTemplate === "string" && body.whatsappOneHourTemplate.trim().length > 0
+              ? body.whatsappOneHourTemplate
+              : DEFAULT_WHATSAPP_ONE_HOUR_TEMPLATE,
+          whatsappBirthdayTemplate:
+            typeof body.whatsappBirthdayTemplate === "string" && body.whatsappBirthdayTemplate.trim().length > 0
+              ? body.whatsappBirthdayTemplate
+              : DEFAULT_WHATSAPP_BIRTHDAY_TEMPLATE,
+          whatsappDayBeforeEnabled: Boolean(body.whatsappDayBeforeEnabled ?? true),
+          whatsappOneHourEnabled: Boolean(body.whatsappOneHourEnabled ?? true),
+          whatsappBirthdayEnabled: Boolean(body.whatsappBirthdayEnabled ?? true),
           whatsappApiEnabled: Boolean(body.whatsappApiEnabled),
           whatsappApiPhoneNumberId:
             typeof body.whatsappApiPhoneNumberId === "string" && body.whatsappApiPhoneNumberId.trim().length > 0
@@ -347,6 +432,11 @@ export async function PATCH(req: NextRequest) {
         });
         return NextResponse.json({
           ...legacy,
+          whatsappOneHourTemplate: DEFAULT_WHATSAPP_ONE_HOUR_TEMPLATE,
+          whatsappBirthdayTemplate: DEFAULT_WHATSAPP_BIRTHDAY_TEMPLATE,
+          whatsappDayBeforeEnabled: true,
+          whatsappOneHourEnabled: true,
+          whatsappBirthdayEnabled: true,
           whatsappApiEnabled: false,
           whatsappApiPhoneNumberId: "",
           whatsappApiVersion: "v23.0",

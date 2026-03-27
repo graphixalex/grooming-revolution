@@ -16,6 +16,13 @@ function getRequestIp(req: NextRequest) {
   return req.headers.get("x-real-ip") || null;
 }
 
+function parseBirthDateInput(value?: string | null) {
+  const raw = (value || "").trim();
+  if (!raw) return null;
+  const parsed = new Date(`${raw}T12:00:00.000Z`);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireApiSession();
   if ("error" in auth) return auth.error;
@@ -43,6 +50,7 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
         petType: true,
         petBreed: true,
         petAge: true,
+        petBirthDate: true,
         isSeniorDeclared: true,
         diseasesDeclared: true,
         veterinarianName: true,
@@ -148,6 +156,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     petType: parsed.data.petType?.trim() || null,
     petBreed: parsed.data.petBreed?.trim() || null,
     petAge: parsed.data.petAge?.trim() || null,
+    petBirthDate: parseBirthDateInput(parsed.data.petBirthDate || null),
     isSeniorDeclared: parsed.data.isSeniorDeclared,
     diseasesDeclared: parsed.data.diseasesDeclared?.trim() || null,
     veterinarianName: parsed.data.veterinarianName?.trim() || null,
@@ -178,6 +187,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       petType: parsed.data.petType?.trim() || null,
       petBreed: parsed.data.petBreed?.trim() || null,
       petAge: parsed.data.petAge?.trim() || null,
+      petBirthDate: parseBirthDateInput(parsed.data.petBirthDate || null),
       isSeniorDeclared: parsed.data.isSeniorDeclared,
       diseasesDeclared: parsed.data.diseasesDeclared?.trim() || null,
       veterinarianName: parsed.data.veterinarianName?.trim() || null,
@@ -198,6 +208,29 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     },
     select: { id: true },
   });
+
+  const birthDate = parseBirthDateInput(parsed.data.petBirthDate || null);
+  if (parsed.data.petName.trim() && birthDate) {
+    const dog = await prisma.dog.findFirst({
+      where: {
+        salonId,
+        clienteId: id,
+        deletedAt: null,
+        nome: {
+          equals: parsed.data.petName.trim(),
+          mode: "insensitive",
+        },
+      },
+      select: { id: true },
+      orderBy: { createdAt: "asc" },
+    });
+    if (dog) {
+      await prisma.dog.update({
+        where: { id: dog.id },
+        data: { birthDate },
+      });
+    }
+  }
 
   await addAuditLog({
     salonId,

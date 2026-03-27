@@ -21,6 +21,7 @@ type AnamnesisHistoryRow = {
   petType?: string | null;
   petBreed?: string | null;
   petAge?: string | null;
+  petBirthDate?: string | null;
   isSeniorDeclared: boolean;
   diseasesDeclared?: string | null;
   veterinarianName?: string | null;
@@ -61,6 +62,7 @@ export function ClientAnamnesisCard({ clientId }: { clientId: string }) {
   const [petType, setPetType] = useState("");
   const [petBreed, setPetBreed] = useState("");
   const [petAge, setPetAge] = useState("");
+  const [petBirthDate, setPetBirthDate] = useState("");
   const [isSeniorDeclared, setIsSeniorDeclared] = useState(false);
   const [diseasesDeclared, setDiseasesDeclared] = useState("");
   const [veterinarianName, setVeterinarianName] = useState("");
@@ -103,6 +105,7 @@ export function ClientAnamnesisCard({ clientId }: { clientId: string }) {
     setPetType("");
     setPetBreed("");
     setPetAge("");
+    setPetBirthDate("");
     setIsSeniorDeclared(false);
     setDiseasesDeclared("");
     setVeterinarianName("");
@@ -225,6 +228,7 @@ export function ClientAnamnesisCard({ clientId }: { clientId: string }) {
           petType: petType.trim(),
           petBreed: petBreed.trim(),
           petAge: petAge.trim(),
+          petBirthDate,
           isSeniorDeclared,
           diseasesDeclared: diseasesDeclared.trim(),
           veterinarianName: veterinarianName.trim(),
@@ -371,6 +375,7 @@ export function ClientAnamnesisCard({ clientId }: { clientId: string }) {
               </select>
               <Input placeholder="Razza" value={petBreed} onChange={(event) => setPetBreed(event.target.value)} />
               <Input placeholder="Eta (es. 7 mesi, 3 anni)" value={petAge} onChange={(event) => setPetAge(event.target.value)} />
+              <Input type="date" value={petBirthDate} onChange={(event) => setPetBirthDate(event.target.value)} />
               <Input placeholder="Nome veterinario" value={veterinarianName} onChange={(event) => setVeterinarianName(event.target.value)} />
               <select
                 className="h-10 rounded-md border border-zinc-300 px-3 text-sm"

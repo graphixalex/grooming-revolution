@@ -72,6 +72,7 @@ enum WhatsAppRecipientStatus {
 
 enum AppointmentReminderKind {
   DAY_BEFORE_WHATSAPP
+  HOUR_BEFORE_WHATSAPP
 }
 
 enum BookingRequestStatus {
@@ -110,6 +111,11 @@ model Salon {
   telefono              String?
   email                 String?
   whatsappTemplate      String?              @db.Text
+  whatsappOneHourTemplate String?            @db.Text
+  whatsappBirthdayTemplate String?           @db.Text
+  whatsappDayBeforeEnabled Boolean           @default(true)
+  whatsappOneHourEnabled Boolean             @default(true)
+  whatsappBirthdayEnabled Boolean            @default(true)
   whatsappApiEnabled    Boolean              @default(false)
   whatsappApiPhoneNumberId String?
   whatsappApiAccessToken String?             @db.Text
@@ -154,6 +160,7 @@ model Salon {
   anamnesisRecords      FirstVisitAnamnesisRecord[]
   mattingConsentTemplates MattingConsentTemplate[]
   mattingConsentRecords MattingConsentRecord[]
+  birthdayGreetings     DogBirthdayGreetingLog[]
 
   @@index([salonGroupId])
 }
@@ -324,6 +331,7 @@ model Dog {
   taglia              DogSize
   noteCane            String?     @db.Text
   preferenzeCura      String?     @db.Text
+  birthDate           DateTime?
   createdAt           DateTime    @default(now())
   updatedAt           DateTime    @updatedAt
   deletedAt           DateTime?
@@ -333,6 +341,7 @@ model Dog {
   tagRapidi           DogQuickTag[]
   appointments        Appointment[]
   bookingRequests     BookingRequest[]
+  birthdayGreetings   DogBirthdayGreetingLog[]
 
   @@index([salonId, clienteId, deletedAt])
 }
@@ -428,6 +437,27 @@ model AppointmentReminder {
   @@index([kind, status])
 }
 
+model DogBirthdayGreetingLog {
+  id                  String                 @id @default(cuid())
+  salonId             String
+  dogId               String
+  year                Int
+  status              WhatsAppRecipientStatus @default(PENDING)
+  attemptCount        Int                    @default(0)
+  messageId           String?
+  errorMessage        String?
+  lastAttemptAt       DateTime?
+  sentAt              DateTime?
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+
+  salon               Salon                  @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  dog                 Dog                    @relation(fields: [dogId], references: [id], onDelete: Cascade)
+
+  @@unique([dogId, year])
+  @@index([salonId, year, status])
+}
+
 model Operator {
   id                  String      @id @default(cuid())
   salonId             String
@@ -516,6 +546,7 @@ model FirstVisitAnamnesisRecord {
   petType             String?
   petBreed            String?
   petAge              String?
+  petBirthDate        DateTime?
   isSeniorDeclared    Boolean
   diseasesDeclared    String?
   veterinarianName    String?
