@@ -111,7 +111,13 @@ function toWorkingHoursJson(state: WorkingHoursState, exceptions: ExceptionHours
 export function SettingsClient({ initial }: { initial: any }) {
   const [salon, setSalon] = useState(initial.salon);
   const [tags, setTags] = useState(initial.tags);
-  const [treatments, setTreatments] = useState(initial.treatments);
+  const [treatments, setTreatments] = useState(
+    (initial.treatments || []).map((t: any, idx: number) => ({
+      ...t,
+      ordine: t?.ordine ?? idx,
+      color: t?.color || "#2563eb",
+    })),
+  );
   const [staffEmail, setStaffEmail] = useState("");
   const [staffPassword, setStaffPassword] = useState("Password123!");
   const [staffRole, setStaffRole] = useState<"MANAGER" | "STAFF">("MANAGER");
@@ -382,7 +388,7 @@ export function SettingsClient({ initial }: { initial: any }) {
         </label>
         {operators.map((op: any, opIndex: number) => (
           <div key={op.id || opIndex} className="space-y-3 rounded-md border border-zinc-200 p-3">
-            <div className="grid gap-2 md:grid-cols-7">
+            <div className="grid gap-2 md:grid-cols-6">
               <Input
                 placeholder="Nome operatore"
                 value={op.nome}
@@ -390,18 +396,6 @@ export function SettingsClient({ initial }: { initial: any }) {
                   setOperators((prev: any[]) => prev.map((x, i) => (i === opIndex ? { ...x, nome: e.target.value } : x)))
                 }
               />
-              <div className="flex h-10 items-center gap-2 rounded-md border border-zinc-300 bg-white px-3">
-                <input
-                  type="color"
-                  aria-label="Colore operatore"
-                  className="h-6 w-8 cursor-pointer rounded border border-zinc-300"
-                  value={op.color || "#2563eb"}
-                  onChange={(e) =>
-                    setOperators((prev: any[]) => prev.map((x, i) => (i === opIndex ? { ...x, color: e.target.value } : x)))
-                  }
-                />
-                <span className="text-xs text-zinc-500">Colore agenda</span>
-              </div>
               <div className="space-y-1">
                 <p className="text-xs font-medium text-zinc-700">
                   Vuoi espandere l&apos;agenda per questo operatore? Scegli da 1 a 10 colonne per giorno.
@@ -858,6 +852,16 @@ export function SettingsClient({ initial }: { initial: any }) {
         {treatments.map((t: any, i: number) => (
           <div key={t.id} className="flex items-center gap-2">
             <Input value={t.nome} onChange={(e) => setTreatments(treatments.map((x: any, idx: number) => (idx === i ? { ...x, nome: e.target.value } : x)))} />
+            <label className="flex items-center gap-2 rounded-md border border-zinc-300 bg-white px-2 py-1 text-xs text-zinc-600">
+              <input
+                type="color"
+                aria-label={`Colore trattamento ${t.nome || i + 1}`}
+                className="h-6 w-8 cursor-pointer rounded border border-zinc-300"
+                value={t.color || "#2563eb"}
+                onChange={(e) => setTreatments(treatments.map((x: any, idx: number) => (idx === i ? { ...x, color: e.target.value } : x)))}
+              />
+              Colore
+            </label>
             <label className="text-sm">
               <input
                 type="checkbox"
@@ -876,7 +880,7 @@ export function SettingsClient({ initial }: { initial: any }) {
         ))}
         <Button
           variant="outline"
-          onClick={() => setTreatments([...treatments, { id: `new-${Date.now()}`, nome: "Nuovo trattamento", attivo: true, ordine: treatments.length }])}
+          onClick={() => setTreatments([...treatments, { id: `new-${Date.now()}`, nome: "Nuovo trattamento", attivo: true, ordine: treatments.length, color: "#2563eb" }])}
         >
           Aggiungi trattamento
         </Button>

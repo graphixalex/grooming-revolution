@@ -5,6 +5,28 @@ import { Prisma } from "@prisma/client";
 
 export default async function PlannerPage() {
   const session = await getRequiredSession();
+  const treatmentsPromise = (async () => {
+    try {
+      return await prisma.treatment.findMany({
+        where: { salonId: session.user.salonId },
+        orderBy: { ordine: "asc" },
+        select: { id: true, nome: true, attivo: true, ordine: true, color: true },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        (error.code === "P2021" || error.code === "P2022")
+      ) {
+        const legacyTreatments = await prisma.treatment.findMany({
+          where: { salonId: session.user.salonId },
+          orderBy: { ordine: "asc" },
+          select: { id: true, nome: true, attivo: true, ordine: true },
+        });
+        return legacyTreatments.map((t) => ({ ...t, color: "#2563eb" }));
+      }
+      throw error;
+    }
+  })();
   const operatorsPromise = (async () => {
     try {
       return await prisma.operator.findMany({
@@ -28,7 +50,7 @@ export default async function PlannerPage() {
     }
   })();
   const [treatments, salon, operators] = await Promise.all([
-    prisma.treatment.findMany({ where: { salonId: session.user.salonId }, orderBy: { ordine: "asc" } }),
+    treatmentsPromise,
     prisma.salon.findUnique({
       where: { id: session.user.salonId },
       select: { workingHoursJson: true, whatsappTemplate: true, nomeAttivita: true, nomeSede: true, indirizzo: true, salonGroupId: true, valuta: true, timezone: true },

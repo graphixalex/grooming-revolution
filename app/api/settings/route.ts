@@ -59,6 +59,28 @@ export async function GET() {
       throw error;
     }
   })();
+  const treatmentsPromise = (async () => {
+    try {
+      return await prisma.treatment.findMany({
+        where: { salonId },
+        orderBy: { ordine: "asc" },
+        select: { id: true, nome: true, attivo: true, ordine: true, color: true },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        (error.code === "P2021" || error.code === "P2022")
+      ) {
+        const legacyTreatments = await prisma.treatment.findMany({
+          where: { salonId },
+          orderBy: { ordine: "asc" },
+          select: { id: true, nome: true, attivo: true, ordine: true },
+        });
+        return legacyTreatments.map((t) => ({ ...t, color: "#2563eb" }));
+      }
+      throw error;
+    }
+  })();
 
   const [salon, tags, treatments, staff, operators] = await Promise.all([
     prisma.salon.findUnique({
@@ -94,7 +116,7 @@ export async function GET() {
       },
     }),
     prisma.quickTag.findMany({ where: { salonId }, orderBy: { ordine: "asc" } }),
-    prisma.treatment.findMany({ where: { salonId }, orderBy: { ordine: "asc" } }),
+    treatmentsPromise,
     prisma.user.findMany({
       where: { salonId },
       orderBy: { createdAt: "asc" },
@@ -353,7 +375,7 @@ export async function PATCH(req: NextRequest) {
   }
 
   if (body.section === "treatments") {
-    const incoming = (body.treatments as Array<{ id?: string; attivo: boolean; ordine: number; nome: string }>).filter(
+    const incoming = (body.treatments as Array<{ id?: string; attivo: boolean; ordine: number; nome: string; color?: string | null }>).filter(
       (t) => String(t.nome || "").trim().length > 0,
     );
     const existing = await prisma.treatment.findMany({ where: { salonId }, select: { id: true } });
@@ -371,15 +393,53 @@ export async function PATCH(req: NextRequest) {
     }
 
     for (const t of incoming) {
+      const payload = {
+        attivo: Boolean(t.attivo),
+        ordine: t.ordine,
+        nome: t.nome.trim(),
+        color: typeof t.color === "string" && t.color.trim().length > 0 ? t.color.trim() : "#2563eb",
+      };
+      const legacyPayload = {
+        attivo: payload.attivo,
+        ordine: payload.ordine,
+        nome: payload.nome,
+      };
       if (t.id && existingIds.has(t.id)) {
-        await prisma.treatment.update({
-          where: { id: t.id },
-          data: { attivo: Boolean(t.attivo), ordine: t.ordine, nome: t.nome.trim() },
-        });
+        try {
+          await prisma.treatment.update({
+            where: { id: t.id },
+            data: payload,
+          });
+        } catch (error) {
+          if (
+            error instanceof Prisma.PrismaClientKnownRequestError &&
+            (error.code === "P2021" || error.code === "P2022")
+          ) {
+            await prisma.treatment.update({
+              where: { id: t.id },
+              data: legacyPayload,
+            });
+          } else {
+            throw error;
+          }
+        }
       } else {
-        await prisma.treatment.create({
-          data: { salonId, attivo: Boolean(t.attivo), ordine: t.ordine, nome: t.nome.trim() },
-        });
+        try {
+          await prisma.treatment.create({
+            data: { salonId, ...payload },
+          });
+        } catch (error) {
+          if (
+            error instanceof Prisma.PrismaClientKnownRequestError &&
+            (error.code === "P2021" || error.code === "P2022")
+          ) {
+            await prisma.treatment.create({
+              data: { salonId, ...legacyPayload },
+            });
+          } else {
+            throw error;
+          }
+        }
       }
     }
     return NextResponse.json({ ok: true });

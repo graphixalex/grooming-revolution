@@ -365,6 +365,7 @@ model Treatment {
   id                  String      @id @default(cuid())
   salonId             String
   nome                String
+  color               String?     @default("#2563eb")
   attivo              Boolean     @default(true)
   ordine              Int         @default(0)
 

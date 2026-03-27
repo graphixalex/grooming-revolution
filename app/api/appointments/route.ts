@@ -78,7 +78,7 @@ export async function GET(req: NextRequest) {
       operator: { select: { id: true, nome: true, color: true } },
       cane: true,
       cliente: true,
-      trattamentiSelezionati: { include: { treatment: true } },
+      trattamentiSelezionati: { include: { treatment: { select: { id: true, nome: true } } } },
       transactions: true,
     },
     orderBy: { startAt: "asc" },
@@ -561,7 +561,7 @@ export async function PATCH(req: NextRequest) {
       operator: { select: { id: true, nome: true, color: true } },
       cane: true,
       cliente: true,
-      trattamentiSelezionati: { include: { treatment: true } },
+      trattamentiSelezionati: { include: { treatment: { select: { id: true, nome: true } } } },
       transactions: true,
     },
   });

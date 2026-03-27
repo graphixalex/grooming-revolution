@@ -12,7 +12,7 @@ import { getDateKeyInTimeZone, getWorkingHoursRowForDate } from "@/lib/working-h
 
 type Cliente = { id: string; nome: string; cognome: string; telefono: string; email?: string | null };
 type Cane = { id: string; nome: string; razza?: string | null; taglia: "XS" | "S" | "M" | "L" | "XL" | "XXL"; clienteId: string };
-type Treatment = { id: string; nome: string; attivo: boolean };
+type Treatment = { id: string; nome: string; attivo: boolean; color?: string | null };
 type Operator = {
   id: string;
   nome: string;
@@ -103,18 +103,10 @@ function mixHex(base: string, target: string, targetWeight: number) {
   });
 }
 
-function getProfessionalOperatorColor(raw?: string | null) {
+function getProfessionalTreatmentColor(raw?: string | null) {
   const safe = normalizeHexColor(raw) || "#2563eb";
   const tonedDown = mixHex(safe, "#1f2937", 0.45);
   return mixHex(tonedDown, "#f8fafc", 0.1);
-}
-
-function getAppointmentBgColor(appt: Appointment) {
-  if (isPersonalNoteAppointment(appt)) return "#475569";
-  if (appt.stato === "CANCELLATO") return "#64748b";
-  if (appt.stato === "NO_SHOW") return "#a16207";
-  if ((appt.transactions?.length ?? 0) > 0) return "#0f766e";
-  return getProfessionalOperatorColor(appt.operator?.color);
 }
 
 const durations = Array.from({ length: 20 }, (_, i) => (i + 1) * 15);
@@ -431,6 +423,21 @@ export function PlannerClient({
   const [newDogForm, setNewDogForm] = useState({ nome: "", razza: "", taglia: "M", noteCane: "", tagRapidiIds: [] as string[] });
   const [passingClientForm, setPassingClientForm] = useState({ telefono: "", dogNome: "", dogRazza: "", dogTaglia: "M" });
   const [lastTap, setLastTap] = useState<{ appointmentId: string; at: number } | null>(null);
+  const treatmentsById = useMemo(() => {
+    const map = new Map<string, Treatment>();
+    for (const treatment of treatments) map.set(treatment.id, treatment);
+    return map;
+  }, [treatments]);
+
+  function getAppointmentBgColor(appt: Appointment) {
+    if (isPersonalNoteAppointment(appt)) return "#475569";
+    if (appt.stato === "CANCELLATO") return "#64748b";
+    if (appt.stato === "NO_SHOW") return "#a16207";
+    if ((appt.transactions?.length ?? 0) > 0) return "#0f766e";
+    const firstTreatmentId = appt.trattamentiSelezionati[0]?.treatment?.id;
+    const treatmentColor = firstTreatmentId ? treatmentsById.get(firstTreatmentId)?.color : null;
+    return getProfessionalTreatmentColor(treatmentColor);
+  }
 
   function humanAppointmentStatus(status: string) {
     if (status === "PRENOTATO") return "Prenotato";
