@@ -5,17 +5,35 @@ import { Prisma } from "@prisma/client";
 
 export default async function PlannerPage() {
   const session = await getRequiredSession();
+  const operatorsPromise = (async () => {
+    try {
+      return await prisma.operator.findMany({
+        where: { salonId: session.user.salonId, attivo: true },
+        orderBy: { ordine: "asc" },
+        select: { id: true, nome: true, color: true, workingHoursJson: true, agendaColumns: true },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        (error.code === "P2021" || error.code === "P2022")
+      ) {
+        const legacyOperators = await prisma.operator.findMany({
+          where: { salonId: session.user.salonId, attivo: true },
+          orderBy: { ordine: "asc" },
+          select: { id: true, nome: true, color: true, workingHoursJson: true },
+        });
+        return legacyOperators.map((op) => ({ ...op, agendaColumns: 1 }));
+      }
+      throw error;
+    }
+  })();
   const [treatments, salon, operators] = await Promise.all([
     prisma.treatment.findMany({ where: { salonId: session.user.salonId }, orderBy: { ordine: "asc" } }),
     prisma.salon.findUnique({
       where: { id: session.user.salonId },
       select: { workingHoursJson: true, whatsappTemplate: true, nomeAttivita: true, nomeSede: true, indirizzo: true, salonGroupId: true, valuta: true, timezone: true },
     }),
-    prisma.operator.findMany({
-      where: { salonId: session.user.salonId, attivo: true },
-      orderBy: { ordine: "asc" },
-      select: { id: true, nome: true, color: true, workingHoursJson: true, agendaColumns: true },
-    }),
+    operatorsPromise,
   ]);
   const branches =
     session.user.role === "OWNER" && salon?.salonGroupId

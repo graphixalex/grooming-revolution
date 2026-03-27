@@ -18,6 +18,48 @@ export async function GET() {
   }
   const salonId = auth.session.user.salonId;
 
+  const operatorsPromise = (async () => {
+    try {
+      return await prisma.operator.findMany({
+        where: { salonId },
+        orderBy: { ordine: "asc" },
+        select: {
+          id: true,
+          nome: true,
+          attivo: true,
+          ordine: true,
+          color: true,
+          workingHoursJson: true,
+          kpiTargetRevenue: true,
+          kpiTargetAppointments: true,
+          agendaColumns: true,
+        },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        (error.code === "P2021" || error.code === "P2022")
+      ) {
+        const legacyOperators = await prisma.operator.findMany({
+          where: { salonId },
+          orderBy: { ordine: "asc" },
+          select: {
+            id: true,
+            nome: true,
+            attivo: true,
+            ordine: true,
+            color: true,
+            workingHoursJson: true,
+            kpiTargetRevenue: true,
+            kpiTargetAppointments: true,
+          },
+        });
+        return legacyOperators.map((op) => ({ ...op, agendaColumns: 1 }));
+      }
+      throw error;
+    }
+  })();
+
   const [salon, tags, treatments, staff, operators] = await Promise.all([
     prisma.salon.findUnique({
       where: { id: salonId },
@@ -58,7 +100,7 @@ export async function GET() {
       orderBy: { createdAt: "asc" },
       select: { id: true, email: true, ruolo: true, canAccessGroupSalons: true, salon: { select: { id: true, nomeSede: true } } },
     }),
-    prisma.operator.findMany({ where: { salonId }, orderBy: { ordine: "asc" } }),
+    operatorsPromise,
   ]);
 
   return NextResponse.json({
@@ -553,10 +595,41 @@ export async function PATCH(req: NextRequest) {
             ? null
             : Number(o.kpiTargetAppointments),
       };
+      const legacyPayload = {
+        nome: payload.nome,
+        attivo: payload.attivo,
+        ordine: payload.ordine,
+        color: payload.color,
+        workingHoursJson: payload.workingHoursJson,
+        kpiTargetRevenue: payload.kpiTargetRevenue,
+        kpiTargetAppointments: payload.kpiTargetAppointments,
+      };
       if (o.id && existingIds.has(o.id)) {
-        await prisma.operator.update({ where: { id: o.id }, data: payload });
+        try {
+          await prisma.operator.update({ where: { id: o.id }, data: payload });
+        } catch (error) {
+          if (
+            error instanceof Prisma.PrismaClientKnownRequestError &&
+            (error.code === "P2021" || error.code === "P2022")
+          ) {
+            await prisma.operator.update({ where: { id: o.id }, data: legacyPayload });
+          } else {
+            throw error;
+          }
+        }
       } else {
-        await prisma.operator.create({ data: { salonId, ...payload } });
+        try {
+          await prisma.operator.create({ data: { salonId, ...payload } });
+        } catch (error) {
+          if (
+            error instanceof Prisma.PrismaClientKnownRequestError &&
+            (error.code === "P2021" || error.code === "P2022")
+          ) {
+            await prisma.operator.create({ data: { salonId, ...legacyPayload } });
+          } else {
+            throw error;
+          }
+        }
       }
     }
 
