@@ -343,8 +343,13 @@ export function PlannerClient({
   const [slotDateInput, setSlotDateInput] = useState("");
   const [slotTimeInput, setSlotTimeInput] = useState("");
   const [sequenceEnabled, setSequenceEnabled] = useState(false);
-  const [sequenceSlots, setSequenceSlots] = useState<Array<{ date: string; time: string; operatorId: string; treatmentIds: string[] }>>([]);
+  const [sequenceSlots, setSequenceSlots] = useState<
+    Array<{ date: string; time: string; operatorId: string; allowOverlap: boolean; treatmentIds: string[] }>
+  >([]);
   const [sequenceValidation, setSequenceValidation] = useState<Record<string, { available: boolean; reasons: string[] }>>({});
+  const [sequencePreviewIndex, setSequencePreviewIndex] = useState<number | null>(null);
+  const [sequencePreviewLoading, setSequencePreviewLoading] = useState(false);
+  const [sequencePreviewAppointments, setSequencePreviewAppointments] = useState<Appointment[]>([]);
   const [selectedClient, setSelectedClient] = useState<Cliente | null>(null);
   const [selectedDog, setSelectedDog] = useState<Cane | null>(null);
   const [search, setSearch] = useState("");
@@ -420,6 +425,9 @@ export function PlannerClient({
     setSequenceEnabled(false);
     setSequenceSlots([]);
     setSequenceValidation({});
+    setSequencePreviewIndex(null);
+    setSequencePreviewLoading(false);
+    setSequencePreviewAppointments([]);
     setModalMode("APPOINTMENT");
     setNewClientForm({ nome: "", cognome: "", telefono: "", email: "", noteCliente: "", consensoPromemoria: true });
     setNewDogForm({ nome: "", razza: "", taglia: "M", noteCane: "", tagRapidiIds: [] });
@@ -651,6 +659,7 @@ export function PlannerClient({
           date: slotDateInput,
           time: slotTimeInput,
           operatorId: selectedOperatorId || "",
+          allowOverlap: false,
           treatmentIds: [...selectedTreatments],
         }];
       }
@@ -752,10 +761,14 @@ export function PlannerClient({
           rowId: `seq-${index}`,
           startAt: dt.toISOString(),
           operatorId: slot.operatorId || null,
+          allowOverlap: slot.allowOverlap === true,
           trattamentiIds: slot.treatmentIds,
         };
       })
-      .filter((slot): slot is { rowId: string; startAt: string; operatorId: string | null; trattamentiIds: string[] } => Boolean(slot));
+      .filter(
+        (slot): slot is { rowId: string; startAt: string; operatorId: string | null; allowOverlap: boolean; trattamentiIds: string[] } =>
+          Boolean(slot),
+      );
   }
 
   async function validateSequenceAvailability(payload: Record<string, unknown>) {
@@ -929,7 +942,13 @@ export function PlannerClient({
     setSequenceSlots((prev) => {
       if (!prev.length) {
         return slotDateInput && slotTimeInput
-          ? [{ date: slotDateInput, time: slotTimeInput, operatorId: selectedOperatorId || "", treatmentIds: [...selectedTreatments] }]
+          ? [{
+              date: slotDateInput,
+              time: slotTimeInput,
+              operatorId: selectedOperatorId || "",
+              allowOverlap: false,
+              treatmentIds: [...selectedTreatments],
+            }]
           : prev;
       }
       const last = prev[prev.length - 1];
@@ -940,7 +959,13 @@ export function PlannerClient({
       nextDate.setMonth(nextDate.getMonth() + 1);
       return [
         ...prev,
-        { date: toDateInputValue(nextDate), time: toTimeInputValue(nextDate), operatorId: last.operatorId, treatmentIds: [...last.treatmentIds] },
+        {
+          date: toDateInputValue(nextDate),
+          time: toTimeInputValue(nextDate),
+          operatorId: last.operatorId,
+          allowOverlap: last.allowOverlap,
+          treatmentIds: [...last.treatmentIds],
+        },
       ];
     });
     setSequenceValidation({});
@@ -949,12 +974,21 @@ export function PlannerClient({
   function addEmptySequenceSlot() {
     setSequenceSlots((prev) => [
       ...prev,
-      { date: slotDateInput, time: slotTimeInput, operatorId: selectedOperatorId || "", treatmentIds: [...selectedTreatments] },
+      {
+        date: slotDateInput,
+        time: slotTimeInput,
+        operatorId: selectedOperatorId || "",
+        allowOverlap: false,
+        treatmentIds: [...selectedTreatments],
+      },
     ]);
     setSequenceValidation({});
   }
 
-  function updateSequenceSlot(index: number, patch: Partial<{ date: string; time: string; operatorId: string; treatmentIds: string[] }>) {
+  function updateSequenceSlot(
+    index: number,
+    patch: Partial<{ date: string; time: string; operatorId: string; allowOverlap: boolean; treatmentIds: string[] }>,
+  ) {
     setSequenceSlots((prev) => prev.map((slot, i) => (i === index ? { ...slot, ...patch } : slot)));
     setSequenceValidation({});
   }
@@ -979,6 +1013,30 @@ export function PlannerClient({
 
   const hasValidSequenceSlot = sequenceSlots.some((slot) => Boolean(buildLocalDateTime(slot.date, slot.time)));
   const sequenceReady = Boolean(selectedClient && selectedDog);
+
+  async function openSequencePreview(index: number) {
+    const row = sequenceSlots[index];
+    if (!row?.date) {
+      alert("Seleziona prima una data valida");
+      return;
+    }
+    setSequencePreviewIndex(index);
+    setSequencePreviewLoading(true);
+    try {
+      const from = new Date(`${row.date}T00:00:00`);
+      const to = new Date(`${row.date}T23:59:59`);
+      const res = await fetch(`/api/appointments?from=${encodeURIComponent(from.toISOString())}&to=${encodeURIComponent(to.toISOString())}`);
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Errore caricamento anteprima giorno");
+        setSequencePreviewAppointments([]);
+        return;
+      }
+      setSequencePreviewAppointments(Array.isArray(data) ? data : []);
+    } finally {
+      setSequencePreviewLoading(false);
+    }
+  }
 
   async function moveAppointmentToSlot(appointmentId: string, targetStart: Date, targetOperatorId: string | null) {
     const appointment = appointments.find((a) => a.id === appointmentId);
@@ -1736,6 +1794,7 @@ export function PlannerClient({
                                   date: slotDateInput,
                                   time: slotTimeInput,
                                   operatorId: selectedOperatorId || "",
+                                  allowOverlap: false,
                                   treatmentIds: [...selectedTreatments],
                                 }]
                               : prev,
@@ -1801,6 +1860,19 @@ export function PlannerClient({
                                   {t.nome}
                                 </label>
                               ))}
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <label className="flex items-center gap-2 rounded border border-zinc-200 px-2 py-1 text-xs">
+                              <input
+                                type="checkbox"
+                                checked={slot.allowOverlap}
+                                onChange={(e) => updateSequenceSlot(index, { allowOverlap: e.target.checked })}
+                              />
+                              Consenti sovrapposizione
+                            </label>
+                            <Button type="button" variant="outline" onClick={() => void openSequencePreview(index)}>
+                              Anteprima giorno
+                            </Button>
                           </div>
                           {(() => {
                             const rowKey = `seq-${index}`;
@@ -2169,6 +2241,127 @@ export function PlannerClient({
                 Chiudi
               </Button>
             </div>
+          </Card>
+        </div>
+      ) : null}
+
+      {sequencePreviewIndex !== null ? (
+        <div
+          className="fixed inset-0 z-[60] overflow-y-auto bg-black/45 p-2 md:p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setSequencePreviewIndex(null);
+          }}
+        >
+          <Card className="mx-auto my-0 w-full max-w-4xl space-y-3 overflow-y-auto p-3 md:my-4 md:max-h-[calc(100dvh-3rem)] md:p-4">
+            {(() => {
+              const row = sequenceSlots[sequencePreviewIndex];
+              if (!row) return <p className="text-sm text-zinc-600">Riga sequenza non trovata.</p>;
+              const candidateStart = buildLocalDateTime(row.date, row.time);
+              const candidateEnd = candidateStart ? addMinutes(candidateStart, durata) : null;
+              const dayRows = sequencePreviewAppointments
+                .filter((a) => {
+                  const d = new Date(a.startAt);
+                  return toDateInputValue(d) === row.date;
+                })
+                .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
+
+              const conflicts = candidateStart && candidateEnd && row.operatorId
+                ? dayRows.filter((a) => {
+                    if (a.operator?.id !== row.operatorId) return false;
+                    const aStart = new Date(a.startAt);
+                    const aEnd = new Date(a.endAt);
+                    return candidateStart < aEnd && candidateEnd > aStart;
+                  })
+                : [];
+
+              return (
+                <>
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="text-lg font-semibold">Anteprima agenda del giorno</h3>
+                    <Button variant="outline" onClick={() => setSequencePreviewIndex(null)}>
+                      Chiudi
+                    </Button>
+                  </div>
+
+                  <div className="grid gap-2 md:grid-cols-4">
+                    <Input type="date" value={row.date} onChange={(e) => updateSequenceSlot(sequencePreviewIndex, { date: e.target.value })} />
+                    <Input type="time" value={row.time} onChange={(e) => updateSequenceSlot(sequencePreviewIndex, { time: e.target.value })} />
+                    <select
+                      className="h-10 rounded-md border border-zinc-300 px-3 text-sm"
+                      value={row.operatorId}
+                      onChange={(e) => updateSequenceSlot(sequencePreviewIndex, { operatorId: e.target.value })}
+                    >
+                      <option value="">Operatore...</option>
+                      {operators.map((op) => (
+                        <option key={op.id} value={op.id}>
+                          {op.nome}
+                        </option>
+                      ))}
+                    </select>
+                    <label className="flex items-center gap-2 rounded border border-zinc-300 px-3 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={row.allowOverlap}
+                        onChange={(e) => updateSequenceSlot(sequencePreviewIndex, { allowOverlap: e.target.checked })}
+                      />
+                      Consenti overlap
+                    </label>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" variant="outline" onClick={() => void openSequencePreview(sequencePreviewIndex)}>
+                      Aggiorna anteprima
+                    </Button>
+                    {sequencePreviewLoading ? <p className="text-sm text-zinc-600">Caricamento agenda...</p> : null}
+                  </div>
+
+                  {candidateStart && candidateEnd ? (
+                    <div className={`rounded border p-2 text-sm ${conflicts.length && !row.allowOverlap ? "border-rose-300 bg-rose-50 text-rose-800" : "border-emerald-300 bg-emerald-50 text-emerald-800"}`}>
+                      Slot scelto: {format(candidateStart, "dd/MM/yyyy HH:mm")} - {format(candidateEnd, "HH:mm")}{" "}
+                      {row.operatorId ? `(${operators.find((op) => op.id === row.operatorId)?.nome || "Operatore"})` : "(operatore non selezionato)"}
+                      {conflicts.length ? ` | Conflitti: ${conflicts.length}` : " | Nessun conflitto"}
+                    </div>
+                  ) : null}
+
+                  <div className="max-h-[45dvh] overflow-y-auto rounded border border-zinc-200">
+                    <table className="w-full text-sm">
+                      <thead className="bg-zinc-50 text-left text-xs text-zinc-600">
+                        <tr>
+                          <th className="px-3 py-2">Ora</th>
+                          <th className="px-3 py-2">Operatore</th>
+                          <th className="px-3 py-2">Cliente/Cane</th>
+                          <th className="px-3 py-2">Trattamenti</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {dayRows.length ? (
+                          dayRows.map((a) => (
+                            <tr key={`prev-${a.id}`} className="border-t border-zinc-100">
+                              <td className="px-3 py-2">
+                                {format(new Date(a.startAt), "HH:mm")} - {format(new Date(a.endAt), "HH:mm")}
+                              </td>
+                              <td className="px-3 py-2">{a.operator?.nome || "-"}</td>
+                              <td className="px-3 py-2">
+                                {isPersonalNoteAppointment(a) ? "Nota personale" : `${a.cliente.nome} ${a.cliente.cognome} / ${a.cane.nome}`}
+                              </td>
+                              <td className="px-3 py-2">
+                                {a.trattamentiSelezionati.length ? a.trattamentiSelezionati.map((t) => t.treatment.nome).join(", ") : "-"}
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td className="px-3 py-3 text-zinc-600" colSpan={4}>
+                              Nessun appuntamento per questo giorno.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              );
+            })()}
           </Card>
         </div>
       ) : null}
