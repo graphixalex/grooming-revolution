@@ -343,7 +343,8 @@ export function PlannerClient({
   const [slotDateInput, setSlotDateInput] = useState("");
   const [slotTimeInput, setSlotTimeInput] = useState("");
   const [sequenceEnabled, setSequenceEnabled] = useState(false);
-  const [sequenceSlots, setSequenceSlots] = useState<Array<{ date: string; time: string; treatmentIds: string[] }>>([]);
+  const [sequenceSlots, setSequenceSlots] = useState<Array<{ date: string; time: string; operatorId: string; treatmentIds: string[] }>>([]);
+  const [sequenceValidation, setSequenceValidation] = useState<Record<string, { available: boolean; reasons: string[] }>>({});
   const [selectedClient, setSelectedClient] = useState<Cliente | null>(null);
   const [selectedDog, setSelectedDog] = useState<Cane | null>(null);
   const [search, setSearch] = useState("");
@@ -418,6 +419,7 @@ export function PlannerClient({
     setListinoQuote(null);
     setSequenceEnabled(false);
     setSequenceSlots([]);
+    setSequenceValidation({});
     setModalMode("APPOINTMENT");
     setNewClientForm({ nome: "", cognome: "", telefono: "", email: "", noteCliente: "", consensoPromemoria: true });
     setNewDogForm({ nome: "", razza: "", taglia: "M", noteCane: "", tagRapidiIds: [] });
@@ -644,10 +646,17 @@ export function PlannerClient({
     if (!sequenceEnabled) return;
     if (!slotDateInput || !slotTimeInput) return;
     setSequenceSlots((prev) => {
-      if (!prev.length) return [{ date: slotDateInput, time: slotTimeInput, treatmentIds: [...selectedTreatments] }];
+      if (!prev.length) {
+        return [{
+          date: slotDateInput,
+          time: slotTimeInput,
+          operatorId: selectedOperatorId || "",
+          treatmentIds: [...selectedTreatments],
+        }];
+      }
       return [{ ...prev[0], date: slotDateInput, time: slotTimeInput }, ...prev.slice(1)];
     });
-  }, [sequenceEnabled, slotDateInput, slotTimeInput, selectedTreatments]);
+  }, [sequenceEnabled, slotDateInput, slotTimeInput, selectedTreatments, selectedOperatorId]);
 
   async function loadDogs(clienteId: string) {
     const res = await fetch(`/api/dogs?clienteId=${clienteId}`);
@@ -734,6 +743,42 @@ export function PlannerClient({
     return { res, data };
   }
 
+  function buildSequenceItems() {
+    return sequenceSlots
+      .map((slot, index) => {
+        const dt = buildLocalDateTime(slot.date, slot.time);
+        if (!dt) return null;
+        return {
+          rowId: `seq-${index}`,
+          startAt: dt.toISOString(),
+          operatorId: slot.operatorId || null,
+          trattamentiIds: slot.treatmentIds,
+        };
+      })
+      .filter((slot): slot is { rowId: string; startAt: string; operatorId: string | null; trattamentiIds: string[] } => Boolean(slot));
+  }
+
+  async function validateSequenceAvailability(payload: Record<string, unknown>) {
+    const res = await fetch("/api/appointments", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...payload, dryRun: true, allowOverlap: false }),
+    });
+    const data = await res.json();
+    if (!res.ok) return { ok: false, data };
+    const nextValidation: Record<string, { available: boolean; reasons: string[] }> = {};
+    const rows = Array.isArray(data.results) ? data.results : [];
+    for (const row of rows) {
+      if (!row?.rowId) continue;
+      nextValidation[String(row.rowId)] = {
+        available: Boolean(row.available),
+        reasons: Array.isArray(row.reasons) ? row.reasons.map((r: unknown) => String(r)) : [],
+      };
+    }
+    setSequenceValidation(nextValidation);
+    return { ok: Boolean(data.ok), data };
+  }
+
   async function saveAppointment() {
     if (!slotStart) return;
     const operatorIdForSave = selectedOperatorId;
@@ -774,41 +819,42 @@ export function PlannerClient({
 
     if (!selectedClient || !selectedDog) return;
     if (sequenceEnabled) {
-      const startsAt = sequenceSlots
-        .map((slot) => buildLocalDateTime(slot.date, slot.time))
-        .filter((slot): slot is Date => Boolean(slot))
-        .map((slot) => slot.toISOString());
-      const sequenceItems = sequenceSlots
-        .map((slot) => {
-          const dt = buildLocalDateTime(slot.date, slot.time);
-          if (!dt) return null;
-          return {
-            startAt: dt.toISOString(),
-            trattamentiIds: slot.treatmentIds,
-          };
-        })
-        .filter((slot): slot is { startAt: string; trattamentiIds: string[] } => Boolean(slot));
+      const sequenceItems = buildSequenceItems();
+      const startsAt = sequenceItems.map((slot) => slot.startAt);
 
       if (!startsAt.length) {
         alert("Inserisci almeno una data/ora valida per la sequenza");
         return;
       }
+      if (operators.length > 0 && sequenceItems.some((slot) => !slot.operatorId)) {
+        alert("Seleziona un operatore per ogni riga della sequenza");
+        return;
+      }
 
-      const { res, data } = await requestAppointmentWithOptionalOverlap(
-        "POST",
-        {
-          modalita: "BULK_APPOINTMENT",
-          operatorId: operatorIdForSave || null,
-          clienteId: selectedClient.id,
-          caneId: selectedDog.id,
-          startsAt,
-          sequenceItems,
-          durataMinuti: durata,
-          noteAppuntamento: note,
-          trattamentiIds: selectedTreatments,
-        },
-        "Una o più date sono in sovrapposizione. Vuoi salvare comunque la sequenza?",
-      );
+      const basePayload = {
+        modalita: "BULK_APPOINTMENT",
+        operatorId: operatorIdForSave || null,
+        clienteId: selectedClient.id,
+        caneId: selectedDog.id,
+        startsAt,
+        sequenceItems,
+        durataMinuti: durata,
+        noteAppuntamento: note,
+        trattamentiIds: selectedTreatments,
+      };
+
+      const preCheck = await validateSequenceAvailability(basePayload);
+      if (!preCheck.ok) {
+        alert(preCheck.data?.error || "La sequenza contiene slot non disponibili. Controlla gli indicatori rossi.");
+        return;
+      }
+
+      const res = await fetch("/api/appointments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...basePayload, allowOverlap: false }),
+      });
+      const data = await res.json();
       if (!res.ok) {
         alert(data.error || "Errore creazione sequenza appuntamenti");
         return;
@@ -883,7 +929,7 @@ export function PlannerClient({
     setSequenceSlots((prev) => {
       if (!prev.length) {
         return slotDateInput && slotTimeInput
-          ? [{ date: slotDateInput, time: slotTimeInput, treatmentIds: [...selectedTreatments] }]
+          ? [{ date: slotDateInput, time: slotTimeInput, operatorId: selectedOperatorId || "", treatmentIds: [...selectedTreatments] }]
           : prev;
       }
       const last = prev[prev.length - 1];
@@ -892,20 +938,30 @@ export function PlannerClient({
       if (!lastDate) return prev;
       const nextDate = new Date(lastDate);
       nextDate.setMonth(nextDate.getMonth() + 1);
-      return [...prev, { date: toDateInputValue(nextDate), time: toTimeInputValue(nextDate), treatmentIds: [...last.treatmentIds] }];
+      return [
+        ...prev,
+        { date: toDateInputValue(nextDate), time: toTimeInputValue(nextDate), operatorId: last.operatorId, treatmentIds: [...last.treatmentIds] },
+      ];
     });
+    setSequenceValidation({});
   }
 
   function addEmptySequenceSlot() {
-    setSequenceSlots((prev) => [...prev, { date: slotDateInput, time: slotTimeInput, treatmentIds: [...selectedTreatments] }]);
+    setSequenceSlots((prev) => [
+      ...prev,
+      { date: slotDateInput, time: slotTimeInput, operatorId: selectedOperatorId || "", treatmentIds: [...selectedTreatments] },
+    ]);
+    setSequenceValidation({});
   }
 
-  function updateSequenceSlot(index: number, patch: Partial<{ date: string; time: string; treatmentIds: string[] }>) {
+  function updateSequenceSlot(index: number, patch: Partial<{ date: string; time: string; operatorId: string; treatmentIds: string[] }>) {
     setSequenceSlots((prev) => prev.map((slot, i) => (i === index ? { ...slot, ...patch } : slot)));
+    setSequenceValidation({});
   }
 
   function removeSequenceSlot(index: number) {
     setSequenceSlots((prev) => prev.filter((_, i) => i !== index));
+    setSequenceValidation({});
   }
 
   function toggleSequenceSlotTreatment(index: number, treatmentId: string, checked: boolean) {
@@ -918,6 +974,7 @@ export function PlannerClient({
         return { ...slot, treatmentIds: next };
       }),
     );
+    setSequenceValidation({});
   }
 
   const hasValidSequenceSlot = sequenceSlots.some((slot) => Boolean(buildLocalDateTime(slot.date, slot.time)));
@@ -1675,10 +1732,16 @@ export function PlannerClient({
                           prev.length
                             ? prev
                             : slotDateInput && slotTimeInput
-                              ? [{ date: slotDateInput, time: slotTimeInput, treatmentIds: [...selectedTreatments] }]
+                              ? [{
+                                  date: slotDateInput,
+                                  time: slotTimeInput,
+                                  operatorId: selectedOperatorId || "",
+                                  treatmentIds: [...selectedTreatments],
+                                }]
                               : prev,
                         );
                       }
+                      setSequenceValidation({});
                     }}
                   />
                   Prenotazione in sequenza (date multiple)
@@ -1693,7 +1756,7 @@ export function PlannerClient({
                     <div className="space-y-2">
                       {sequenceSlots.map((slot, index) => (
                         <div key={`seq-top-${index}`} className="space-y-2 rounded-lg border border-amber-200 bg-white p-2">
-                          <div className="grid gap-2 md:grid-cols-[1fr_1fr_auto]">
+                          <div className="grid gap-2 md:grid-cols-[1fr_1fr_1fr_auto]">
                             <Input
                               type="date"
                               value={slot.date}
@@ -1704,6 +1767,18 @@ export function PlannerClient({
                               value={slot.time}
                               onChange={(e) => updateSequenceSlot(index, { time: e.target.value })}
                             />
+                            <select
+                              className="h-10 rounded-md border border-zinc-300 px-3 text-sm"
+                              value={slot.operatorId}
+                              onChange={(e) => updateSequenceSlot(index, { operatorId: e.target.value })}
+                            >
+                              <option value="">Operatore...</option>
+                              {operators.map((op) => (
+                                <option key={op.id} value={op.id}>
+                                  {op.nome}
+                                </option>
+                              ))}
+                            </select>
                             <Button
                               type="button"
                               variant="outline"
@@ -1727,6 +1802,18 @@ export function PlannerClient({
                                 </label>
                               ))}
                           </div>
+                          {(() => {
+                            const rowKey = `seq-${index}`;
+                            const rowValidation = sequenceValidation[rowKey];
+                            if (!rowValidation) return null;
+                            return rowValidation.available ? (
+                              <p className="text-xs font-medium text-emerald-700">Disponibile</p>
+                            ) : (
+                              <p className="text-xs font-medium text-rose-700">
+                                Non disponibile: {rowValidation.reasons.join(", ")}
+                              </p>
+                            );
+                          })()}
                         </div>
                       ))}
                     </div>
@@ -1736,6 +1823,40 @@ export function PlannerClient({
                       </Button>
                       <Button type="button" variant="outline" onClick={addSequenceSlotFromLast}>
                         Aggiungi +1 mese
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={async () => {
+                          if (!selectedClient || !selectedDog) {
+                            alert("Seleziona prima cliente e cane");
+                            return;
+                          }
+                          const sequenceItems = buildSequenceItems();
+                          const startsAt = sequenceItems.map((slot) => slot.startAt);
+                          if (!startsAt.length) {
+                            alert("Inserisci almeno una data/ora valida");
+                            return;
+                          }
+                          const validation = await validateSequenceAvailability({
+                            modalita: "BULK_APPOINTMENT",
+                            operatorId: selectedOperatorId || null,
+                            clienteId: selectedClient.id,
+                            caneId: selectedDog.id,
+                            startsAt,
+                            sequenceItems,
+                            durataMinuti: durata,
+                            noteAppuntamento: note,
+                            trattamentiIds: selectedTreatments,
+                          });
+                          if (validation.ok) {
+                            alert("Sequenza valida: tutti gli slot sono disponibili.");
+                          } else {
+                            alert("Alcune righe non sono disponibili. Vedi dettaglio sotto ogni riga.");
+                          }
+                        }}
+                      >
+                        Verifica disponibilita
                       </Button>
                     </div>
                   </div>

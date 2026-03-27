@@ -159,7 +159,8 @@ export async function POST(req: NextRequest) {
   }
 
   if (body.modalita === "BULK_APPOINTMENT") {
-    const sequenceItemsRaw: Array<{ startAt: unknown; trattamentiIds?: unknown }> = Array.isArray(body.sequenceItems)
+    const dryRun = body.dryRun === true;
+    const sequenceItemsRaw: Array<{ rowId?: unknown; startAt: unknown; trattamentiIds?: unknown; operatorId?: unknown }> = Array.isArray(body.sequenceItems)
       ? body.sequenceItems
       : [];
     const normalizedSequenceItems = sequenceItemsRaw
@@ -168,9 +169,11 @@ export async function POST(req: NextRequest) {
         if (!Number.isFinite(parsedStartAt.getTime())) return null;
         const rawTreatments = Array.isArray(item.trattamentiIds) ? item.trattamentiIds : [];
         const normalizedTreatments = rawTreatments.filter((id): id is string => typeof id === "string" && id.trim().length > 0);
-        return { startAt: parsedStartAt, trattamentiIds: normalizedTreatments };
+        const operatorId = typeof item.operatorId === "string" && item.operatorId ? item.operatorId : null;
+        const rowId = typeof item.rowId === "string" && item.rowId ? item.rowId : parsedStartAt.toISOString();
+        return { rowId, startAt: parsedStartAt, trattamentiIds: normalizedTreatments, operatorId };
       })
-      .filter((item): item is { startAt: Date; trattamentiIds: string[] } => Boolean(item))
+      .filter((item): item is { rowId: string; startAt: Date; trattamentiIds: string[]; operatorId: string | null } => Boolean(item))
       .sort((a, b) => a.startAt.getTime() - b.startAt.getTime());
 
     const startAtListRaw: unknown[] = Array.isArray(body.startsAt) ? body.startsAt : [];
@@ -179,9 +182,15 @@ export async function POST(req: NextRequest) {
       .filter((value: Date) => Number.isFinite(value.getTime()))
       .sort((a, b) => a.getTime() - b.getTime());
 
+    const fallbackOperatorId = typeof body.operatorId === "string" && body.operatorId ? body.operatorId : null;
     const sourceItems = normalizedSequenceItems.length
       ? normalizedSequenceItems
-      : fallbackStartAtList.map((startAt) => ({ startAt, trattamentiIds: [] as string[] }));
+      : fallbackStartAtList.map((startAt) => ({
+          rowId: startAt.toISOString(),
+          startAt,
+          trattamentiIds: [] as string[],
+          operatorId: fallbackOperatorId,
+        }));
 
     if (!sourceItems.length) {
       return NextResponse.json({ error: "Seleziona almeno una data/ora valida per la sequenza" }, { status: 400 });
@@ -190,7 +199,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Puoi creare al massimo ${MAX_BULK_APPOINTMENTS} appuntamenti in sequenza` }, { status: 400 });
     }
 
-    const uniqueStartAtMap = new Map<string, { startAt: Date; trattamentiIds: string[] }>();
+    const uniqueStartAtMap = new Map<string, { rowId: string; startAt: Date; trattamentiIds: string[]; operatorId: string | null }>();
     for (const item of sourceItems) {
       uniqueStartAtMap.set(item.startAt.toISOString(), item);
     }
@@ -208,60 +217,79 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
     }
 
-    const operatorId = typeof body.operatorId === "string" && body.operatorId ? body.operatorId : null;
-    if (!operatorId && activeOperatorsCount > 0) {
-      return NextResponse.json({ error: "Seleziona un operatore" }, { status: 400 });
-    }
-    const operator = operatorId
-      ? await prisma.operator.findFirst({
-          where: { id: operatorId, salonId, attivo: true },
-          select: { id: true, workingHoursJson: true },
-        })
-      : null;
-    if (operatorId && !operator) return NextResponse.json({ error: "Operatore non valido" }, { status: 400 });
+    const operators = await prisma.operator.findMany({
+      where: { salonId, attivo: true },
+      select: { id: true, workingHoursJson: true },
+    });
+    const operatorMap = new Map(operators.map((op) => [op.id, op]));
+    const useSalonHoursCheck = activeOperatorsCount === 0;
 
-    const useSalonHoursCheck = !operatorId && activeOperatorsCount === 0;
     const slotRanges = uniqueSequenceItems.map((item) => ({
       startAt: item.startAt,
       endAt: computeEndAt(item.startAt, parsed.data.durataMinuti),
       trattamentiIds: item.trattamentiIds,
+      operatorId: item.operatorId,
+      rowId: item.rowId,
     }));
 
+    const validationResults: Array<{
+      rowId: string;
+      startAt: string;
+      operatorId: string | null;
+      available: boolean;
+      reasons: string[];
+    }> = [];
+
     for (const range of slotRanges) {
+      const reasons: string[] = [];
+      const rowOperator = range.operatorId ? operatorMap.get(range.operatorId) : null;
+
+      if (activeOperatorsCount > 0 && !range.operatorId) {
+        reasons.push("Operatore obbligatorio");
+      }
+      if (range.operatorId && !rowOperator) {
+        reasons.push("Operatore non valido");
+      }
       if (useSalonHoursCheck && !isInsideWorkingHours(salon.workingHoursJson, range.startAt, range.endAt, salonTimeZone)) {
-        return NextResponse.json(
-          { error: `Orario fuori fascia lavorativa sede: ${range.startAt.toLocaleString("it-IT")}` },
-          { status: 400 },
-        );
+        reasons.push("Fuori orario sede");
       }
-      if (operator?.workingHoursJson && !isInsideWorkingHours(operator.workingHoursJson, range.startAt, range.endAt, salonTimeZone)) {
-        return NextResponse.json(
-          { error: `Orario fuori disponibilita operatore: ${range.startAt.toLocaleString("it-IT")}` },
-          { status: 400 },
-        );
+      if (rowOperator?.workingHoursJson && !isInsideWorkingHours(rowOperator.workingHoursJson, range.startAt, range.endAt, salonTimeZone)) {
+        reasons.push("Fuori disponibilita operatore");
       }
+      if (!allowOverlap && !salon.overlapAllowed && (await hasOverlap(salonId, range.startAt, range.endAt, undefined, range.operatorId))) {
+        reasons.push("Sovrapposto con appuntamento esistente");
+      }
+
+      validationResults.push({
+        rowId: range.rowId,
+        startAt: range.startAt.toISOString(),
+        operatorId: range.operatorId,
+        available: reasons.length === 0,
+        reasons,
+      });
     }
 
     for (let i = 0; i < slotRanges.length; i += 1) {
       for (let j = i + 1; j < slotRanges.length; j += 1) {
+        const sameOperator = (slotRanges[i].operatorId || null) === (slotRanges[j].operatorId || null);
+        if (!sameOperator) continue;
         if (slotRanges[i].startAt < slotRanges[j].endAt && slotRanges[i].endAt > slotRanges[j].startAt) {
-          return NextResponse.json(
-            { error: `Sovrapposizione tra date selezionate: ${slotRanges[j].startAt.toLocaleString("it-IT")}` },
-            { status: 400 },
-          );
+          const result = validationResults.find((row) => row.rowId === slotRanges[j].rowId);
+          if (result) {
+            result.available = false;
+            result.reasons.push("Sovrapposto con un'altra riga della sequenza");
+          }
         }
       }
     }
 
-    if (!allowOverlap && !salon.overlapAllowed) {
-      for (const range of slotRanges) {
-        if (await hasOverlap(salonId, range.startAt, range.endAt, undefined, operatorId)) {
-          return NextResponse.json(
-            { error: `Sovrapposizione con altro appuntamento: ${range.startAt.toLocaleString("it-IT")}` },
-            { status: 400 },
-          );
-        }
-      }
+    const hasErrors = validationResults.some((row) => !row.available);
+    if (dryRun) {
+      return NextResponse.json({ ok: !hasErrors, results: validationResults });
+    }
+    if (hasErrors) {
+      const first = validationResults.find((row) => !row.available)!;
+      return NextResponse.json({ error: `${new Date(first.startAt).toLocaleString("it-IT")}: ${first.reasons.join(", ")}` }, { status: 400 });
     }
 
     const createdIds = await prisma.$transaction(async (trx) => {
@@ -271,7 +299,7 @@ export async function POST(req: NextRequest) {
         const created = await trx.appointment.create({
           data: {
             salonId,
-            operatorId,
+            operatorId: range.operatorId,
             clienteId: parsed.data.clienteId,
             caneId: parsed.data.caneId,
             startAt: range.startAt,
