@@ -7,7 +7,7 @@ import { sendWhatsAppTextViaApi } from "@/lib/whatsapp";
 import { assertCriticalEnv } from "@/lib/env-security";
 import {
   DEFAULT_WHATSAPP_BIRTHDAY_TEMPLATE,
-  DEFAULT_WHATSAPP_REMINDER_TEMPLATE,
+  normalizeWhatsAppReminderTemplate,
 } from "@/lib/default-templates";
 
 function isAuthorized(req: NextRequest) {
@@ -122,9 +122,7 @@ export async function GET(req: NextRequest) {
         }
 
         const template =
-          typeof salon.whatsappTemplate === "string" && salon.whatsappTemplate.trim().length > 0
-            ? salon.whatsappTemplate
-            : DEFAULT_WHATSAPP_REMINDER_TEMPLATE;
+          normalizeWhatsAppReminderTemplate(salon.whatsappTemplate);
         const text = renderTemplate(
           template,
           reminderVariables({

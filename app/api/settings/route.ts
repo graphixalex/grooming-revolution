@@ -13,6 +13,7 @@ import {
   DEFAULT_WHATSAPP_BOOKING_CONFIRM_TEMPLATE,
   DEFAULT_WHATSAPP_ONE_HOUR_TEMPLATE,
   DEFAULT_WHATSAPP_REMINDER_TEMPLATE,
+  normalizeWhatsAppReminderTemplate,
 } from "@/lib/default-templates";
 
 export async function GET() {
@@ -196,9 +197,7 @@ export async function GET() {
       ? {
           ...salon,
           whatsappTemplate:
-            typeof salon.whatsappTemplate === "string" && salon.whatsappTemplate.trim().length > 0
-              ? salon.whatsappTemplate
-              : DEFAULT_WHATSAPP_REMINDER_TEMPLATE,
+            normalizeWhatsAppReminderTemplate(salon.whatsappTemplate),
           whatsappBookingTemplate:
             typeof salon.whatsappBookingTemplate === "string" && salon.whatsappBookingTemplate.trim().length > 0
               ? salon.whatsappBookingTemplate
@@ -395,7 +394,7 @@ export async function PATCH(req: NextRequest) {
         data: {
           whatsappTemplate:
             typeof body.whatsappTemplate === "string" && body.whatsappTemplate.trim().length > 0
-              ? body.whatsappTemplate
+              ? normalizeWhatsAppReminderTemplate(body.whatsappTemplate)
               : DEFAULT_WHATSAPP_REMINDER_TEMPLATE,
           whatsappBookingTemplate:
             typeof body.whatsappBookingTemplate === "string" && body.whatsappBookingTemplate.trim().length > 0
@@ -437,7 +436,7 @@ export async function PATCH(req: NextRequest) {
           data: {
             whatsappTemplate:
               typeof body.whatsappTemplate === "string" && body.whatsappTemplate.trim().length > 0
-                ? body.whatsappTemplate
+                ? normalizeWhatsAppReminderTemplate(body.whatsappTemplate)
                 : DEFAULT_WHATSAPP_REMINDER_TEMPLATE,
           },
         });

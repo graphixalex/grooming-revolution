@@ -7,7 +7,7 @@ import {
   DEFAULT_WHATSAPP_BIRTHDAY_TEMPLATE,
   DEFAULT_WHATSAPP_BOOKING_CONFIRM_TEMPLATE,
   DEFAULT_WHATSAPP_ONE_HOUR_TEMPLATE,
-  DEFAULT_WHATSAPP_REMINDER_TEMPLATE,
+  normalizeWhatsAppReminderTemplate,
 } from "@/lib/default-templates";
 
 export default async function WhatsAppPage() {
@@ -52,7 +52,7 @@ export default async function WhatsAppPage() {
         return legacy
           ? {
               ...legacy,
-              whatsappTemplate: legacy.whatsappTemplate || DEFAULT_WHATSAPP_REMINDER_TEMPLATE,
+              whatsappTemplate: normalizeWhatsAppReminderTemplate(legacy.whatsappTemplate),
               whatsappBookingTemplate: DEFAULT_WHATSAPP_BOOKING_CONFIRM_TEMPLATE,
               whatsappOneHourTemplate: DEFAULT_WHATSAPP_ONE_HOUR_TEMPLATE,
               whatsappBirthdayTemplate: DEFAULT_WHATSAPP_BIRTHDAY_TEMPLATE,
@@ -68,7 +68,7 @@ export default async function WhatsAppPage() {
 
   const initialSalon = {
     ...(salon || {}),
-    whatsappTemplate: salon?.whatsappTemplate || DEFAULT_WHATSAPP_REMINDER_TEMPLATE,
+    whatsappTemplate: normalizeWhatsAppReminderTemplate(salon?.whatsappTemplate),
     whatsappBookingTemplate: salon?.whatsappBookingTemplate || DEFAULT_WHATSAPP_BOOKING_CONFIRM_TEMPLATE,
     whatsappOneHourTemplate: salon?.whatsappOneHourTemplate || DEFAULT_WHATSAPP_ONE_HOUR_TEMPLATE,
     whatsappBirthdayTemplate: salon?.whatsappBirthdayTemplate || DEFAULT_WHATSAPP_BIRTHDAY_TEMPLATE,
