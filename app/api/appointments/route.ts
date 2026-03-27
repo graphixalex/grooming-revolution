@@ -159,28 +159,47 @@ export async function POST(req: NextRequest) {
   }
 
   if (body.modalita === "BULK_APPOINTMENT") {
+    const sequenceItemsRaw: Array<{ startAt: unknown; trattamentiIds?: unknown }> = Array.isArray(body.sequenceItems)
+      ? body.sequenceItems
+      : [];
+    const normalizedSequenceItems = sequenceItemsRaw
+      .map((item) => {
+        const parsedStartAt = new Date(String(item.startAt));
+        if (!Number.isFinite(parsedStartAt.getTime())) return null;
+        const rawTreatments = Array.isArray(item.trattamentiIds) ? item.trattamentiIds : [];
+        const normalizedTreatments = rawTreatments.filter((id): id is string => typeof id === "string" && id.trim().length > 0);
+        return { startAt: parsedStartAt, trattamentiIds: normalizedTreatments };
+      })
+      .filter((item): item is { startAt: Date; trattamentiIds: string[] } => Boolean(item))
+      .sort((a, b) => a.startAt.getTime() - b.startAt.getTime());
+
     const startAtListRaw: unknown[] = Array.isArray(body.startsAt) ? body.startsAt : [];
-    const startAtList = startAtListRaw
+    const fallbackStartAtList = startAtListRaw
       .map((value: unknown) => new Date(String(value)))
       .filter((value: Date) => Number.isFinite(value.getTime()))
       .sort((a, b) => a.getTime() - b.getTime());
-    if (!startAtList.length) {
+
+    const sourceItems = normalizedSequenceItems.length
+      ? normalizedSequenceItems
+      : fallbackStartAtList.map((startAt) => ({ startAt, trattamentiIds: [] as string[] }));
+
+    if (!sourceItems.length) {
       return NextResponse.json({ error: "Seleziona almeno una data/ora valida per la sequenza" }, { status: 400 });
     }
-    if (startAtList.length > MAX_BULK_APPOINTMENTS) {
+    if (sourceItems.length > MAX_BULK_APPOINTMENTS) {
       return NextResponse.json({ error: `Puoi creare al massimo ${MAX_BULK_APPOINTMENTS} appuntamenti in sequenza` }, { status: 400 });
     }
 
-    const uniqueStartAtMap = new Map<string, Date>();
-    for (const startAt of startAtList) {
-      uniqueStartAtMap.set(startAt.toISOString(), startAt);
+    const uniqueStartAtMap = new Map<string, { startAt: Date; trattamentiIds: string[] }>();
+    for (const item of sourceItems) {
+      uniqueStartAtMap.set(item.startAt.toISOString(), item);
     }
-    const uniqueStartAtList = Array.from(uniqueStartAtMap.values()).sort((a, b) => a.getTime() - b.getTime());
+    const uniqueSequenceItems = Array.from(uniqueStartAtMap.values()).sort((a, b) => a.startAt.getTime() - b.startAt.getTime());
 
     const parsed = appointmentSchema.safeParse({
       clienteId: body.clienteId,
       caneId: body.caneId,
-      startAt: uniqueStartAtList[0].toISOString(),
+      startAt: uniqueSequenceItems[0].startAt.toISOString(),
       durataMinuti: body.durataMinuti,
       noteAppuntamento: body.noteAppuntamento,
       trattamentiIds: body.trattamentiIds,
@@ -202,9 +221,10 @@ export async function POST(req: NextRequest) {
     if (operatorId && !operator) return NextResponse.json({ error: "Operatore non valido" }, { status: 400 });
 
     const useSalonHoursCheck = !operatorId && activeOperatorsCount === 0;
-    const slotRanges = uniqueStartAtList.map((startAt) => ({
-      startAt,
-      endAt: computeEndAt(startAt, parsed.data.durataMinuti),
+    const slotRanges = uniqueSequenceItems.map((item) => ({
+      startAt: item.startAt,
+      endAt: computeEndAt(item.startAt, parsed.data.durataMinuti),
+      trattamentiIds: item.trattamentiIds,
     }));
 
     for (const range of slotRanges) {
@@ -247,6 +267,7 @@ export async function POST(req: NextRequest) {
     const createdIds = await prisma.$transaction(async (trx) => {
       const ids: string[] = [];
       for (const range of slotRanges) {
+        const treatmentIdsForRow = range.trattamentiIds.length ? range.trattamentiIds : parsed.data.trattamentiIds;
         const created = await trx.appointment.create({
           data: {
             salonId,
@@ -259,7 +280,7 @@ export async function POST(req: NextRequest) {
             noteAppuntamento: parsed.data.noteAppuntamento || null,
             createdById: auth.session.user.id,
             trattamentiSelezionati: {
-              create: parsed.data.trattamentiIds.map((treatmentId) => ({ treatmentId })),
+              create: treatmentIdsForRow.map((treatmentId) => ({ treatmentId })),
             },
           },
           select: { id: true },

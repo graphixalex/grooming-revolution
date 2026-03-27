@@ -343,7 +343,7 @@ export function PlannerClient({
   const [slotDateInput, setSlotDateInput] = useState("");
   const [slotTimeInput, setSlotTimeInput] = useState("");
   const [sequenceEnabled, setSequenceEnabled] = useState(false);
-  const [sequenceSlots, setSequenceSlots] = useState<Array<{ date: string; time: string }>>([]);
+  const [sequenceSlots, setSequenceSlots] = useState<Array<{ date: string; time: string; treatmentIds: string[] }>>([]);
   const [selectedClient, setSelectedClient] = useState<Cliente | null>(null);
   const [selectedDog, setSelectedDog] = useState<Cane | null>(null);
   const [search, setSearch] = useState("");
@@ -644,10 +644,10 @@ export function PlannerClient({
     if (!sequenceEnabled) return;
     if (!slotDateInput || !slotTimeInput) return;
     setSequenceSlots((prev) => {
-      if (!prev.length) return [{ date: slotDateInput, time: slotTimeInput }];
+      if (!prev.length) return [{ date: slotDateInput, time: slotTimeInput, treatmentIds: [...selectedTreatments] }];
       return [{ ...prev[0], date: slotDateInput, time: slotTimeInput }, ...prev.slice(1)];
     });
-  }, [sequenceEnabled, slotDateInput, slotTimeInput]);
+  }, [sequenceEnabled, slotDateInput, slotTimeInput, selectedTreatments]);
 
   async function loadDogs(clienteId: string) {
     const res = await fetch(`/api/dogs?clienteId=${clienteId}`);
@@ -778,6 +778,16 @@ export function PlannerClient({
         .map((slot) => buildLocalDateTime(slot.date, slot.time))
         .filter((slot): slot is Date => Boolean(slot))
         .map((slot) => slot.toISOString());
+      const sequenceItems = sequenceSlots
+        .map((slot) => {
+          const dt = buildLocalDateTime(slot.date, slot.time);
+          if (!dt) return null;
+          return {
+            startAt: dt.toISOString(),
+            trattamentiIds: slot.treatmentIds,
+          };
+        })
+        .filter((slot): slot is { startAt: string; trattamentiIds: string[] } => Boolean(slot));
 
       if (!startsAt.length) {
         alert("Inserisci almeno una data/ora valida per la sequenza");
@@ -792,6 +802,7 @@ export function PlannerClient({
           clienteId: selectedClient.id,
           caneId: selectedDog.id,
           startsAt,
+          sequenceItems,
           durataMinuti: durata,
           noteAppuntamento: note,
           trattamentiIds: selectedTreatments,
@@ -871,7 +882,9 @@ export function PlannerClient({
   function addSequenceSlotFromLast() {
     setSequenceSlots((prev) => {
       if (!prev.length) {
-        return slotDateInput && slotTimeInput ? [{ date: slotDateInput, time: slotTimeInput }] : prev;
+        return slotDateInput && slotTimeInput
+          ? [{ date: slotDateInput, time: slotTimeInput, treatmentIds: [...selectedTreatments] }]
+          : prev;
       }
       const last = prev[prev.length - 1];
       if (!last?.date || !last?.time) return prev;
@@ -879,20 +892,32 @@ export function PlannerClient({
       if (!lastDate) return prev;
       const nextDate = new Date(lastDate);
       nextDate.setMonth(nextDate.getMonth() + 1);
-      return [...prev, { date: toDateInputValue(nextDate), time: toTimeInputValue(nextDate) }];
+      return [...prev, { date: toDateInputValue(nextDate), time: toTimeInputValue(nextDate), treatmentIds: [...last.treatmentIds] }];
     });
   }
 
   function addEmptySequenceSlot() {
-    setSequenceSlots((prev) => [...prev, { date: slotDateInput, time: slotTimeInput }]);
+    setSequenceSlots((prev) => [...prev, { date: slotDateInput, time: slotTimeInput, treatmentIds: [...selectedTreatments] }]);
   }
 
-  function updateSequenceSlot(index: number, patch: Partial<{ date: string; time: string }>) {
+  function updateSequenceSlot(index: number, patch: Partial<{ date: string; time: string; treatmentIds: string[] }>) {
     setSequenceSlots((prev) => prev.map((slot, i) => (i === index ? { ...slot, ...patch } : slot)));
   }
 
   function removeSequenceSlot(index: number) {
     setSequenceSlots((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function toggleSequenceSlotTreatment(index: number, treatmentId: string, checked: boolean) {
+    setSequenceSlots((prev) =>
+      prev.map((slot, i) => {
+        if (i !== index) return slot;
+        const next = checked
+          ? Array.from(new Set([...slot.treatmentIds, treatmentId]))
+          : slot.treatmentIds.filter((id) => id !== treatmentId);
+        return { ...slot, treatmentIds: next };
+      }),
+    );
   }
 
   const hasValidSequenceSlot = sequenceSlots.some((slot) => Boolean(buildLocalDateTime(slot.date, slot.time)));
@@ -1647,7 +1672,11 @@ export function PlannerClient({
                       setSequenceEnabled(enabled);
                       if (enabled) {
                         setSequenceSlots((prev) =>
-                          prev.length ? prev : slotDateInput && slotTimeInput ? [{ date: slotDateInput, time: slotTimeInput }] : prev,
+                          prev.length
+                            ? prev
+                            : slotDateInput && slotTimeInput
+                              ? [{ date: slotDateInput, time: slotTimeInput, treatmentIds: [...selectedTreatments] }]
+                              : prev,
                         );
                       }
                     }}
@@ -1663,25 +1692,41 @@ export function PlannerClient({
                   <div className="space-y-2">
                     <div className="space-y-2">
                       {sequenceSlots.map((slot, index) => (
-                        <div key={`seq-top-${index}`} className="grid gap-2 md:grid-cols-[1fr_1fr_auto]">
-                          <Input
-                            type="date"
-                            value={slot.date}
-                            onChange={(e) => updateSequenceSlot(index, { date: e.target.value })}
-                          />
-                          <Input
-                            type="time"
-                            value={slot.time}
-                            onChange={(e) => updateSequenceSlot(index, { time: e.target.value })}
-                          />
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => removeSequenceSlot(index)}
-                            disabled={sequenceSlots.length <= 1}
-                          >
-                            Rimuovi
-                          </Button>
+                        <div key={`seq-top-${index}`} className="space-y-2 rounded-lg border border-amber-200 bg-white p-2">
+                          <div className="grid gap-2 md:grid-cols-[1fr_1fr_auto]">
+                            <Input
+                              type="date"
+                              value={slot.date}
+                              onChange={(e) => updateSequenceSlot(index, { date: e.target.value })}
+                            />
+                            <Input
+                              type="time"
+                              value={slot.time}
+                              onChange={(e) => updateSequenceSlot(index, { time: e.target.value })}
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => removeSequenceSlot(index)}
+                              disabled={sequenceSlots.length <= 1}
+                            >
+                              Rimuovi
+                            </Button>
+                          </div>
+                          <div className="grid gap-1 md:grid-cols-2">
+                            {treatments
+                              .filter((t) => t.attivo)
+                              .map((t) => (
+                                <label key={`seq-${index}-t-${t.id}`} className="flex items-center gap-2 rounded border border-zinc-200 p-1.5 text-xs">
+                                  <input
+                                    type="checkbox"
+                                    checked={slot.treatmentIds.includes(t.id)}
+                                    onChange={(e) => toggleSequenceSlotTreatment(index, t.id, e.target.checked)}
+                                  />
+                                  {t.nome}
+                                </label>
+                              ))}
+                          </div>
                         </div>
                       ))}
                     </div>
