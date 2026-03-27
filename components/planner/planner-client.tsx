@@ -350,6 +350,8 @@ export function PlannerClient({
   const [sequencePreviewIndex, setSequencePreviewIndex] = useState<number | null>(null);
   const [sequencePreviewLoading, setSequencePreviewLoading] = useState(false);
   const [sequencePreviewAppointments, setSequencePreviewAppointments] = useState<Appointment[]>([]);
+  const [sequenceServicePickerIndex, setSequenceServicePickerIndex] = useState<number | null>(null);
+  const [showMainServicePicker, setShowMainServicePicker] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Cliente | null>(null);
   const [selectedDog, setSelectedDog] = useState<Cane | null>(null);
   const [search, setSearch] = useState("");
@@ -428,6 +430,8 @@ export function PlannerClient({
     setSequencePreviewIndex(null);
     setSequencePreviewLoading(false);
     setSequencePreviewAppointments([]);
+    setSequenceServicePickerIndex(null);
+    setShowMainServicePicker(false);
     setModalMode("APPOINTMENT");
     setNewClientForm({ nome: "", cognome: "", telefono: "", email: "", noteCliente: "", consensoPromemoria: true });
     setNewDogForm({ nome: "", razza: "", taglia: "M", noteCane: "", tagRapidiIds: [] });
@@ -1841,25 +1845,25 @@ export function PlannerClient({
                             <Button
                               type="button"
                               variant="outline"
+                              className="w-auto whitespace-nowrap"
                               onClick={() => removeSequenceSlot(index)}
                               disabled={sequenceSlots.length <= 1}
                             >
                               Rimuovi
                             </Button>
                           </div>
-                          <div className="grid gap-1 md:grid-cols-2">
-                            {treatments
-                              .filter((t) => t.attivo)
-                              .map((t) => (
-                                <label key={`seq-${index}-t-${t.id}`} className="flex items-center gap-2 rounded border border-zinc-200 p-1.5 text-xs">
-                                  <input
-                                    type="checkbox"
-                                    checked={slot.treatmentIds.includes(t.id)}
-                                    onChange={(e) => toggleSequenceSlotTreatment(index, t.id, e.target.checked)}
-                                  />
-                                  {t.nome}
-                                </label>
-                              ))}
+                          <div className="space-y-1">
+                            <Button type="button" variant="outline" onClick={() => setSequenceServicePickerIndex(index)}>
+                              Seleziona servizio ({slot.treatmentIds.length})
+                            </Button>
+                            <p className="text-xs text-zinc-600">
+                              {slot.treatmentIds.length
+                                ? treatments
+                                    .filter((t) => slot.treatmentIds.includes(t.id))
+                                    .map((t) => t.nome)
+                                    .join(", ")
+                                : "Nessun servizio selezionato"}
+                            </p>
                           </div>
                           <div className="flex flex-wrap items-center gap-2">
                             <label className="flex items-center gap-2 rounded border border-zinc-200 px-2 py-1 text-xs">
@@ -2060,21 +2064,18 @@ export function PlannerClient({
                 ) : null}
 
                 <label className="text-sm font-medium">Trattamenti</label>
-                <div className="grid gap-2 md:grid-cols-2">
-                  {treatments
-                    .filter((t) => t.attivo)
-                    .map((t) => (
-                      <label key={t.id} className="flex items-center gap-2 rounded border border-zinc-200 p-2 text-sm">
-                        <input
-                          type="checkbox"
-                          checked={selectedTreatments.includes(t.id)}
-                          onChange={(e) => {
-                            setSelectedTreatments((prev) => (e.target.checked ? [...prev, t.id] : prev.filter((id) => id !== t.id)));
-                          }}
-                        />
-                        {t.nome}
-                      </label>
-                    ))}
+                <div className="space-y-1">
+                  <Button type="button" variant="outline" onClick={() => setShowMainServicePicker(true)}>
+                    Seleziona servizio ({selectedTreatments.length})
+                  </Button>
+                  <p className="text-xs text-zinc-600">
+                    {selectedTreatments.length
+                      ? treatments
+                          .filter((t) => selectedTreatments.includes(t.id))
+                          .map((t) => t.nome)
+                          .join(", ")
+                      : "Nessun servizio selezionato"}
+                  </p>
                 </div>
 
                 <label className="text-sm font-medium">Note appuntamento</label>
@@ -2094,6 +2095,68 @@ export function PlannerClient({
               >
                 {modalMode === "NOTE" ? "Salva nota" : sequenceEnabled ? "Salva sequenza" : "Salva appuntamento"}
               </Button>
+            </div>
+          </Card>
+        </div>
+      ) : null}
+
+      {showMainServicePicker ? (
+        <div
+          className="fixed inset-0 z-[65] overflow-y-auto bg-black/45 p-2 md:p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowMainServicePicker(false);
+          }}
+        >
+          <Card className="mx-auto my-0 w-full max-w-xl space-y-3 overflow-y-auto p-3 md:my-4 md:max-h-[calc(100dvh-3rem)] md:p-4">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-lg font-semibold">Seleziona servizio</h3>
+              <Button variant="outline" onClick={() => setShowMainServicePicker(false)}>
+                Chiudi
+              </Button>
+            </div>
+            <div className="max-h-[55dvh] space-y-2 overflow-y-auto rounded border border-zinc-200 p-2">
+              {treatments.filter((t) => t.attivo).map((t) => (
+                <label key={`main-service-${t.id}`} className="flex items-center gap-2 rounded border border-zinc-200 p-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={selectedTreatments.includes(t.id)}
+                    onChange={(e) => {
+                      setSelectedTreatments((prev) => (e.target.checked ? [...prev, t.id] : prev.filter((id) => id !== t.id)));
+                    }}
+                  />
+                  {t.nome}
+                </label>
+              ))}
+            </div>
+          </Card>
+        </div>
+      ) : null}
+
+      {sequenceServicePickerIndex !== null ? (
+        <div
+          className="fixed inset-0 z-[65] overflow-y-auto bg-black/45 p-2 md:p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setSequenceServicePickerIndex(null);
+          }}
+        >
+          <Card className="mx-auto my-0 w-full max-w-xl space-y-3 overflow-y-auto p-3 md:my-4 md:max-h-[calc(100dvh-3rem)] md:p-4">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-lg font-semibold">Seleziona servizio (sequenza)</h3>
+              <Button variant="outline" onClick={() => setSequenceServicePickerIndex(null)}>
+                Chiudi
+              </Button>
+            </div>
+            <div className="max-h-[55dvh] space-y-2 overflow-y-auto rounded border border-zinc-200 p-2">
+              {treatments.filter((t) => t.attivo).map((t) => (
+                <label key={`seq-service-${t.id}`} className="flex items-center gap-2 rounded border border-zinc-200 p-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(sequenceSlots[sequenceServicePickerIndex]?.treatmentIds.includes(t.id))}
+                    onChange={(e) => toggleSequenceSlotTreatment(sequenceServicePickerIndex, t.id, e.target.checked)}
+                  />
+                  {t.nome}
+                </label>
+              ))}
             </div>
           </Card>
         </div>
