@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { DEFAULT_SALON_TIMEZONE, normalizePhone, reminderVariables, renderTemplate } from "@/lib/reminders";
+import { getDateKeyInTimeZone } from "@/lib/working-hours";
 import {
   DEFAULT_WHATSAPP_BIRTHDAY_TEMPLATE,
   DEFAULT_WHATSAPP_BOOKING_CONFIRM_TEMPLATE,
@@ -62,6 +63,11 @@ export async function enqueueBookingConfirmationForAppointment(appointmentId: st
   const salon = await getSalonTemplates(appointment.salonId);
   if (!salon) return { enqueued: false, reason: "salon_not_found" };
   const tz = salon.timezone || DEFAULT_SALON_TIMEZONE;
+  const appointmentDateKey = getDateKeyInTimeZone(appointment.startAt, tz);
+  const todayDateKey = getDateKeyInTimeZone(new Date(), tz);
+  if (appointmentDateKey < todayDateKey) {
+    return { enqueued: false, reason: "appointment_date_in_past" };
+  }
   const template =
     typeof salon.whatsappBookingTemplate === "string" && salon.whatsappBookingTemplate.trim().length > 0
       ? salon.whatsappBookingTemplate
