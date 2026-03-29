@@ -66,7 +66,8 @@ export async function syncConnectionWithGateway(salonId: string) {
       displayPhoneNumber: statusResult.data.displayPhoneNumber || connection.displayPhoneNumber || null,
       connectedAt: statusResult.data.status === "CONNECTED" ? connection.connectedAt || new Date() : connection.connectedAt,
       lastSeenAt: new Date(),
-      ...(mappedStatus === "CONNECTED" ? { failureCount: 0, disabledReason: null } : {}),
+      ...(mappedStatus === "CONNECTED" ? { failureCount: 0 } : {}),
+      ...(mappedStatus !== "DISABLED" ? { disabledReason: null } : {}),
       metadataJson: {
         ...((connection.metadataJson as Record<string, unknown>) || {}),
         gatewayReachable: true,

@@ -148,6 +148,7 @@ export function WhatsAppClient({ initialSalon }: { initialSalon: any }) {
   const [diagnostics, setDiagnostics] = useState<DiagnosticsData | null>(initialSalon.whatsappDiagnostics || null);
   const [qrData, setQrData] = useState<string | null>(null);
   const [qrExpiresAt, setQrExpiresAt] = useState<string | null>(null);
+  const [qrMessage, setQrMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [diagRows, setDiagRows] = useState<DiagnosticsRow[]>([]);
   const [diagScope, setDiagScope] = useState<"CURRENT_SALON" | "GROUP">("CURRENT_SALON");
@@ -199,8 +200,14 @@ export function WhatsAppClient({ initialSalon }: { initialSalon: any }) {
       const qrPayload = data?.qr?.qrData;
       if (typeof qrPayload === "string" && qrPayload.trim().length > 0) {
         setQrData(qrPayload);
+        setQrMessage(null);
       } else {
         setQrData(null);
+        const serverMessage =
+          typeof data?.qrError?.message === "string" && data.qrError.message.trim().length > 0
+            ? data.qrError.message
+            : "Codice QR non ancora disponibile. Attenda pochi secondi e premi «Mostra/Aggiorna QR».";
+        setQrMessage(serverMessage);
       }
       setQrExpiresAt(typeof data?.qr?.expiresAt === "string" ? data.qr.expiresAt : null);
       await loadConnection();
@@ -242,10 +249,16 @@ export function WhatsAppClient({ initialSalon }: { initialSalon: any }) {
         alert(data.error || "Codice QR non disponibile");
         setQrData(null);
         setQrExpiresAt(null);
+        setQrMessage(typeof data?.error === "string" ? data.error : "Codice QR non disponibile");
         return;
       }
       setQrData(typeof data?.qr?.qrData === "string" ? data.qr.qrData : null);
       setQrExpiresAt(typeof data?.qr?.expiresAt === "string" ? data.qr.expiresAt : null);
+      setQrMessage(
+        typeof data?.qr?.qrData === "string" && data.qr.qrData.trim().length > 0
+          ? null
+          : "Codice QR non ancora disponibile. Riprovi tra qualche secondo.",
+      );
       await refreshGatewayState();
     } finally {
       setBusy(false);
@@ -270,6 +283,7 @@ export function WhatsAppClient({ initialSalon }: { initialSalon: any }) {
       setDiagnostics(data.diagnostics);
       setQrData(null);
       setQrExpiresAt(null);
+      setQrMessage(null);
       await loadDiagnosticsSummary();
     } finally {
       setBusy(false);
@@ -472,6 +486,11 @@ export function WhatsAppClient({ initialSalon }: { initialSalon: any }) {
               <img src={qrData} alt="QR WhatsApp" className="h-52 w-52 rounded border border-zinc-200 object-contain sm:h-56 sm:w-56" />
               {qrExpiresAt ? <p className="mt-2"><strong>Scade:</strong> {new Date(qrExpiresAt).toLocaleString("it-IT")}</p> : null}
             </div>
+          ) : null}
+          {!qrData && qrMessage ? (
+            <p className="mt-2 rounded border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] text-amber-900">
+              {qrMessage}
+            </p>
           ) : null}
         </div>
 

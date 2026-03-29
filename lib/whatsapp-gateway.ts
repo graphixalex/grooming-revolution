@@ -39,7 +39,7 @@ function mapGatewayStatus(rawStatus: string): Pick<GatewaySessionSnapshot, "stat
   if (["connected", "ready", "authenticated", "open", "online"].includes(value)) {
     return { status: "CONNECTED", qrReady: false, initialized: true, reason: null };
   }
-  if (["qr_ready", "qr", "waiting_qr", "pending_scan", "scan_qr", "initializing", "starting"].includes(value)) {
+  if (["qr_ready", "qr", "waiting_qr", "pending_scan", "scan_qr", "initializing", "starting", "connecting", "pairing"].includes(value)) {
     return { status: "CONNECTING", qrReady: true, initialized: true, reason: null };
   }
   if (["not_initialized", "disconnected", "closed", "stopped"].includes(value)) {
@@ -224,4 +224,3 @@ export async function gatewaySendMessage(input: {
     data: { accepted, externalId, providerStatus },
   };
 }
-
