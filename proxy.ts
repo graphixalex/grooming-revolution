@@ -12,6 +12,8 @@ const publicRoutes = [
   "/api/public",
   "/api/paddle/webhook",
   "/api/cron/whatsapp-reminders",
+  "/api/cron/whatsapp-hour-before",
+  "/api/cron/whatsapp-queue-dispatch",
   "/book",
   "/pay",
   "/legal",

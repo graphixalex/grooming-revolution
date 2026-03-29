@@ -2,13 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getTomorrowUtcRangeForTimeZone } from "@/lib/timezone";
-import { renderTemplate, reminderVariables } from "@/lib/reminders";
-import { sendWhatsAppTextViaApi } from "@/lib/whatsapp";
+import { DEFAULT_SALON_TIMEZONE } from "@/lib/reminders";
 import { assertCriticalEnv } from "@/lib/env-security";
-import {
-  DEFAULT_WHATSAPP_BIRTHDAY_TEMPLATE,
-  normalizeWhatsAppReminderTemplate,
-} from "@/lib/default-templates";
+import { DEFAULT_WHATSAPP_BIRTHDAY_TEMPLATE } from "@/lib/default-templates";
+import { enqueueBirthdayGreeting, enqueueReminderDayBefore } from "@/lib/whatsapp-automation";
+import { processWhatsAppQueueBatch } from "@/lib/whatsapp-queue";
 
 function isAuthorized(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
@@ -40,7 +38,9 @@ export async function GET(req: NextRequest) {
   const salons = await (async () => {
     try {
       return await prisma.salon.findMany({
-        where: { whatsappApiEnabled: true },
+        where: {
+          OR: [{ whatsappDayBeforeEnabled: true }, { whatsappBirthdayEnabled: true }],
+        },
         select: {
           id: true,
           timezone: true,
@@ -79,13 +79,14 @@ export async function GET(req: NextRequest) {
   })();
 
   let processed = 0;
-  let sent = 0;
+  let enqueued = 0;
+  let deduped = 0;
   let failed = 0;
   let skipped = 0;
   let warnings: string[] = [];
 
   for (const salon of salons) {
-    const tz = salon.timezone || "Europe/Rome";
+    const tz = salon.timezone || DEFAULT_SALON_TIMEZONE;
 
     if (salon.whatsappDayBeforeEnabled !== false) {
       const { startUtc, endUtc } = getTomorrowUtcRangeForTimeZone(tz);
@@ -121,68 +122,38 @@ export async function GET(req: NextRequest) {
           continue;
         }
 
-        const template =
-          normalizeWhatsAppReminderTemplate(salon.whatsappTemplate);
-        const text = renderTemplate(
-          template,
-          reminderVariables({
-            nomeCliente: `${appointment.cliente.nome} ${appointment.cliente.cognome}`.trim(),
-            nomePet: appointment.cane.nome,
-            startAt: appointment.startAt,
-            nomeAttivita: salon.nomeAttivita || "",
-            indirizzoAttivita: salon.indirizzo || "",
-          }),
-        );
-
-        const result = await sendWhatsAppTextViaApi({
+        const queueResult = await enqueueReminderDayBefore({
+          id: appointment.id,
           salonId: salon.id,
+          startAt: appointment.startAt,
+          clientName: `${appointment.cliente.nome} ${appointment.cliente.cognome}`.trim(),
+          dogName: appointment.cane.nome,
           phone: appointment.cliente.telefono,
-          text,
         });
-        const nextAttempt = (existing?.attemptCount ?? 0) + 1;
-        const now = new Date();
-        if (result.ok) {
-          sent += 1;
-          await prisma.appointmentReminder.upsert({
-            where: { appointmentId_kind: { appointmentId: appointment.id, kind: "DAY_BEFORE_WHATSAPP" } },
-            update: {
-              status: "SENT",
-              attemptCount: nextAttempt,
-              messageId: result.messageId || null,
-              errorMessage: null,
-              sentAt: now,
-              lastAttemptAt: now,
-            },
-            create: {
-              appointmentId: appointment.id,
-              kind: "DAY_BEFORE_WHATSAPP",
-              status: "SENT",
-              attemptCount: nextAttempt,
-              messageId: result.messageId || null,
-              sentAt: now,
-              lastAttemptAt: now,
-            },
-          });
-        } else {
+        if (!queueResult.enqueued) {
           failed += 1;
-          await prisma.appointmentReminder.upsert({
-            where: { appointmentId_kind: { appointmentId: appointment.id, kind: "DAY_BEFORE_WHATSAPP" } },
-            update: {
-              status: nextAttempt >= 3 ? "SKIPPED" : "FAILED",
-              attemptCount: nextAttempt,
-              errorMessage: result.error,
-              lastAttemptAt: now,
-            },
-            create: {
+          continue;
+        }
+        await prisma.appointmentReminder.upsert({
+          where: {
+            appointmentId_kind: {
               appointmentId: appointment.id,
               kind: "DAY_BEFORE_WHATSAPP",
-              status: nextAttempt >= 3 ? "SKIPPED" : "FAILED",
-              attemptCount: nextAttempt,
-              errorMessage: result.error,
-              lastAttemptAt: now,
             },
-          });
-        }
+          },
+          update: {
+            status: "PENDING",
+            errorMessage: null,
+          },
+          create: {
+            appointmentId: appointment.id,
+            kind: "DAY_BEFORE_WHATSAPP",
+            status: "PENDING",
+            attemptCount: 0,
+          },
+        });
+        if (queueResult.dedup) deduped += 1;
+        else enqueued += 1;
       }
     }
 
@@ -224,84 +195,51 @@ export async function GET(req: NextRequest) {
           continue;
         }
 
-        const template =
-          typeof salon.whatsappBirthdayTemplate === "string" && salon.whatsappBirthdayTemplate.trim().length > 0
-            ? salon.whatsappBirthdayTemplate
-            : DEFAULT_WHATSAPP_BIRTHDAY_TEMPLATE;
-        const text = renderTemplate(template, {
-          nome_cliente: `${dog.cliente.nome} ${dog.cliente.cognome}`.trim(),
-          nome_pet: dog.nome,
-          data_appuntamento: "",
-          orario_appuntamento: "",
-          nome_attivita: salon.nomeAttivita || "",
-          indirizzo_attivita: salon.indirizzo || "",
-        });
-
-        const result = await sendWhatsAppTextViaApi({
+        const result = await enqueueBirthdayGreeting({
           salonId: salon.id,
+          dogId: dog.id,
+          year,
           phone: dog.cliente.telefono,
-          text,
+          clientName: `${dog.cliente.nome} ${dog.cliente.cognome}`.trim(),
+          dogName: dog.nome,
         });
-        const now = new Date();
-        const nextAttempt = (existing?.attemptCount ?? 0) + 1;
-        if (result.ok) {
-          sent += 1;
-          await prisma.dogBirthdayGreetingLog.upsert({
-            where: { dogId_year: { dogId: dog.id, year } },
-            update: {
-              status: "SENT",
-              attemptCount: nextAttempt,
-              messageId: result.messageId || null,
-              errorMessage: null,
-              sentAt: now,
-              lastAttemptAt: now,
-            },
-            create: {
-              salonId: salon.id,
-              dogId: dog.id,
-              year,
-              status: "SENT",
-              attemptCount: nextAttempt,
-              messageId: result.messageId || null,
-              sentAt: now,
-              lastAttemptAt: now,
-            },
-          });
-        } else {
+        if (!result.enqueued) {
           failed += 1;
-          await prisma.dogBirthdayGreetingLog.upsert({
-            where: { dogId_year: { dogId: dog.id, year } },
-            update: {
-              status: nextAttempt >= 3 ? "SKIPPED" : "FAILED",
-              attemptCount: nextAttempt,
-              errorMessage: result.error,
-              lastAttemptAt: now,
-            },
-            create: {
-              salonId: salon.id,
-              dogId: dog.id,
-              year,
-              status: nextAttempt >= 3 ? "SKIPPED" : "FAILED",
-              attemptCount: nextAttempt,
-              errorMessage: result.error,
-              lastAttemptAt: now,
-            },
-          });
+          continue;
         }
+        await prisma.dogBirthdayGreetingLog.upsert({
+          where: { dogId_year: { dogId: dog.id, year } },
+          update: {
+            status: "PENDING",
+            errorMessage: null,
+          },
+          create: {
+            salonId: salon.id,
+            dogId: dog.id,
+            year,
+            status: "PENDING",
+            attemptCount: 0,
+          },
+        });
+        if (result.dedup) deduped += 1;
+        else enqueued += 1;
       }
       } catch {
         warnings = [...warnings, "Migration compleanni cane non applicata"];
       }
     }
   }
+  const worker = await processWhatsAppQueueBatch({ batchSize: 120, workerId: "cron-day-before" });
 
   return NextResponse.json({
     ok: true,
     salons: salons.length,
     processed,
-    sent,
+    enqueued,
+    deduped,
     failed,
     skipped,
     warnings,
+    worker,
   });
 }

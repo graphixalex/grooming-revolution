@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/api-auth";
 import { appointmentSchema, transactionSchema } from "@/lib/validators";
 import { computeEndAt, hasOverlap, isInsideWorkingHours } from "@/lib/business-rules";
+import { enqueueBookingConfirmationForAppointment } from "@/lib/whatsapp-automation";
 
 const INTERNAL_NOTE_PHONE = "__NOTE__";
 const INTERNAL_NOTE_EMAIL = "note@sistema.local";
@@ -154,6 +155,7 @@ export async function POST(req: NextRequest) {
       },
       include: { trattamentiSelezionati: true },
     });
+    await enqueueBookingConfirmationForAppointment(appointment.id).catch(() => null);
 
     return NextResponse.json(appointment, { status: 201 });
   }
@@ -317,6 +319,9 @@ export async function POST(req: NextRequest) {
       }
       return ids;
     });
+    await Promise.all(
+      createdIds.map((id) => enqueueBookingConfirmationForAppointment(id).catch(() => null)),
+    );
 
     return NextResponse.json({ createdCount: createdIds.length, ids: createdIds }, { status: 201 });
   }
@@ -370,6 +375,7 @@ export async function POST(req: NextRequest) {
     },
     include: { operator: true, trattamentiSelezionati: true },
   });
+  await enqueueBookingConfirmationForAppointment(appointment.id).catch(() => null);
 
   return NextResponse.json(appointment, { status: 201 });
 }
@@ -565,6 +571,38 @@ export async function PATCH(req: NextRequest) {
       transactions: true,
     },
   });
+
+  const startChanged = hasStartUpdate && appointment.startAt.getTime() !== startAt.getTime();
+  if (startChanged) {
+    await prisma.appointmentReminder.deleteMany({
+      where: {
+        appointmentId,
+        kind: { in: ["DAY_BEFORE_WHATSAPP", "HOUR_BEFORE_WHATSAPP"] },
+      },
+    });
+    if (nextStatus === "PRENOTATO") {
+      await enqueueBookingConfirmationForAppointment(appointmentId).catch(() => null);
+    }
+  }
+
+  if (nextStatus === "CANCELLATO") {
+    await prisma.whatsAppOutboundMessage.updateMany({
+      where: {
+        appointmentId,
+        status: { in: ["QUEUED", "LOCKED", "SENDING", "RETRY_SCHEDULED"] },
+        kind: { in: ["BOOKING_CONFIRM", "REMINDER_DAY_BEFORE", "REMINDER_HOUR_BEFORE"] },
+      },
+      data: {
+        status: "CANCELLED",
+        cancelledAt: new Date(),
+        lockExpiresAt: null,
+        lockedAt: null,
+        lockedBy: null,
+        lastErrorCode: "APPOINTMENT_CANCELLED",
+        lastErrorMessage: "Appuntamento cancellato prima dell'invio",
+      },
+    });
+  }
 
   return NextResponse.json(updated);
 }

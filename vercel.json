@@ -7,6 +7,10 @@
     {
       "path": "/api/cron/whatsapp-hour-before",
       "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/whatsapp-queue-dispatch",
+      "schedule": "*/2 * * * *"
     }
   ]
 }

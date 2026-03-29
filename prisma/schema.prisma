@@ -70,6 +70,42 @@ enum WhatsAppRecipientStatus {
   SKIPPED
 }
 
+enum WhatsAppProviderType {
+  LINKED_SESSION
+  LEGACY_META
+}
+
+enum WhatsAppConnectionStatus {
+  DISCONNECTED
+  CONNECTING
+  CONNECTED
+  DEGRADED
+  EXPIRED
+  DISABLED
+}
+
+enum WhatsAppMessageKind {
+  BOOKING_CONFIRM
+  REMINDER_DAY_BEFORE
+  REMINDER_HOUR_BEFORE
+  BIRTHDAY_GREETING
+  CAMPAIGN_SERVICE
+  CAMPAIGN_MARKETING
+  MANUAL_SERVICE
+}
+
+enum WhatsAppMessageStatus {
+  QUEUED
+  LOCKED
+  SENDING
+  ACCEPTED
+  RETRY_SCHEDULED
+  FAILED_TEMPORARY
+  FAILED_PERMANENT
+  SKIPPED
+  CANCELLED
+}
+
 enum AppointmentReminderKind {
   DAY_BEFORE_WHATSAPP
   HOUR_BEFORE_WHATSAPP
@@ -89,183 +125,189 @@ enum BookingTrustFlag {
 }
 
 model SalonGroup {
-  id                    String               @id @default(cuid())
-  nome                  String
-  createdAt             DateTime             @default(now())
-  updatedAt             DateTime             @updatedAt
+  id        String   @id @default(cuid())
+  nome      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  salons                Salon[]
+  salons Salon[]
 }
 
 model Salon {
-  id                    String               @id @default(cuid())
-  salonGroupId          String?
-  nomeAttivita          String
-  nomeSede              String?
-  paese                 String
-  timezone              String
-  valuta                String               @default("EUR")
-  vatRate               Decimal              @default(22)
-  vatIncluded           Boolean              @default(true)
-  indirizzo             String?
-  telefono              String?
-  email                 String?
-  whatsappTemplate      String?              @db.Text
-  whatsappBookingTemplate String?            @db.Text
-  whatsappOneHourTemplate String?            @db.Text
-  whatsappBirthdayTemplate String?           @db.Text
-  whatsappDayBeforeEnabled Boolean           @default(true)
-  whatsappOneHourEnabled Boolean             @default(true)
-  whatsappBirthdayEnabled Boolean            @default(true)
-  whatsappApiEnabled    Boolean              @default(false)
-  whatsappApiPhoneNumberId String?
-  whatsappApiAccessToken String?             @db.Text
-  whatsappApiVersion    String?              @default("v23.0")
-  bookingEnabled        Boolean              @default(false)
-  firstVisitAnamnesisEnabled Boolean         @default(false)
-  mattingConsentEnabled Boolean              @default(false)
-  bookingSlug           String?              @unique
-  bookingDisplayName    String?
-  bookingDescription    String?              @db.Text
-  bookingLogoUrl        String?
-  emailTemplate         String?              @db.Text
-  overlapAllowed        Boolean              @default(false)
-  workingHoursJson      Json?
-  holidaysJson          Json?
-  subscriptionPlan      SubscriptionPlan     @default(FREE)
-  paddleCustomerId      String?
-  paddleSubscriptionId  String?
-  billingVatNumber      String?
-  billingCountry        String?
-  createdAt             DateTime             @default(now())
-  updatedAt             DateTime             @updatedAt
+  id                            String           @id @default(cuid())
+  salonGroupId                  String?
+  nomeAttivita                  String
+  nomeSede                      String?
+  paese                         String
+  timezone                      String
+  valuta                        String           @default("EUR")
+  vatRate                       Decimal          @default(22)
+  vatIncluded                   Boolean          @default(true)
+  indirizzo                     String?
+  telefono                      String?
+  email                         String?
+  whatsappTemplate              String?          @db.Text
+  whatsappBookingTemplate       String?          @db.Text
+  whatsappOneHourTemplate       String?          @db.Text
+  whatsappBirthdayTemplate      String?          @db.Text
+  whatsappDayBeforeEnabled      Boolean          @default(true)
+  whatsappOneHourEnabled        Boolean          @default(true)
+  whatsappBirthdayEnabled       Boolean          @default(true)
+  whatsappApiEnabled            Boolean          @default(false)
+  whatsappApiPhoneNumberId      String?
+  whatsappApiAccessToken        String?          @db.Text
+  whatsappApiVersion            String?          @default("v23.0")
+  whatsappApiBusinessAccountId  String?
+  whatsappApiDisplayPhoneNumber String?
+  whatsappApiConnectedAt        DateTime?
+  bookingEnabled                Boolean          @default(false)
+  firstVisitAnamnesisEnabled    Boolean          @default(false)
+  mattingConsentEnabled         Boolean          @default(false)
+  bookingSlug                   String?          @unique
+  bookingDisplayName            String?
+  bookingDescription            String?          @db.Text
+  bookingLogoUrl                String?
+  emailTemplate                 String?          @db.Text
+  overlapAllowed                Boolean          @default(false)
+  workingHoursJson              Json?
+  holidaysJson                  Json?
+  subscriptionPlan              SubscriptionPlan @default(FREE)
+  paddleCustomerId              String?
+  paddleSubscriptionId          String?
+  billingVatNumber              String?
+  billingCountry                String?
+  createdAt                     DateTime         @default(now())
+  updatedAt                     DateTime         @updatedAt
 
-  salonGroup            SalonGroup?          @relation(fields: [salonGroupId], references: [id], onDelete: SetNull)
-  users                 User[]
-  operators             Operator[]
-  clients               Client[]
-  dogs                  Dog[]
-  quickTags             QuickTag[]
-  treatments            Treatment[]
-  appointments          Appointment[]
-  transactions          Transaction[]
-  cashSessions          CashSession[]
-  priceRules            ServicePriceRule[]
-  auditLogs             AuditLog[]
-  consentTemplates      ConsentTemplate[]
-  clientConsents        ClientConsent[]
-  whatsappCampaigns     WhatsAppCampaign[]
-  bookingRequests       BookingRequest[]
-  subscriptionPayments  SubscriptionPayment[]
-  anamnesisTemplates    FirstVisitAnamnesisTemplate[]
-  anamnesisRecords      FirstVisitAnamnesisRecord[]
+  salonGroup              SalonGroup?                   @relation(fields: [salonGroupId], references: [id], onDelete: SetNull)
+  users                   User[]
+  operators               Operator[]
+  clients                 Client[]
+  dogs                    Dog[]
+  quickTags               QuickTag[]
+  treatments              Treatment[]
+  appointments            Appointment[]
+  transactions            Transaction[]
+  cashSessions            CashSession[]
+  priceRules              ServicePriceRule[]
+  auditLogs               AuditLog[]
+  consentTemplates        ConsentTemplate[]
+  clientConsents          ClientConsent[]
+  whatsappCampaigns       WhatsAppCampaign[]
+  bookingRequests         BookingRequest[]
+  subscriptionPayments    SubscriptionPayment[]
+  anamnesisTemplates      FirstVisitAnamnesisTemplate[]
+  anamnesisRecords        FirstVisitAnamnesisRecord[]
   mattingConsentTemplates MattingConsentTemplate[]
-  mattingConsentRecords MattingConsentRecord[]
-  birthdayGreetings     DogBirthdayGreetingLog[]
+  mattingConsentRecords   MattingConsentRecord[]
+  birthdayGreetings       DogBirthdayGreetingLog[]
+  whatsappConnection      WhatsAppConnection?
+  whatsappSessions        WhatsAppSession[]
+  whatsappOutbound        WhatsAppOutboundMessage[]
+  whatsappDeliveryEvents  WhatsAppDeliveryEvent[]
 
   @@index([salonGroupId])
 }
 
 model PublicAnalyticsEvent {
-  id                    String      @id @default(cuid())
-  eventType             String
-  path                  String?
-  source                String?
-  sessionId             String?
-  ipHash                String?
-  userAgent             String?
-  referrer              String?
-  createdAt             DateTime    @default(now())
+  id        String   @id @default(cuid())
+  eventType String
+  path      String?
+  source    String?
+  sessionId String?
+  ipHash    String?
+  userAgent String?
+  referrer  String?
+  createdAt DateTime @default(now())
 
   @@index([eventType, createdAt])
   @@index([sessionId, createdAt])
 }
 
 model SubscriptionPayment {
-  id                    String      @id @default(cuid())
-  salonId               String
-  paddleTransactionId   String      @unique
-  paddleSubscriptionId  String?
-  currency              String
-  grossAmount           Decimal     @db.Decimal(10, 2)
-  netAmount             Decimal?    @db.Decimal(10, 2)
-  taxAmount             Decimal?    @db.Decimal(10, 2)
-  paidAt                DateTime
-  createdAt             DateTime    @default(now())
+  id                   String   @id @default(cuid())
+  salonId              String
+  paddleTransactionId  String   @unique
+  paddleSubscriptionId String?
+  currency             String
+  grossAmount          Decimal  @db.Decimal(10, 2)
+  netAmount            Decimal? @db.Decimal(10, 2)
+  taxAmount            Decimal? @db.Decimal(10, 2)
+  paidAt               DateTime
+  createdAt            DateTime @default(now())
 
-  salon                 Salon       @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  salon Salon @relation(fields: [salonId], references: [id], onDelete: Cascade)
 
   @@index([salonId, paidAt])
   @@index([paidAt])
 }
 
 model User {
-  id            String      @id @default(cuid())
-  salonId       String
-  displayName   String?
-  email         String
-  passwordHash  String
-  ruolo         UserRole
-  canAccessGroupSalons Boolean @default(false)
-  createdAt     DateTime    @default(now())
+  id                   String   @id @default(cuid())
+  salonId              String
+  displayName          String?
+  email                String   @unique
+  passwordHash         String
+  ruolo                UserRole
+  canAccessGroupSalons Boolean  @default(false)
+  createdAt            DateTime @default(now())
 
-  salon         Salon       @relation(fields: [salonId], references: [id], onDelete: Cascade)
-  createdAppointments Appointment[] @relation("AppointmentCreatedBy")
-  createdTransactions Transaction[] @relation("TransactionCreatedBy")
-  openedCashSessions CashSession[] @relation("CashSessionOpenedBy")
-  closedCashSessions CashSession[] @relation("CashSessionClosedBy")
-  createdPriceRules ServicePriceRule[] @relation("ServicePriceRuleCreatedBy")
-  auditLogs     AuditLog[]
-  createdClientConsents ClientConsent[] @relation("ClientConsentCreatedBy")
-  revokedClientConsents ClientConsent[] @relation("ClientConsentRevokedBy")
-  whatsappCampaignsCreated WhatsAppCampaign[]
-  reviewedBookingRequests BookingRequest[] @relation("BookingRequestReviewedBy")
-  passwordResetTokens PasswordResetToken[]
-  createdAnamnesisRecords FirstVisitAnamnesisRecord[] @relation("FirstVisitAnamnesisCreatedBy")
-  revokedAnamnesisRecords FirstVisitAnamnesisRecord[] @relation("FirstVisitAnamnesisRevokedBy")
-  createdMattingConsentRecords MattingConsentRecord[] @relation("MattingConsentCreatedBy")
-  revokedMattingConsentRecords MattingConsentRecord[] @relation("MattingConsentRevokedBy")
+  salon                        Salon                       @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  createdAppointments          Appointment[]               @relation("AppointmentCreatedBy")
+  createdTransactions          Transaction[]               @relation("TransactionCreatedBy")
+  openedCashSessions           CashSession[]               @relation("CashSessionOpenedBy")
+  closedCashSessions           CashSession[]               @relation("CashSessionClosedBy")
+  createdPriceRules            ServicePriceRule[]          @relation("ServicePriceRuleCreatedBy")
+  auditLogs                    AuditLog[]
+  createdClientConsents        ClientConsent[]             @relation("ClientConsentCreatedBy")
+  revokedClientConsents        ClientConsent[]             @relation("ClientConsentRevokedBy")
+  whatsappCampaignsCreated     WhatsAppCampaign[]
+  reviewedBookingRequests      BookingRequest[]            @relation("BookingRequestReviewedBy")
+  passwordResetTokens          PasswordResetToken[]
+  createdAnamnesisRecords      FirstVisitAnamnesisRecord[] @relation("FirstVisitAnamnesisCreatedBy")
+  revokedAnamnesisRecords      FirstVisitAnamnesisRecord[] @relation("FirstVisitAnamnesisRevokedBy")
+  createdMattingConsentRecords MattingConsentRecord[]      @relation("MattingConsentCreatedBy")
+  revokedMattingConsentRecords MattingConsentRecord[]      @relation("MattingConsentRevokedBy")
 
-  @@unique([salonId, email])
   @@index([salonId])
 }
 
 model PasswordResetToken {
-  id            String   @id @default(cuid())
-  userId        String
-  tokenHash     String   @unique
-  expiresAt     DateTime
-  usedAt        DateTime?
-  createdAt     DateTime @default(now())
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
 
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, expiresAt])
   @@index([expiresAt, usedAt])
 }
 
 model Client {
-  id                  String      @id @default(cuid())
-  salonId             String
-  nome                String
-  cognome             String
-  telefono            String
-  email               String?
-  noteCliente         String?     @db.Text
-  consensoPromemoria  Boolean     @default(false)
-  consensoTimestamp   DateTime?
-  createdAt           DateTime    @default(now())
-  updatedAt           DateTime    @updatedAt
-  deletedAt           DateTime?
+  id                 String    @id @default(cuid())
+  salonId            String
+  nome               String
+  cognome            String
+  telefono           String
+  email              String?
+  noteCliente        String?   @db.Text
+  consensoPromemoria Boolean   @default(false)
+  consensoTimestamp  DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  deletedAt          DateTime?
 
-  salon               Salon       @relation(fields: [salonId], references: [id], onDelete: Cascade)
-  dogs                Dog[]
-  appointments        Appointment[]
-  consents            ClientConsent[]
+  salon                      Salon                       @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  dogs                       Dog[]
+  appointments               Appointment[]
+  consents                   ClientConsent[]
   whatsappCampaignRecipients WhatsAppCampaignRecipient[]
-  bookingRequests     BookingRequest[]
-  anamnesisRecords    FirstVisitAnamnesisRecord[]
-  mattingConsentRecords MattingConsentRecord[]
+  bookingRequests            BookingRequest[]
+  anamnesisRecords           FirstVisitAnamnesisRecord[]
+  mattingConsentRecords      MattingConsentRecord[]
 
   @@index([salonId, deletedAt])
   @@index([salonId, telefono])
@@ -273,144 +315,146 @@ model Client {
 }
 
 model ConsentTemplate {
-  id                  String      @id @default(cuid())
-  salonId             String
-  kind                ConsentKind
-  title               String
-  legalText           String      @db.Text
-  version             Int         @default(1)
-  isActive            Boolean     @default(true)
-  createdAt           DateTime    @default(now())
-  updatedAt           DateTime    @updatedAt
+  id        String      @id @default(cuid())
+  salonId   String
+  kind      ConsentKind
+  title     String
+  legalText String      @db.Text
+  version   Int         @default(1)
+  isActive  Boolean     @default(true)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
 
-  salon               Salon       @relation(fields: [salonId], references: [id], onDelete: Cascade)
-  consents            ClientConsent[]
+  salon    Salon           @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  consents ClientConsent[]
 
   @@unique([salonId, kind, version])
   @@index([salonId, kind, isActive])
 }
 
 model ClientConsent {
-  id                  String      @id @default(cuid())
-  salonId             String
-  clientId            String
-  templateId          String
-  kind                ConsentKind
-  granted             Boolean
-  signerFullName      String
-  signerDocumentId    String?
-  legalTextSnapshot   String      @db.Text
-  templateVersion     Int
-  signatureDataUrl    String      @db.Text
-  evidenceHash        String
-  ipAddress           String?
-  userAgent           String?
-  signedAt            DateTime
-  revokedAt           DateTime?
-  revokedReason       String?     @db.Text
-  createdById         String
-  revokedById         String?
-  createdAt           DateTime    @default(now())
-  updatedAt           DateTime    @updatedAt
+  id                String      @id @default(cuid())
+  salonId           String
+  clientId          String
+  templateId        String
+  kind              ConsentKind
+  granted           Boolean
+  signerFullName    String
+  signerDocumentId  String?
+  legalTextSnapshot String      @db.Text
+  templateVersion   Int
+  signatureDataUrl  String      @db.Text
+  evidenceHash      String
+  ipAddress         String?
+  userAgent         String?
+  signedAt          DateTime
+  revokedAt         DateTime?
+  revokedReason     String?     @db.Text
+  createdById       String
+  revokedById       String?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
 
-  salon               Salon       @relation(fields: [salonId], references: [id], onDelete: Cascade)
-  client              Client      @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  template            ConsentTemplate @relation(fields: [templateId], references: [id], onDelete: Restrict)
-  createdBy           User        @relation("ClientConsentCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  revokedBy           User?       @relation("ClientConsentRevokedBy", fields: [revokedById], references: [id], onDelete: SetNull)
+  salon     Salon           @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  client    Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  template  ConsentTemplate @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  createdBy User            @relation("ClientConsentCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  revokedBy User?           @relation("ClientConsentRevokedBy", fields: [revokedById], references: [id], onDelete: SetNull)
 
   @@index([salonId, clientId, kind, signedAt])
   @@index([clientId, signedAt])
 }
 
 model Dog {
-  id                  String      @id @default(cuid())
-  salonId             String
-  clienteId           String
-  nome                String
-  razza               String?
-  taglia              DogSize
-  noteCane            String?     @db.Text
-  preferenzeCura      String?     @db.Text
-  birthDate           DateTime?
-  createdAt           DateTime    @default(now())
-  updatedAt           DateTime    @updatedAt
-  deletedAt           DateTime?
+  id             String    @id @default(cuid())
+  salonId        String
+  clienteId      String
+  nome           String
+  razza          String?
+  taglia         DogSize
+  noteCane       String?   @db.Text
+  preferenzeCura String?   @db.Text
+  birthDate      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
 
-  salon               Salon       @relation(fields: [salonId], references: [id], onDelete: Cascade)
-  cliente             Client      @relation(fields: [clienteId], references: [id], onDelete: Cascade)
-  tagRapidi           DogQuickTag[]
-  appointments        Appointment[]
-  bookingRequests     BookingRequest[]
-  birthdayGreetings   DogBirthdayGreetingLog[]
+  salon             Salon                     @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  cliente           Client                    @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  tagRapidi         DogQuickTag[]
+  appointments      Appointment[]
+  bookingRequests   BookingRequest[]
+  birthdayGreetings DogBirthdayGreetingLog[]
+  whatsappOutbound  WhatsAppOutboundMessage[]
 
   @@index([salonId, clienteId, deletedAt])
 }
 
 model QuickTag {
-  id                  String      @id @default(cuid())
-  salonId             String
-  nome                String
-  ordine              Int         @default(0)
-  createdAt           DateTime    @default(now())
+  id        String   @id @default(cuid())
+  salonId   String
+  nome      String
+  ordine    Int      @default(0)
+  createdAt DateTime @default(now())
 
-  salon               Salon       @relation(fields: [salonId], references: [id], onDelete: Cascade)
-  dogs                DogQuickTag[]
+  salon Salon         @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  dogs  DogQuickTag[]
 
   @@unique([salonId, nome])
   @@index([salonId, ordine])
 }
 
 model DogQuickTag {
-  dogId               String
-  quickTagId          String
+  dogId      String
+  quickTagId String
 
-  dog                 Dog         @relation(fields: [dogId], references: [id], onDelete: Cascade)
-  quickTag            QuickTag    @relation(fields: [quickTagId], references: [id], onDelete: Cascade)
+  dog      Dog      @relation(fields: [dogId], references: [id], onDelete: Cascade)
+  quickTag QuickTag @relation(fields: [quickTagId], references: [id], onDelete: Cascade)
 
   @@id([dogId, quickTagId])
 }
 
 model Treatment {
-  id                  String      @id @default(cuid())
-  salonId             String
-  nome                String
-  color               String?     @default("#2563eb")
-  attivo              Boolean     @default(true)
-  ordine              Int         @default(0)
+  id      String  @id @default(cuid())
+  salonId String
+  nome    String
+  color   String? @default("#2563eb")
+  attivo  Boolean @default(true)
+  ordine  Int     @default(0)
 
-  salon               Salon       @relation(fields: [salonId], references: [id], onDelete: Cascade)
-  appointments        AppointmentTreatment[]
-  priceRules          ServicePriceRule[]
-  bookingRequests     BookingRequest[]
+  salon           Salon                  @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  appointments    AppointmentTreatment[]
+  priceRules      ServicePriceRule[]
+  bookingRequests BookingRequest[]
 
   @@index([salonId, ordine])
 }
 
 model Appointment {
-  id                  String               @id @default(cuid())
-  salonId             String
-  operatorId          String?
-  clienteId           String
-  caneId              String
-  startAt             DateTime
-  endAt               DateTime
-  durataMinuti        Int
-  noteAppuntamento    String?              @db.Text
-  stato               AppointmentStatus    @default(PRENOTATO)
-  createdById         String
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
-  deletedAt           DateTime?
+  id               String            @id @default(cuid())
+  salonId          String
+  operatorId       String?
+  clienteId        String
+  caneId           String
+  startAt          DateTime
+  endAt            DateTime
+  durataMinuti     Int
+  noteAppuntamento String?           @db.Text
+  stato            AppointmentStatus @default(PRENOTATO)
+  createdById      String
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  deletedAt        DateTime?
 
-  salon               Salon                @relation(fields: [salonId], references: [id], onDelete: Cascade)
-  operator            Operator?            @relation(fields: [operatorId], references: [id], onDelete: SetNull)
-  cliente             Client               @relation(fields: [clienteId], references: [id], onDelete: Restrict)
-  cane                Dog                  @relation(fields: [caneId], references: [id], onDelete: Restrict)
-  createdBy           User                 @relation("AppointmentCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  salon                  Salon                     @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  operator               Operator?                 @relation(fields: [operatorId], references: [id], onDelete: SetNull)
+  cliente                Client                    @relation(fields: [clienteId], references: [id], onDelete: Restrict)
+  cane                   Dog                       @relation(fields: [caneId], references: [id], onDelete: Restrict)
+  createdBy              User                      @relation("AppointmentCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   trattamentiSelezionati AppointmentTreatment[]
-  transactions        Transaction[]
-  reminders           AppointmentReminder[]
+  transactions           Transaction[]
+  reminders              AppointmentReminder[]
+  whatsappOutbound       WhatsAppOutboundMessage[]
 
   @@index([salonId, startAt, endAt])
   @@index([salonId, operatorId, startAt])
@@ -420,162 +464,162 @@ model Appointment {
 }
 
 model AppointmentReminder {
-  id                  String                 @id @default(cuid())
-  appointmentId       String
-  kind                AppointmentReminderKind
-  status              WhatsAppRecipientStatus @default(PENDING)
-  attemptCount        Int                    @default(0)
-  messageId           String?
-  errorMessage        String?
-  lastAttemptAt       DateTime?
-  sentAt              DateTime?
-  createdAt           DateTime               @default(now())
-  updatedAt           DateTime               @updatedAt
+  id            String                  @id @default(cuid())
+  appointmentId String
+  kind          AppointmentReminderKind
+  status        WhatsAppRecipientStatus @default(PENDING)
+  attemptCount  Int                     @default(0)
+  messageId     String?
+  errorMessage  String?
+  lastAttemptAt DateTime?
+  sentAt        DateTime?
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
 
-  appointment         Appointment            @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
 
   @@unique([appointmentId, kind])
   @@index([kind, status])
 }
 
 model DogBirthdayGreetingLog {
-  id                  String                 @id @default(cuid())
-  salonId             String
-  dogId               String
-  year                Int
-  status              WhatsAppRecipientStatus @default(PENDING)
-  attemptCount        Int                    @default(0)
-  messageId           String?
-  errorMessage        String?
-  lastAttemptAt       DateTime?
-  sentAt              DateTime?
-  createdAt           DateTime               @default(now())
-  updatedAt           DateTime               @updatedAt
+  id            String                  @id @default(cuid())
+  salonId       String
+  dogId         String
+  year          Int
+  status        WhatsAppRecipientStatus @default(PENDING)
+  attemptCount  Int                     @default(0)
+  messageId     String?
+  errorMessage  String?
+  lastAttemptAt DateTime?
+  sentAt        DateTime?
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
 
-  salon               Salon                  @relation(fields: [salonId], references: [id], onDelete: Cascade)
-  dog                 Dog                    @relation(fields: [dogId], references: [id], onDelete: Cascade)
+  salon Salon @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  dog   Dog   @relation(fields: [dogId], references: [id], onDelete: Cascade)
 
   @@unique([dogId, year])
   @@index([salonId, year, status])
 }
 
 model Operator {
-  id                  String      @id @default(cuid())
-  salonId             String
-  nome                String
-  attivo              Boolean     @default(true)
-  ordine              Int         @default(0)
-  agendaColumns       Int         @default(1)
-  color               String?     @default("#2563eb")
-  workingHoursJson    Json?
-  kpiTargetRevenue    Decimal?    @db.Decimal(10, 2)
+  id                    String   @id @default(cuid())
+  salonId               String
+  nome                  String
+  attivo                Boolean  @default(true)
+  ordine                Int      @default(0)
+  agendaColumns         Int      @default(1)
+  color                 String?  @default("#2563eb")
+  workingHoursJson      Json?
+  kpiTargetRevenue      Decimal? @db.Decimal(10, 2)
   kpiTargetAppointments Int?
-  createdAt           DateTime    @default(now())
-  updatedAt           DateTime    @updatedAt
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
-  salon               Salon       @relation(fields: [salonId], references: [id], onDelete: Cascade)
-  appointments        Appointment[]
-  bookingRequests     BookingRequest[]
+  salon           Salon            @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  appointments    Appointment[]
+  bookingRequests BookingRequest[]
 
-  @@index([salonId, ordine])
   @@unique([salonId, nome])
+  @@index([salonId, ordine])
 }
 
 model BookingRequest {
-  id                  String               @id @default(cuid())
-  salonId             String
-  treatmentId         String
-  existingClientId    String?
-  existingDogId       String?
-  proposedOperatorId  String?
-  clientNome          String
-  clientCognome       String
-  clientTelefono      String
-  clientEmail         String?
-  dogNome             String
-  dogRazza            String?
-  dogTaglia           DogSize
-  dogTipoPelo         String?
-  note                String?              @db.Text
+  id                   String               @id @default(cuid())
+  salonId              String
+  treatmentId          String
+  existingClientId     String?
+  existingDogId        String?
+  proposedOperatorId   String?
+  clientNome           String
+  clientCognome        String
+  clientTelefono       String
+  clientEmail          String?
+  dogNome              String
+  dogRazza             String?
+  dogTaglia            DogSize
+  dogTipoPelo          String?
+  note                 String?              @db.Text
   estimatedDurationMin Int
-  requestedStartAt    DateTime
-  requestedEndAt      DateTime
-  trustFlag           BookingTrustFlag
-  status              BookingRequestStatus @default(PENDING)
-  appointmentId       String?
-  reviewedById        String?
-  reviewedAt          DateTime?
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
+  requestedStartAt     DateTime
+  requestedEndAt       DateTime
+  trustFlag            BookingTrustFlag
+  status               BookingRequestStatus @default(PENDING)
+  appointmentId        String?
+  reviewedById         String?
+  reviewedAt           DateTime?
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
 
-  salon               Salon                @relation(fields: [salonId], references: [id], onDelete: Cascade)
-  treatment           Treatment            @relation(fields: [treatmentId], references: [id], onDelete: Restrict)
-  existingClient      Client?              @relation(fields: [existingClientId], references: [id], onDelete: SetNull)
-  existingDog         Dog?                 @relation(fields: [existingDogId], references: [id], onDelete: SetNull)
-  proposedOperator    Operator?            @relation(fields: [proposedOperatorId], references: [id], onDelete: SetNull)
-  reviewedBy          User?                @relation("BookingRequestReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  salon            Salon     @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  treatment        Treatment @relation(fields: [treatmentId], references: [id], onDelete: Restrict)
+  existingClient   Client?   @relation(fields: [existingClientId], references: [id], onDelete: SetNull)
+  existingDog      Dog?      @relation(fields: [existingDogId], references: [id], onDelete: SetNull)
+  proposedOperator Operator? @relation(fields: [proposedOperatorId], references: [id], onDelete: SetNull)
+  reviewedBy       User?     @relation("BookingRequestReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
 
   @@index([salonId, status, createdAt])
   @@index([salonId, trustFlag, createdAt])
 }
 
 model FirstVisitAnamnesisTemplate {
-  id                  String      @id @default(cuid())
-  salonId             String
-  title               String
-  legalText           String      @db.Text
-  version             Int         @default(1)
-  isActive            Boolean     @default(true)
-  createdAt           DateTime    @default(now())
-  updatedAt           DateTime    @updatedAt
+  id        String   @id @default(cuid())
+  salonId   String
+  title     String
+  legalText String   @db.Text
+  version   Int      @default(1)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  salon               Salon       @relation(fields: [salonId], references: [id], onDelete: Cascade)
-  records             FirstVisitAnamnesisRecord[]
+  salon   Salon                       @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  records FirstVisitAnamnesisRecord[]
 
   @@unique([salonId, version])
   @@index([salonId, isActive])
 }
 
 model FirstVisitAnamnesisRecord {
-  id                  String      @id @default(cuid())
-  salonId             String
-  clientId            String
-  templateId          String
-  ownerFullName       String
-  ownerPhone          String
-  petName             String
-  petType             String?
-  petBreed            String?
-  petAge              String?
-  petBirthDate        DateTime?
-  isSeniorDeclared    Boolean
-  diseasesDeclared    String?
-  veterinarianName    String?
-  hasMicrochip        Boolean?
-  socialPhotoConsent  Boolean?
-  additionalNotes     String?     @db.Text
-  acknowledgedRisk    Boolean
-  signerFullName      String
-  signerDocumentId    String?
-  legalTextSnapshot   String      @db.Text
-  templateVersion     Int
-  signatureDataUrl    String      @db.Text
-  evidenceHash        String
-  ipAddress           String?
-  userAgent           String?
-  signedAt            DateTime
-  revokedAt           DateTime?
-  revokedReason       String?     @db.Text
-  createdById         String
-  revokedById         String?
-  createdAt           DateTime    @default(now())
-  updatedAt           DateTime    @updatedAt
+  id                 String    @id @default(cuid())
+  salonId            String
+  clientId           String
+  templateId         String
+  ownerFullName      String
+  ownerPhone         String
+  petName            String
+  petType            String?
+  petBreed           String?
+  petAge             String?
+  petBirthDate       DateTime?
+  isSeniorDeclared   Boolean
+  diseasesDeclared   String?
+  veterinarianName   String?
+  hasMicrochip       Boolean?
+  socialPhotoConsent Boolean?
+  additionalNotes    String?   @db.Text
+  acknowledgedRisk   Boolean
+  signerFullName     String
+  signerDocumentId   String?
+  legalTextSnapshot  String    @db.Text
+  templateVersion    Int
+  signatureDataUrl   String    @db.Text
+  evidenceHash       String
+  ipAddress          String?
+  userAgent          String?
+  signedAt           DateTime
+  revokedAt          DateTime?
+  revokedReason      String?   @db.Text
+  createdById        String
+  revokedById        String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
-  salon               Salon       @relation(fields: [salonId], references: [id], onDelete: Cascade)
-  client              Client      @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  template            FirstVisitAnamnesisTemplate @relation(fields: [templateId], references: [id], onDelete: Restrict)
-  createdBy           User        @relation("FirstVisitAnamnesisCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  revokedBy           User?       @relation("FirstVisitAnamnesisRevokedBy", fields: [revokedById], references: [id], onDelete: SetNull)
+  salon     Salon                       @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  client    Client                      @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  template  FirstVisitAnamnesisTemplate @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  createdBy User                        @relation("FirstVisitAnamnesisCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  revokedBy User?                       @relation("FirstVisitAnamnesisRevokedBy", fields: [revokedById], references: [id], onDelete: SetNull)
 
   @@index([salonId, clientId, signedAt])
   @@index([clientId, signedAt])
@@ -583,55 +627,55 @@ model FirstVisitAnamnesisRecord {
 }
 
 model MattingConsentTemplate {
-  id                  String      @id @default(cuid())
-  salonId             String
-  title               String
-  legalText           String      @db.Text
-  version             Int         @default(1)
-  isActive            Boolean     @default(true)
-  createdAt           DateTime    @default(now())
-  updatedAt           DateTime    @updatedAt
+  id        String   @id @default(cuid())
+  salonId   String
+  title     String
+  legalText String   @db.Text
+  version   Int      @default(1)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  salon               Salon       @relation(fields: [salonId], references: [id], onDelete: Cascade)
-  records             MattingConsentRecord[]
+  salon   Salon                  @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  records MattingConsentRecord[]
 
   @@unique([salonId, version])
   @@index([salonId, isActive])
 }
 
 model MattingConsentRecord {
-  id                  String      @id @default(cuid())
-  salonId             String
-  clientId            String
-  templateId          String
-  ownerFullName       String
-  petName             String
-  consentDematting    Boolean
+  id                    String    @id @default(cuid())
+  salonId               String
+  clientId              String
+  templateId            String
+  ownerFullName         String
+  petName               String
+  consentDematting      Boolean
   consentUnderMatsShave Boolean
-  formDate            DateTime
-  additionalNotes     String?     @db.Text
-  acknowledgedRisk    Boolean
-  signerFullName      String
-  signerDocumentId    String?
-  legalTextSnapshot   String      @db.Text
-  templateVersion     Int
-  signatureDataUrl    String      @db.Text
-  evidenceHash        String
-  ipAddress           String?
-  userAgent           String?
-  signedAt            DateTime
-  revokedAt           DateTime?
-  revokedReason       String?     @db.Text
-  createdById         String
-  revokedById         String?
-  createdAt           DateTime    @default(now())
-  updatedAt           DateTime    @updatedAt
+  formDate              DateTime
+  additionalNotes       String?   @db.Text
+  acknowledgedRisk      Boolean
+  signerFullName        String
+  signerDocumentId      String?
+  legalTextSnapshot     String    @db.Text
+  templateVersion       Int
+  signatureDataUrl      String    @db.Text
+  evidenceHash          String
+  ipAddress             String?
+  userAgent             String?
+  signedAt              DateTime
+  revokedAt             DateTime?
+  revokedReason         String?   @db.Text
+  createdById           String
+  revokedById           String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
-  salon               Salon       @relation(fields: [salonId], references: [id], onDelete: Cascade)
-  client              Client      @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  template            MattingConsentTemplate @relation(fields: [templateId], references: [id], onDelete: Restrict)
-  createdBy           User        @relation("MattingConsentCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  revokedBy           User?       @relation("MattingConsentRevokedBy", fields: [revokedById], references: [id], onDelete: SetNull)
+  salon     Salon                  @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  client    Client                 @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  template  MattingConsentTemplate @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  createdBy User                   @relation("MattingConsentCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  revokedBy User?                  @relation("MattingConsentRevokedBy", fields: [revokedById], references: [id], onDelete: SetNull)
 
   @@index([salonId, clientId, signedAt])
   @@index([clientId, signedAt])
@@ -639,149 +683,267 @@ model MattingConsentRecord {
 }
 
 model AppointmentTreatment {
-  appointmentId       String
-  treatmentId         String
+  appointmentId String
+  treatmentId   String
 
-  appointment         Appointment  @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
-  treatment           Treatment    @relation(fields: [treatmentId], references: [id], onDelete: Cascade)
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  treatment   Treatment   @relation(fields: [treatmentId], references: [id], onDelete: Cascade)
 
   @@id([appointmentId, treatmentId])
 }
 
 model Transaction {
-  id                  String        @id @default(cuid())
-  salonId             String
-  appointmentId       String
-  cashSessionId       String?
-  amount              Decimal       @db.Decimal(10, 2)
-  tipAmount           Decimal       @default(0) @db.Decimal(10, 2)
-  method              PaymentMethod
-  vatRate             Decimal       @db.Decimal(5, 2)
-  vatAmount           Decimal       @db.Decimal(10, 2)
-  netAmount           Decimal       @db.Decimal(10, 2)
-  grossAmount         Decimal       @db.Decimal(10, 2)
-  dateTime            DateTime
-  note                String?
-  createdById         String
-  createdAt           DateTime      @default(now())
+  id            String        @id @default(cuid())
+  salonId       String
+  appointmentId String
+  cashSessionId String?
+  amount        Decimal       @db.Decimal(10, 2)
+  tipAmount     Decimal       @default(0) @db.Decimal(10, 2)
+  method        PaymentMethod
+  vatRate       Decimal       @db.Decimal(5, 2)
+  vatAmount     Decimal       @db.Decimal(10, 2)
+  netAmount     Decimal       @db.Decimal(10, 2)
+  grossAmount   Decimal       @db.Decimal(10, 2)
+  dateTime      DateTime
+  note          String?
+  createdById   String
+  createdAt     DateTime      @default(now())
 
-  salon               Salon         @relation(fields: [salonId], references: [id], onDelete: Cascade)
-  appointment         Appointment   @relation(fields: [appointmentId], references: [id], onDelete: Restrict)
-  cashSession         CashSession?  @relation(fields: [cashSessionId], references: [id], onDelete: SetNull)
-  createdBy           User          @relation("TransactionCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  salon       Salon        @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  appointment Appointment  @relation(fields: [appointmentId], references: [id], onDelete: Restrict)
+  cashSession CashSession? @relation(fields: [cashSessionId], references: [id], onDelete: SetNull)
+  createdBy   User         @relation("TransactionCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
 
   @@index([salonId, dateTime])
   @@index([cashSessionId])
 }
 
 model ServicePriceRule {
-  id                  String        @id @default(cuid())
-  salonId             String
-  treatmentId         String
-  dogSize             DogSize?
-  razzaPattern        String?
-  extraLabel          String?
-  basePrice           Decimal       @db.Decimal(10, 2)
-  extraPrice          Decimal       @default(0) @db.Decimal(10, 2)
-  durataMinuti        Int
-  validoDa            DateTime
-  validoA             DateTime?
-  attiva              Boolean       @default(true)
-  note                String?
-  createdById         String
-  createdAt           DateTime      @default(now())
+  id           String    @id @default(cuid())
+  salonId      String
+  treatmentId  String
+  dogSize      DogSize?
+  razzaPattern String?
+  extraLabel   String?
+  basePrice    Decimal   @db.Decimal(10, 2)
+  extraPrice   Decimal   @default(0) @db.Decimal(10, 2)
+  durataMinuti Int
+  validoDa     DateTime
+  validoA      DateTime?
+  attiva       Boolean   @default(true)
+  note         String?
+  createdById  String
+  createdAt    DateTime  @default(now())
 
-  salon               Salon         @relation(fields: [salonId], references: [id], onDelete: Cascade)
-  treatment           Treatment     @relation(fields: [treatmentId], references: [id], onDelete: Cascade)
-  createdBy           User          @relation("ServicePriceRuleCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  salon     Salon     @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  treatment Treatment @relation(fields: [treatmentId], references: [id], onDelete: Cascade)
+  createdBy User      @relation("ServicePriceRuleCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
 
   @@index([salonId, attiva, validoDa, validoA])
   @@index([salonId, treatmentId, dogSize])
 }
 
 model CashSession {
-  id                  String            @id @default(cuid())
-  salonId             String
-  openedById          String
-  closedById          String?
-  status              CashSessionStatus @default(OPEN)
-  openingFloat        Decimal           @db.Decimal(10, 2)
-  closingExpected     Decimal?          @db.Decimal(10, 2)
-  closingCounted      Decimal?          @db.Decimal(10, 2)
-  difference          Decimal?          @db.Decimal(10, 2)
-  noteApertura        String?
-  noteChiusura        String?
-  openedAt            DateTime          @default(now())
-  closedAt            DateTime?
-  createdAt           DateTime          @default(now())
-  updatedAt           DateTime          @updatedAt
+  id              String            @id @default(cuid())
+  salonId         String
+  openedById      String
+  closedById      String?
+  status          CashSessionStatus @default(OPEN)
+  openingFloat    Decimal           @db.Decimal(10, 2)
+  closingExpected Decimal?          @db.Decimal(10, 2)
+  closingCounted  Decimal?          @db.Decimal(10, 2)
+  difference      Decimal?          @db.Decimal(10, 2)
+  noteApertura    String?
+  noteChiusura    String?
+  openedAt        DateTime          @default(now())
+  closedAt        DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
 
-  salon               Salon             @relation(fields: [salonId], references: [id], onDelete: Cascade)
-  openedBy            User              @relation("CashSessionOpenedBy", fields: [openedById], references: [id], onDelete: Restrict)
-  closedBy            User?             @relation("CashSessionClosedBy", fields: [closedById], references: [id], onDelete: Restrict)
-  transactions        Transaction[]
+  salon        Salon         @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  openedBy     User          @relation("CashSessionOpenedBy", fields: [openedById], references: [id], onDelete: Restrict)
+  closedBy     User?         @relation("CashSessionClosedBy", fields: [closedById], references: [id], onDelete: Restrict)
+  transactions Transaction[]
 
   @@index([salonId, status, openedAt])
 }
 
 model AuditLog {
-  id                  String      @id @default(cuid())
-  salonId             String
-  userId              String
-  action              String
-  entityType          String
-  entityId            String
-  metaJson            Json?
-  createdAt           DateTime    @default(now())
+  id         String   @id @default(cuid())
+  salonId    String
+  userId     String
+  action     String
+  entityType String
+  entityId   String
+  metaJson   Json?
+  createdAt  DateTime @default(now())
 
-  salon               Salon       @relation(fields: [salonId], references: [id], onDelete: Cascade)
-  user                User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  salon Salon @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([salonId, createdAt])
 }
 
 model WhatsAppCampaign {
-  id                  String                 @id @default(cuid())
-  salonId             String
-  createdById         String
-  type                WhatsAppCampaignType
-  title               String
-  messageTemplate     String                 @db.Text
-  status              WhatsAppCampaignStatus @default(DRAFT)
-  totalRecipients     Int                    @default(0)
-  sentCount           Int                    @default(0)
-  failedCount         Int                    @default(0)
-  skippedCount        Int                    @default(0)
-  createdAt           DateTime               @default(now())
-  startedAt           DateTime?
-  completedAt         DateTime?
+  id              String                 @id @default(cuid())
+  salonId         String
+  createdById     String
+  type            WhatsAppCampaignType
+  title           String
+  messageTemplate String                 @db.Text
+  status          WhatsAppCampaignStatus @default(DRAFT)
+  totalRecipients Int                    @default(0)
+  sentCount       Int                    @default(0)
+  failedCount     Int                    @default(0)
+  skippedCount    Int                    @default(0)
+  createdAt       DateTime               @default(now())
+  startedAt       DateTime?
+  completedAt     DateTime?
 
-  salon               Salon                  @relation(fields: [salonId], references: [id], onDelete: Cascade)
-  createdBy           User                   @relation(fields: [createdById], references: [id], onDelete: Restrict)
-  recipients          WhatsAppCampaignRecipient[]
+  salon            Salon                       @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  createdBy        User                        @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  recipients       WhatsAppCampaignRecipient[]
+  outboundMessages WhatsAppOutboundMessage[]
 
   @@index([salonId, createdAt])
   @@index([salonId, status])
 }
 
 model WhatsAppCampaignRecipient {
-  id                  String                 @id @default(cuid())
-  campaignId          String
-  clientId            String
-  phone               String
-  renderedMessage     String                 @db.Text
-  status              WhatsAppRecipientStatus @default(PENDING)
-  errorMessage        String?
-  messageId           String?
-  attemptCount        Int                    @default(0)
-  lastAttemptAt       DateTime?
-  createdAt           DateTime               @default(now())
-  updatedAt           DateTime               @updatedAt
+  id              String                  @id @default(cuid())
+  campaignId      String
+  clientId        String
+  phone           String
+  renderedMessage String                  @db.Text
+  status          WhatsAppRecipientStatus @default(PENDING)
+  errorMessage    String?
+  messageId       String?
+  attemptCount    Int                     @default(0)
+  lastAttemptAt   DateTime?
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
 
-  campaign            WhatsAppCampaign       @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  client              Client                 @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  campaign         WhatsAppCampaign          @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  client           Client                    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  outboundMessages WhatsAppOutboundMessage[]
 
   @@unique([campaignId, clientId])
   @@index([campaignId, status])
 }
 
+model WhatsAppConnection {
+  id                 String                   @id @default(cuid())
+  salonId            String                   @unique
+  providerType       WhatsAppProviderType     @default(LINKED_SESSION)
+  status             WhatsAppConnectionStatus @default(DISCONNECTED)
+  displayPhoneNumber String?
+  connectedAt        DateTime?
+  lastSeenAt         DateTime?
+  failureCount       Int                      @default(0)
+  disabledReason     String?
+  metadataJson       Json?
+  createdAt          DateTime                 @default(now())
+  updatedAt          DateTime                 @updatedAt
+
+  salon            Salon                     @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  sessions         WhatsAppSession[]
+  outboundMessages WhatsAppOutboundMessage[]
+  deliveryEvents   WhatsAppDeliveryEvent[]
+
+  @@index([status, updatedAt])
+}
+
+model WhatsAppSession {
+  id              String                   @id @default(cuid())
+  salonId         String
+  connectionId    String
+  status          WhatsAppConnectionStatus @default(CONNECTING)
+  pairingCode     String?
+  qrData          String?                  @db.Text
+  expiresAt       DateTime?
+  pairedAt        DateTime?
+  lastHeartbeatAt DateTime?
+  metadataJson    Json?
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+
+  salon      Salon              @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  connection WhatsAppConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@index([salonId, status, updatedAt])
+  @@index([connectionId, createdAt])
+}
+
+model WhatsAppOutboundMessage {
+  id                  String                @id @default(cuid())
+  salonId             String
+  connectionId        String?
+  appointmentId       String?
+  dogId               String?
+  campaignId          String?
+  campaignRecipientId String?
+  kind                WhatsAppMessageKind
+  priority            Int                   @default(50)
+  status              WhatsAppMessageStatus @default(QUEUED)
+  dedupKey            String
+  logicalVersion      Int                   @default(1)
+  recipientPhone      String
+  messageText         String                @db.Text
+  messagePreview      String?
+  metadataJson        Json?
+  scheduledAt         DateTime              @default(now())
+  nextAttemptAt       DateTime              @default(now())
+  lockedAt            DateTime?
+  lockExpiresAt       DateTime?
+  lockedBy            String?
+  attempts            Int                   @default(0)
+  maxAttempts         Int                   @default(5)
+  providerType        WhatsAppProviderType?
+  providerStatus      String?
+  externalMessageId   String?
+  lastErrorCode       String?
+  lastErrorMessage    String?
+  acceptedAt          DateTime?
+  cancelledAt         DateTime?
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+
+  salon             Salon                      @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  connection        WhatsAppConnection?        @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+  appointment       Appointment?               @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  dog               Dog?                       @relation(fields: [dogId], references: [id], onDelete: SetNull)
+  campaign          WhatsAppCampaign?          @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  campaignRecipient WhatsAppCampaignRecipient? @relation(fields: [campaignRecipientId], references: [id], onDelete: SetNull)
+  deliveryEvents    WhatsAppDeliveryEvent[]
+
+  @@unique([salonId, dedupKey])
+  @@index([status, nextAttemptAt, priority])
+  @@index([salonId, status, createdAt])
+  @@index([campaignId, campaignRecipientId])
+}
+
+model WhatsAppDeliveryEvent {
+  id                String                @id @default(cuid())
+  salonId           String
+  connectionId      String?
+  outboundMessageId String
+  eventType         String
+  status            WhatsAppMessageStatus
+  providerType      WhatsAppProviderType?
+  providerStatus    String?
+  dedupKey          String
+  reasonCode        String?
+  reasonMessage     String?
+  attemptNumber     Int                   @default(0)
+  workerId          String?
+  metadataJson      Json?
+  createdAt         DateTime              @default(now())
+
+  salon           Salon                   @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  connection      WhatsAppConnection?     @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+  outboundMessage WhatsAppOutboundMessage @relation(fields: [outboundMessageId], references: [id], onDelete: Cascade)
+
+  @@index([salonId, createdAt])
+  @@index([outboundMessageId, createdAt])
+  @@index([status, createdAt])
+}

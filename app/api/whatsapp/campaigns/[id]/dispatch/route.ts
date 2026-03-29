@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/api-auth";
-import { sendWhatsAppTextViaApi } from "@/lib/whatsapp";
+import { buildDedupKey, enqueueWhatsAppMessage, processWhatsAppQueueBatch } from "@/lib/whatsapp-queue";
+import { normalizePhoneCanonical } from "@/lib/phone";
 
 type DispatchBody = {
   batchSize?: number;
@@ -17,7 +18,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const campaign = await prisma.whatsAppCampaign.findFirst({
     where: { id, salonId },
-    select: { id: true, status: true, totalRecipients: true },
+    select: { id: true, status: true, totalRecipients: true, type: true },
   });
   if (!campaign) {
     return NextResponse.json({ error: "Campagna non trovata" }, { status: 404 });
@@ -47,38 +48,47 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     select: { id: true, phone: true, renderedMessage: true, attemptCount: true },
   });
 
+  let enqueued = 0;
+  let deduped = 0;
+  let skippedInvalidPhone = 0;
   for (const recipient of recipients) {
-    const now = new Date();
-    const result = await sendWhatsAppTextViaApi({
-      salonId,
-      phone: recipient.phone,
-      text: recipient.renderedMessage,
-    });
-    if (result.ok) {
+    const phone = normalizePhoneCanonical(recipient.phone);
+    if (!phone) {
+      skippedInvalidPhone += 1;
       await prisma.whatsAppCampaignRecipient.update({
         where: { id: recipient.id },
         data: {
-          status: "SENT",
-          messageId: result.messageId || null,
-          errorMessage: null,
-          attemptCount: recipient.attemptCount + 1,
-          lastAttemptAt: now,
+          status: "SKIPPED",
+          errorMessage: "invalid_phone",
+          lastAttemptAt: new Date(),
         },
       });
-    } else {
-      const nextAttempt = recipient.attemptCount + 1;
-      const terminal = result.error === "invalid_phone" || nextAttempt >= 3;
-      await prisma.whatsAppCampaignRecipient.update({
-        where: { id: recipient.id },
-        data: {
-          status: terminal ? "SKIPPED" : "FAILED",
-          errorMessage: result.error,
-          attemptCount: nextAttempt,
-          lastAttemptAt: now,
-        },
-      });
+      continue;
     }
+    const queueResult = await enqueueWhatsAppMessage({
+      salonId,
+      kind: campaign.type === "MARKETING" ? "CAMPAIGN_MARKETING" : "CAMPAIGN_SERVICE",
+      dedupKey: buildDedupKey([salonId, "CAMPAIGN", id, recipient.id, 1]),
+      recipientPhone: phone,
+      messageText: recipient.renderedMessage,
+      priority: 60,
+      campaignId: id,
+      campaignRecipientId: recipient.id,
+      maxAttempts: 3,
+      metadataJson: { campaignId: id, campaignRecipientId: recipient.id },
+    });
+    await prisma.whatsAppCampaignRecipient.update({
+      where: { id: recipient.id },
+      data: {
+        status: "PENDING",
+        errorMessage: null,
+        lastAttemptAt: new Date(),
+      },
+    });
+    if (queueResult.dedup) deduped += 1;
+    else enqueued += 1;
   }
+  const worker = await processWhatsAppQueueBatch({ batchSize: Math.max(batchSize, 100), workerId: "campaign-dispatch" });
 
   const [sentCount, failedCount, skippedCount, pendingCount] = await Promise.all([
     prisma.whatsAppCampaignRecipient.count({ where: { campaignId: id, status: "SENT" } }),
@@ -107,10 +117,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   return NextResponse.json({
     ok: true,
     status: completed ? "COMPLETED" : "RUNNING",
+    enqueued,
+    deduped,
+    skippedInvalidPhone,
     sentCount,
     failedCount,
     skippedCount,
     pendingCount,
     processed: recipients.length,
+    worker,
   });
 }

@@ -60,6 +60,16 @@ type ListinoQuote = {
   currency: string;
   missingTreatmentIds: string[];
 };
+type AdditionalDogSlot = {
+  id: string;
+  dogId: string;
+  date: string;
+  time: string;
+  operatorId: string;
+  allowOverlap: boolean;
+  durataMinuti: number;
+  treatmentIds: string[];
+};
 
 function isPersonalNoteAppointment(a: Appointment) {
   return a.cliente.telefono === "__NOTE__";
@@ -368,6 +378,7 @@ export function PlannerClient({
   const [sequencePreviewLoading, setSequencePreviewLoading] = useState(false);
   const [sequencePreviewAppointments, setSequencePreviewAppointments] = useState<Appointment[]>([]);
   const [sequenceServicePickerIndex, setSequenceServicePickerIndex] = useState<number | null>(null);
+  const [additionalServicePickerSlotId, setAdditionalServicePickerSlotId] = useState<string | null>(null);
   const [showMainServicePicker, setShowMainServicePicker] = useState(false);
   const [isPassingClient, setIsPassingClient] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Cliente | null>(null);
@@ -375,6 +386,7 @@ export function PlannerClient({
   const [search, setSearch] = useState("");
   const [results, setResults] = useState<Cliente[]>([]);
   const [dogs, setDogs] = useState<Cane[]>([]);
+  const [additionalDogSlots, setAdditionalDogSlots] = useState<AdditionalDogSlot[]>([]);
   const [durata, setDurata] = useState(60);
   const [note, setNote] = useState("");
   const [selectedTreatments, setSelectedTreatments] = useState<string[]>([]);
@@ -422,7 +434,16 @@ export function PlannerClient({
   const [newClientForm, setNewClientForm] = useState({ nome: "", cognome: "", telefono: "", email: "", noteCliente: "", consensoPromemoria: true });
   const [newDogForm, setNewDogForm] = useState({ nome: "", razza: "", taglia: "M", noteCane: "", tagRapidiIds: [] as string[] });
   const [passingClientForm, setPassingClientForm] = useState({ telefono: "", dogNome: "", dogRazza: "", dogTaglia: "M" });
+  const [freeLimitReached, setFreeLimitReached] = useState(false);
   const [lastTap, setLastTap] = useState<{ appointmentId: string; at: number } | null>(null);
+  const activeTreatmentsSorted = useMemo(
+    () =>
+      treatments
+        .filter((t) => t.attivo)
+        .slice()
+        .sort((a, b) => a.nome.localeCompare(b.nome, "it", { sensitivity: "base" })),
+    [treatments],
+  );
   const treatmentsById = useMemo(() => {
     const map = new Map<string, Treatment>();
     for (const treatment of treatments) map.set(treatment.id, treatment);
@@ -454,6 +475,7 @@ export function PlannerClient({
     setSearch("");
     setResults([]);
     setDogs([]);
+    setAdditionalDogSlots([]);
     setDurata(60);
     setNote("");
     setSelectedTreatments([]);
@@ -465,12 +487,19 @@ export function PlannerClient({
     setSequencePreviewLoading(false);
     setSequencePreviewAppointments([]);
     setSequenceServicePickerIndex(null);
+    setAdditionalServicePickerSlotId(null);
     setShowMainServicePicker(false);
     setIsPassingClient(false);
     setModalMode("APPOINTMENT");
     setNewClientForm({ nome: "", cognome: "", telefono: "", email: "", noteCliente: "", consensoPromemoria: true });
     setNewDogForm({ nome: "", razza: "", taglia: "M", noteCane: "", tagRapidiIds: [] });
     setPassingClientForm({ telefono: "", dogNome: "", dogRazza: "", dogTaglia: "M" });
+    setFreeLimitReached(false);
+  }
+
+  function isFreePlanLimitError(res: Response, data: unknown) {
+    const errorText = typeof data === "object" && data && "error" in data ? String((data as { error?: unknown }).error || "") : "";
+    return res.status === 403 && errorText.includes("Piano Free: limite massimo");
   }
 
   function closeAppointmentModal() {
@@ -513,30 +542,6 @@ export function PlannerClient({
     }
     setLastTap({ appointmentId: appt.id, at: now });
     setPreviewAppointment({ appointment: appt, fallbackOperatorId });
-  }
-
-  function maybeOpenWhatsappReminder(args: {
-    clientPhone: string;
-    clientName: string;
-    dogName: string;
-    startAt: Date;
-  }) {
-    const cleanedPhone = args.clientPhone.replace(/[^\d+]/g, "");
-    if (!cleanedPhone) return;
-
-    const fallbackTemplate =
-      "Ciao %nome_cliente%, ti confermiamo l'appuntamento per %nome_pet% il %data_appuntamento% alle %orario_appuntamento% presso %nome_attivita% (%indirizzo_attivita%).";
-    const base = (whatsappConfig.template || fallbackTemplate)
-      .replaceAll("%nome_cliente%", args.clientName)
-      .replaceAll("%nome_pet%", args.dogName)
-      .replaceAll("%data_appuntamento%", format(args.startAt, "dd/MM/yyyy"))
-      .replaceAll("%orario_appuntamento%", format(args.startAt, "HH:mm"))
-      .replaceAll("%nome_attivita%", whatsappConfig.nomeAttivita || "")
-      .replaceAll("%indirizzo_attivita%", whatsappConfig.indirizzoAttivita || "");
-
-    if (!confirm("Appuntamento salvato. Vuoi inviare WhatsApp adesso?")) return;
-    const popup = window.open("", "_blank");
-    void sendWhatsappMessage(args.clientPhone, base, popup);
   }
 
   async function sendWhatsappMessage(phone: string, text: string, popup: Window | null = null) {
@@ -707,10 +712,67 @@ export function PlannerClient({
     });
   }, [sequenceEnabled, slotDateInput, slotTimeInput, selectedTreatments, selectedOperatorId]);
 
+  useEffect(() => {
+    setAdditionalDogSlots([]);
+    setAdditionalServicePickerSlotId(null);
+  }, [selectedDog?.id]);
+
   async function loadDogs(clienteId: string) {
     const res = await fetch(`/api/dogs?clienteId=${clienteId}`);
     const data = await res.json();
-    setDogs(data);
+    const nextDogs: Cane[] = Array.isArray(data) ? data : [];
+    setDogs(nextDogs);
+    if (nextDogs.length === 1) {
+      setSelectedDog(nextDogs[0]);
+    } else {
+      setSelectedDog(null);
+    }
+    setAdditionalDogSlots([]);
+  }
+
+  function addAdditionalDogSlot() {
+    if (!slotDateInput || !slotTimeInput) return;
+    const usedDogIds = new Set(additionalDogSlots.map((slot) => slot.dogId));
+    if (selectedDog?.id) usedDogIds.add(selectedDog.id);
+    const firstAvailable = dogs.find((dog) => !usedDogIds.has(dog.id));
+    if (!firstAvailable) {
+      alert("Tutti i cani del cliente sono già presenti.");
+      return;
+    }
+    setAdditionalDogSlots((prev) => [
+      ...prev,
+      {
+        id: `extra-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        dogId: firstAvailable.id,
+        date: slotDateInput,
+        time: slotTimeInput,
+        operatorId: selectedOperatorId || "",
+        allowOverlap: false,
+        durataMinuti: durata,
+        treatmentIds: [...selectedTreatments],
+      },
+    ]);
+  }
+
+  function updateAdditionalDogSlot(slotId: string, patch: Partial<AdditionalDogSlot>) {
+    setAdditionalDogSlots((prev) => prev.map((slot) => (slot.id === slotId ? { ...slot, ...patch } : slot)));
+  }
+
+  function removeAdditionalDogSlot(slotId: string) {
+    if (additionalServicePickerSlotId === slotId) setAdditionalServicePickerSlotId(null);
+    setAdditionalDogSlots((prev) => prev.filter((slot) => slot.id !== slotId));
+  }
+
+  function toggleAdditionalSlotTreatment(slotId: string, treatmentId: string, checked: boolean) {
+    setAdditionalDogSlots((prev) =>
+      prev.map((slot) => {
+        if (slot.id !== slotId) return slot;
+        const next = checked
+          ? Array.from(new Set([...(slot.treatmentIds || []), treatmentId]))
+          : (slot.treatmentIds || []).filter((id) => id !== treatmentId);
+        return { ...slot, treatmentIds: next };
+      }),
+    );
   }
 
   async function createClientThenDog() {
@@ -721,9 +783,14 @@ export function PlannerClient({
     });
     const clientData = await cRes.json();
     if (!cRes.ok) {
+      if (isFreePlanLimitError(cRes, clientData)) {
+        setFreeLimitReached(true);
+        return;
+      }
       alert(clientData.error || "Errore creazione cliente");
       return;
     }
+    setFreeLimitReached(false);
 
     setSelectedClient(clientData);
 
@@ -764,9 +831,14 @@ export function PlannerClient({
     });
     const clientData = await cRes.json();
     if (!cRes.ok) {
+      if (isFreePlanLimitError(cRes, clientData)) {
+        setFreeLimitReached(true);
+        return;
+      }
       alert(clientData.error || "Errore creazione cliente di passaggio");
       return;
     }
+    setFreeLimitReached(false);
 
     setSelectedClient(clientData);
 
@@ -972,20 +1044,27 @@ export function PlannerClient({
       return;
     }
 
-    const startForMessage = slotStart;
-    const clientForMessage = selectedClient;
-    const dogForMessage = selectedDog;
+    if (hasInvalidAdditionalDogSlots) {
+      alert("Compila correttamente i dati dei cani aggiuntivi (cane, data, ora).");
+      return;
+    }
+    if (operators.length > 0 && additionalDogSlots.some((slot) => !slot.operatorId)) {
+      alert("Seleziona un operatore per ogni cane aggiuntivo.");
+      return;
+    }
+
+    const primaryPayload = {
+      operatorId: operatorIdForSave || null,
+      clienteId: selectedClient.id,
+      caneId: selectedDog.id,
+      startAt: slotStart.toISOString(),
+      durataMinuti: durata,
+      noteAppuntamento: note,
+      trattamentiIds: selectedTreatments,
+    };
     const { res, data } = await requestAppointmentWithOptionalOverlap(
       "POST",
-      {
-        operatorId: operatorIdForSave || null,
-        clienteId: selectedClient.id,
-        caneId: selectedDog.id,
-        startAt: slotStart.toISOString(),
-        durataMinuti: durata,
-        noteAppuntamento: note,
-        trattamentiIds: selectedTreatments,
-      },
+      primaryPayload,
       "Operatore già occupato in questo orario. Vuoi salvare comunque l'appuntamento in sovrapposizione?",
     );
     if (!res.ok) {
@@ -993,12 +1072,45 @@ export function PlannerClient({
       return;
     }
 
-    maybeOpenWhatsappReminder({
-      clientPhone: clientForMessage.telefono,
-      clientName: `${clientForMessage.nome} ${clientForMessage.cognome}`,
-      dogName: dogForMessage.nome,
-      startAt: startForMessage,
-    });
+    let createdCount = 1;
+    for (const slot of additionalDogSlots) {
+      const slotStartAt = buildLocalDateTime(slot.date, slot.time);
+      if (!slotStartAt || !slot.dogId) continue;
+      const extraRes = await fetch("/api/appointments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          operatorId: slot.operatorId || null,
+          clienteId: selectedClient.id,
+          caneId: slot.dogId,
+          startAt: slotStartAt.toISOString(),
+          durataMinuti: slot.durataMinuti,
+          noteAppuntamento: note,
+          trattamentiIds: slot.treatmentIds,
+          allowOverlap: slot.allowOverlap,
+        }),
+      });
+      const extraData = await extraRes.json();
+      if (!extraRes.ok) {
+        alert(
+          `Creati ${createdCount} appuntamenti. Errore su cane aggiuntivo: ${extraData.error || "errore sconosciuto"}`,
+        );
+        closeAppointmentModal();
+        if (visibleRange) {
+          await loadAppointments(visibleRange.from, visibleRange.to);
+        } else {
+          await loadAppointments();
+        }
+        return;
+      }
+      createdCount += 1;
+    }
+
+    if (additionalDogSlots.length === 0) {
+      alert("Appuntamento creato. La conferma WhatsApp viene gestita automaticamente dal backend se il canale è operativo.");
+    } else {
+      alert(`Appuntamenti creati: ${createdCount}. Le conferme WhatsApp vengono gestite automaticamente dal backend.`);
+    }
 
     closeAppointmentModal();
     if (visibleRange) {
@@ -1102,6 +1214,9 @@ export function PlannerClient({
 
   const hasValidSequenceSlot = sequenceSlots.some((slot) => Boolean(buildLocalDateTime(slot.date, slot.time)));
   const sequenceReady = Boolean(selectedClient && selectedDog);
+  const hasInvalidAdditionalDogSlots = additionalDogSlots.some(
+    (slot) => !slot.dogId || !buildLocalDateTime(slot.date, slot.time) || !Number.isFinite(slot.durataMinuti) || slot.durataMinuti < 15,
+  );
 
   async function openSequencePreview(index: number) {
     const row = sequenceSlots[index];
@@ -1429,9 +1544,7 @@ export function PlannerClient({
           {isMobile ? "Successiva" : "Settimana successiva"}
         </Button>
         <Input
-          type="text"
-          inputMode="numeric"
-          placeholder="gg.mm.aaaa"
+          type="date"
           className={isMobile ? "w-full" : "w-[180px]"}
           value={jumpDate}
           onChange={(e) => setJumpDate(e.target.value)}
@@ -1441,7 +1554,7 @@ export function PlannerClient({
             if (!jumpDate) return;
             const parsed = parseJumpDateInput(jumpDate);
             if (!parsed) {
-              alert("Data non valida. Usa formato gg.mm.aaaa");
+              alert("Data non valida.");
               return;
             }
             if (isMobile) {
@@ -1766,12 +1879,12 @@ export function PlannerClient({
 
       {previewAppointment ? (
         <div
-          className="fixed inset-0 z-40 bg-black/35 p-3 md:p-4"
+          className="fixed inset-0 z-40 flex items-center justify-center bg-black/35 p-3 md:p-4"
           onClick={(event) => {
             if (event.target === event.currentTarget) setPreviewAppointment(null);
           }}
         >
-          <Card className="fixed bottom-2 left-2 right-2 z-50 max-h-[80dvh] overflow-y-auto rounded-2xl p-4 md:left-auto md:right-4 md:w-[440px]">
+          <Card className="z-50 w-full max-w-[440px] max-h-[85dvh] overflow-y-auto rounded-2xl p-4">
             <div className="space-y-2 text-sm">
               <h3 className="text-base font-semibold">Anteprima appuntamento</h3>
               <p className="text-zinc-900">
@@ -1832,28 +1945,30 @@ export function PlannerClient({
           <Card className="mx-auto my-0 w-full max-w-2xl overflow-y-auto p-3 md:my-4 md:max-h-[calc(100dvh-3rem)] md:p-4">
             <h3 className="mb-3 text-lg font-semibold">Nuovo Appuntamento</h3>
             <p className="text-sm text-zinc-600">Slot: {slotStart ? format(slotStart, "dd/MM/yyyy HH:mm") : "-"}</p>
-            <div className="mt-2 grid gap-2 md:grid-cols-2">
-              <Input
-                type="date"
-                value={slotDateInput}
-                onChange={(e) => {
-                  const nextDate = e.target.value;
-                  setSlotDateInput(nextDate);
-                  const next = buildLocalDateTime(nextDate, slotTimeInput);
-                  if (next) setSlotStart(next);
-                }}
-              />
-              <Input
-                type="time"
-                value={slotTimeInput}
-                onChange={(e) => {
-                  const nextTime = e.target.value;
-                  setSlotTimeInput(nextTime);
-                  const next = buildLocalDateTime(slotDateInput, nextTime);
-                  if (next) setSlotStart(next);
-                }}
-              />
-            </div>
+            {modalMode === "NOTE" || sequenceEnabled ? (
+              <div className="mt-2 grid gap-2 md:grid-cols-2">
+                <Input
+                  type="date"
+                  value={slotDateInput}
+                  onChange={(e) => {
+                    const nextDate = e.target.value;
+                    setSlotDateInput(nextDate);
+                    const next = buildLocalDateTime(nextDate, slotTimeInput);
+                    if (next) setSlotStart(next);
+                  }}
+                />
+                <Input
+                  type="time"
+                  value={slotTimeInput}
+                  onChange={(e) => {
+                    const nextTime = e.target.value;
+                    setSlotTimeInput(nextTime);
+                    const next = buildLocalDateTime(slotDateInput, nextTime);
+                    if (next) setSlotStart(next);
+                  }}
+                />
+              </div>
+            ) : null}
             {operators.length ? (
               <p className="mt-2 text-sm text-zinc-600">
                 Operatore assegnato:{" "}
@@ -1962,7 +2077,7 @@ export function PlannerClient({
                             </Button>
                             <p className="text-xs text-zinc-600">
                               {slot.treatmentIds.length
-                                ? treatments
+                                ? activeTreatmentsSorted
                                     .filter((t) => slot.treatmentIds.includes(t.id))
                                     .map((t) => t.nome)
                                     .join(", ")
@@ -2098,6 +2213,24 @@ export function PlannerClient({
             </div>
             ) : null}
 
+            {modalMode === "APPOINTMENT" && freeLimitReached ? (
+              <div className="mb-3 space-y-2 rounded-md border border-amber-300 bg-amber-50 p-3">
+                <p className="text-sm font-semibold text-amber-950">Limite piano gratuito raggiunto</p>
+                <p className="text-xs text-amber-900">
+                  Hai raggiunto il limite di 50 clienti del piano Free. I clienti già presenti restano gestibili.
+                  Per aggiungere nuovi clienti è necessario un upgrade.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Button type="button" onClick={() => window.location.assign("/billing")}>
+                    Vai a Billing
+                  </Button>
+                  <Button type="button" variant="outline" onClick={() => setFreeLimitReached(false)}>
+                    Chiudi
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+
             {modalMode === "APPOINTMENT" && isPassingClient ? (
               <div className="space-y-2">
                 <h4 className="font-medium">Cliente di passaggio</h4>
@@ -2190,15 +2323,32 @@ export function PlannerClient({
                 </div>
                 {selectedClient ? (
                   <>
-                    <h4 className="font-medium">2) Seleziona Cane</h4>
-                    <select className="h-10 w-full rounded-md border border-zinc-300 px-3 text-sm" onChange={(e) => setSelectedDog(dogs.find((d) => d.id === e.target.value) || null)}>
-                      <option value="">Seleziona cane</option>
-                      {dogs.map((d) => (
-                        <option key={d.id} value={d.id}>
-                          {d.nome} {d.razza ? `(${d.razza})` : ""}
-                        </option>
-                      ))}
-                    </select>
+                    {dogs.length > 1 ? (
+                      <>
+                        <h4 className="font-medium">2) Seleziona Cane</h4>
+                        <select
+                          className="h-10 w-full rounded-md border border-zinc-300 px-3 text-sm"
+                          value={selectedDog?.id || ""}
+                          onChange={(e) => setSelectedDog(dogs.find((d) => d.id === e.target.value) || null)}
+                        >
+                          <option value="">Seleziona cane</option>
+                          {dogs.map((d) => (
+                            <option key={d.id} value={d.id}>
+                              {d.nome} {d.razza ? `(${d.razza})` : ""}
+                            </option>
+                          ))}
+                        </select>
+                      </>
+                    ) : dogs.length === 1 ? (
+                      <div className="rounded-md border border-emerald-200 bg-emerald-50 p-2 text-sm text-emerald-800">
+                        Cane selezionato automaticamente:{" "}
+                        <span className="font-medium">
+                          {dogs[0].nome} {dogs[0].razza ? `(${dogs[0].razza})` : ""}
+                        </span>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-zinc-600">Nessun cane trovato per questo cliente.</p>
+                    )}
                   </>
                 ) : null}
               </div>
@@ -2209,15 +2359,20 @@ export function PlannerClient({
                 <p className="text-sm">
                   Cliente: {selectedClient.nome} {selectedClient.cognome} - Cane: {selectedDog.nome}
                 </p>
-                <label className="text-sm font-medium">Durata</label>
-                <select className="h-10 w-full rounded-md border border-zinc-300 px-3 text-sm" value={durata} onChange={(e) => setDurata(Number(e.target.value))}>
-                  {durations.map((d) => (
-                    <option key={d} value={d}>
-                      {d} minuti
-                    </option>
-                  ))}
-                </select>
-                <p className="text-xs text-zinc-500">Fine: {slotStart ? format(addMinutes(slotStart, durata), "HH:mm") : "-"}</p>
+                <label className="text-sm font-medium">Trattamenti</label>
+                <div className="space-y-1">
+                  <Button type="button" variant="outline" onClick={() => setShowMainServicePicker(true)}>
+                    Seleziona servizio ({selectedTreatments.length})
+                  </Button>
+                  <p className="text-xs text-zinc-600">
+                    {selectedTreatments.length
+                      ? activeTreatmentsSorted
+                          .filter((t) => selectedTreatments.includes(t.id))
+                          .map((t) => t.nome)
+                          .join(", ")
+                      : "Nessun servizio selezionato"}
+                  </p>
+                </div>
                 {quoteLoading ? <p className="text-xs text-zinc-500">Calcolo automatico da listino in corso...</p> : null}
                 {listinoQuote ? (
                   <p className="text-xs text-zinc-600">
@@ -2231,20 +2386,152 @@ export function PlannerClient({
                   </p>
                 ) : null}
 
-                <label className="text-sm font-medium">Trattamenti</label>
-                <div className="space-y-1">
-                  <Button type="button" variant="outline" onClick={() => setShowMainServicePicker(true)}>
-                    Seleziona servizio ({selectedTreatments.length})
-                  </Button>
-                  <p className="text-xs text-zinc-600">
-                    {selectedTreatments.length
-                      ? treatments
-                          .filter((t) => selectedTreatments.includes(t.id))
-                          .map((t) => t.nome)
-                          .join(", ")
-                      : "Nessun servizio selezionato"}
-                  </p>
-                </div>
+                <label className="text-sm font-medium">Durata</label>
+                <select className="h-10 w-full rounded-md border border-zinc-300 px-3 text-sm" value={durata} onChange={(e) => setDurata(Number(e.target.value))}>
+                  {durations.map((d) => (
+                    <option key={d} value={d}>
+                      {d} minuti
+                    </option>
+                  ))}
+                </select>
+
+                {!sequenceEnabled ? (
+                  <div className="space-y-2 rounded-md border border-zinc-200 p-2">
+                    <label className="text-sm font-medium">Modifica orario appuntamento</label>
+                    <div className="grid gap-2 md:grid-cols-2">
+                      <Input
+                        type="date"
+                        value={slotDateInput}
+                        onChange={(e) => {
+                          const nextDate = e.target.value;
+                          setSlotDateInput(nextDate);
+                          const next = buildLocalDateTime(nextDate, slotTimeInput);
+                          if (next) setSlotStart(next);
+                        }}
+                      />
+                      <Input
+                        type="time"
+                        value={slotTimeInput}
+                        onChange={(e) => {
+                          const nextTime = e.target.value;
+                          setSlotTimeInput(nextTime);
+                          const next = buildLocalDateTime(slotDateInput, nextTime);
+                          if (next) setSlotStart(next);
+                        }}
+                      />
+                    </div>
+                    <p className="text-xs text-zinc-500">Fine: {slotStart ? format(addMinutes(slotStart, durata), "HH:mm") : "-"}</p>
+                  </div>
+                ) : null}
+
+                {!sequenceEnabled && dogs.length > 1 ? (
+                  <div className="space-y-2 rounded-md border border-zinc-200 p-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <label className="text-sm font-medium">Aggiungi altri cani nello stesso passaggio</label>
+                      <Button type="button" variant="outline" onClick={addAdditionalDogSlot}>
+                        + Aggiungi cane
+                      </Button>
+                    </div>
+                    {additionalDogSlots.length === 0 ? (
+                      <p className="text-xs text-zinc-600">
+                        Ogni riga crea un appuntamento separato e modificabile singolarmente.
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {additionalDogSlots.map((slot) => {
+                          const dogOptions = dogs.filter(
+                            (dog) =>
+                              dog.id !== selectedDog.id &&
+                              (dog.id === slot.dogId || !additionalDogSlots.some((other) => other.id !== slot.id && other.dogId === dog.id)),
+                          );
+                          return (
+                            <div key={slot.id} className="space-y-2 rounded-md border border-zinc-200 p-2">
+                              <div className="grid gap-2 md:grid-cols-2">
+                                <select
+                                  className="h-10 rounded-md border border-zinc-300 px-3 text-sm"
+                                  value={slot.dogId}
+                                  onChange={(e) => updateAdditionalDogSlot(slot.id, { dogId: e.target.value })}
+                                >
+                                  {dogOptions.map((dog) => (
+                                    <option key={dog.id} value={dog.id}>
+                                      {dog.nome} {dog.razza ? `(${dog.razza})` : ""}
+                                    </option>
+                                  ))}
+                                </select>
+                                <select
+                                  className="h-10 rounded-md border border-zinc-300 px-3 text-sm"
+                                  value={slot.operatorId}
+                                  onChange={(e) => updateAdditionalDogSlot(slot.id, { operatorId: e.target.value })}
+                                >
+                                  <option value="">Operatore...</option>
+                                  {operators.map((op) => (
+                                    <option key={op.id} value={op.id}>
+                                      {op.nome}
+                                    </option>
+                                  ))}
+                                </select>
+                                <Input
+                                  type="date"
+                                  value={slot.date}
+                                  onChange={(e) => updateAdditionalDogSlot(slot.id, { date: e.target.value })}
+                                />
+                                <Input
+                                  type="time"
+                                  value={slot.time}
+                                  onChange={(e) => updateAdditionalDogSlot(slot.id, { time: e.target.value })}
+                                />
+                              </div>
+                              <div className="grid gap-2 md:grid-cols-2">
+                                <Button type="button" variant="outline" onClick={() => setAdditionalServicePickerSlotId(slot.id)}>
+                                  Seleziona servizio ({slot.treatmentIds.length})
+                                </Button>
+                                <select
+                                  className="h-10 rounded-md border border-zinc-300 px-3 text-sm"
+                                  value={slot.durataMinuti}
+                                  onChange={(e) => updateAdditionalDogSlot(slot.id, { durataMinuti: Number(e.target.value) })}
+                                >
+                                  {durations.map((d) => (
+                                    <option key={d} value={d}>
+                                      {d} minuti
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                              <p className="text-xs text-zinc-600">
+                                {slot.treatmentIds.length
+                                  ? activeTreatmentsSorted
+                                      .filter((t) => slot.treatmentIds.includes(t.id))
+                                      .map((t) => t.nome)
+                                      .join(", ")
+                                  : "Nessun servizio selezionato"}
+                              </p>
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <label className="flex items-center gap-2 text-xs text-zinc-700">
+                                  <input
+                                    type="checkbox"
+                                    checked={slot.allowOverlap}
+                                    onChange={(e) => updateAdditionalDogSlot(slot.id, { allowOverlap: e.target.checked })}
+                                  />
+                                  Consenti sovrapposizione
+                                </label>
+                                <p className="text-xs text-zinc-500">
+                                  Fine:{" "}
+                                  {(() => {
+                                    const start = buildLocalDateTime(slot.date, slot.time);
+                                    return start ? format(addMinutes(start, slot.durataMinuti), "HH:mm") : "-";
+                                  })()}
+                                </p>
+                                <Button type="button" variant="outline" onClick={() => removeAdditionalDogSlot(slot.id)}>
+                                  Rimuovi
+                                </Button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                ) : null}
 
                 <label className="text-sm font-medium">Note appuntamento</label>
                 <Textarea value={note} onChange={(e) => setNote(e.target.value)} />
@@ -2258,7 +2545,9 @@ export function PlannerClient({
               <Button
                 onClick={saveAppointment}
                 disabled={
-                  (modalMode === "APPOINTMENT" ? !selectedClient || !selectedDog || (sequenceEnabled && !hasValidSequenceSlot) : !note.trim())
+                  (modalMode === "APPOINTMENT"
+                    ? !selectedClient || !selectedDog || (sequenceEnabled && !hasValidSequenceSlot) || (!sequenceEnabled && hasInvalidAdditionalDogSlots)
+                    : !note.trim())
                 }
               >
                 {modalMode === "NOTE" ? "Salva nota" : sequenceEnabled ? "Salva sequenza" : "Salva appuntamento"}
@@ -2283,7 +2572,7 @@ export function PlannerClient({
               </Button>
             </div>
             <div className="max-h-[55dvh] space-y-2 overflow-y-auto rounded border border-zinc-200 p-2">
-              {treatments.filter((t) => t.attivo).map((t) => (
+              {activeTreatmentsSorted.map((t) => (
                 <label key={`main-service-${t.id}`} className="flex items-center gap-2 rounded border border-zinc-200 p-2 text-sm">
                   <input
                     type="checkbox"
@@ -2315,7 +2604,7 @@ export function PlannerClient({
               </Button>
             </div>
             <div className="max-h-[55dvh] space-y-2 overflow-y-auto rounded border border-zinc-200 p-2">
-              {treatments.filter((t) => t.attivo).map((t) => (
+              {activeTreatmentsSorted.map((t) => (
                 <label key={`seq-service-${t.id}`} className="flex items-center gap-2 rounded border border-zinc-200 p-2 text-sm">
                   <input
                     type="checkbox"
@@ -2325,6 +2614,39 @@ export function PlannerClient({
                   {t.nome}
                 </label>
               ))}
+            </div>
+          </Card>
+        </div>
+      ) : null}
+
+      {additionalServicePickerSlotId !== null ? (
+        <div
+          className="fixed inset-0 z-[65] overflow-y-auto bg-black/45 p-2 md:p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setAdditionalServicePickerSlotId(null);
+          }}
+        >
+          <Card className="mx-auto my-0 w-full max-w-xl space-y-3 overflow-y-auto p-3 md:my-4 md:max-h-[calc(100dvh-3rem)] md:p-4">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-lg font-semibold">Seleziona servizio (cane aggiuntivo)</h3>
+              <Button variant="outline" onClick={() => setAdditionalServicePickerSlotId(null)}>
+                Chiudi
+              </Button>
+            </div>
+            <div className="max-h-[55dvh] space-y-2 overflow-y-auto rounded border border-zinc-200 p-2">
+              {activeTreatmentsSorted.map((t) => {
+                const current = additionalDogSlots.find((slot) => slot.id === additionalServicePickerSlotId);
+                return (
+                  <label key={`extra-service-${t.id}`} className="flex items-center gap-2 rounded border border-zinc-200 p-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(current?.treatmentIds.includes(t.id))}
+                      onChange={(e) => toggleAdditionalSlotTreatment(additionalServicePickerSlotId, t.id, e.target.checked)}
+                    />
+                    {t.nome}
+                  </label>
+                );
+              })}
             </div>
           </Card>
         </div>

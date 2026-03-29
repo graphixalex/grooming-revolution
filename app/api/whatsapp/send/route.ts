@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { requireApiSession } from "@/lib/api-auth";
 import { normalizePhone } from "@/lib/reminders";
-import { sendWhatsAppTextViaApi } from "@/lib/whatsapp";
+import { buildDedupKey, enqueueWhatsAppMessage, getOrCreateWhatsAppConnection, processWhatsAppQueueBatch } from "@/lib/whatsapp-queue";
+import { getWhatsAppConnectionDiagnostics } from "@/lib/whatsapp-connection";
 
 type SendBody = {
   phone?: string;
@@ -29,13 +30,46 @@ export async function POST(req: NextRequest) {
   }
 
   const manualUrl = buildManualUrl(body.phone, text);
+  const normalizedPhone = normalizePhone(body.phone || "");
+  if (!normalizedPhone) {
+    return NextResponse.json({ error: "Numero telefono non valido" }, { status: 400 });
+  }
 
   try {
-    const sent = await sendWhatsAppTextViaApi({ salonId, phone: body.phone || "", text });
-    if (sent.ok) {
+    const connectionDiag = await getWhatsAppConnectionDiagnostics(salonId);
+    const connection = connectionDiag.connection || (await getOrCreateWhatsAppConnection(salonId));
+    if (!(connection.status === "CONNECTED" || connection.status === "DEGRADED")) {
       return NextResponse.json({
-        mode: "api",
-        messageId: sent.messageId,
+        mode: "manual",
+        url: manualUrl,
+        warning: "WhatsApp non collegato o non operativo per questa sede: usa il fallback manuale.",
+      });
+    }
+    const dedupKey = buildDedupKey([
+      salonId,
+      "MANUAL_SERVICE",
+      normalizedPhone,
+      text,
+      new Date().toISOString().slice(0, 16),
+    ]);
+    const queued = await enqueueWhatsAppMessage({
+      salonId,
+      kind: "MANUAL_SERVICE",
+      dedupKey,
+      recipientPhone: normalizedPhone,
+      messageText: text,
+      priority: 15,
+      maxAttempts: 3,
+      metadataJson: { source: "manual_send_api" },
+    });
+    const worker = await processWhatsAppQueueBatch({ batchSize: 20, workerId: "manual-send-api" });
+    if (queued.created || queued.dedup) {
+      return NextResponse.json({
+        mode: "queue",
+        queued: true,
+        dedup: queued.dedup,
+        messageId: queued.messageId,
+        worker,
       });
     }
   } catch (error: unknown) {

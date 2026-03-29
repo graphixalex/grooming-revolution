@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,88 @@ type CampaignRow = {
   createdAt: string;
 };
 
+type ConnectionStatus = "DISCONNECTED" | "CONNECTING" | "CONNECTED" | "DEGRADED" | "EXPIRED" | "DISABLED";
+
+type ConnectionData = {
+  id: string;
+  providerType: "LINKED_SESSION" | "LEGACY_META";
+  status: ConnectionStatus;
+  displayPhoneNumber?: string | null;
+  connectedAt?: string | null;
+  lastSeenAt?: string | null;
+  failureCount: number;
+  disabledReason?: string | null;
+};
+
+type DiagnosticsData = {
+  queued: number;
+  retrying: number;
+  recentEvents: Array<{
+    createdAt: string;
+    eventType: string;
+    status: string;
+    reasonCode?: string | null;
+    reasonMessage?: string | null;
+    attemptNumber: number;
+    providerStatus?: string | null;
+  }>;
+};
+
+type DiagnosticsRow = {
+  salonId: string;
+  salonName: string;
+  connection: ConnectionData | null;
+  killSwitchActive: boolean;
+  automations: {
+    bookingConfirmAlwaysOn: boolean;
+    dayBeforeEnabled: boolean;
+    hourBeforeEnabled: boolean;
+    birthdayEnabled: boolean;
+  };
+  queue: {
+    queued: number;
+    locked: number;
+    retryScheduled: number;
+    failedPermanent: number;
+    backlogTotal: number;
+  };
+  delivery24h: {
+    accepted: number;
+    failed: number;
+  };
+  gateway: {
+    configured: boolean;
+    reachable: boolean;
+    rawStatus: string | null;
+    mappedStatus: ConnectionStatus | null;
+    initialized: boolean;
+    qrAvailable: boolean;
+    lastErrorCode: string | null;
+    lastErrorMessage: string | null;
+  };
+  signals: {
+    lastEvent?: {
+      createdAt: string;
+      eventType: string;
+      status: string;
+      reasonCode?: string | null;
+      reasonMessage?: string | null;
+    } | null;
+    lastAcceptedEvent?: {
+      createdAt: string;
+      eventType: string;
+      providerStatus?: string | null;
+    } | null;
+    lastErrorEvent?: {
+      createdAt: string;
+      eventType: string;
+      status: string;
+      reasonCode?: string | null;
+      reasonMessage?: string | null;
+    } | null;
+  };
+};
+
 const RECOMMENDED_TEMPLATE =
   "Gentile %nome_cliente%, con piacere Le ricordiamo l'appuntamento di %nome_pet% previsto per %data_appuntamento% alle ore %orario_appuntamento%, presso %nome_attivita% (%indirizzo_attivita%). Saremo felici di accoglierLa. Per modifiche o disdette può rispondere direttamente a questo messaggio. Grazie.";
 const RECOMMENDED_BOOKING_TEMPLATE =
@@ -35,8 +117,30 @@ const RECOMMENDED_ONE_HOUR_TEMPLATE =
 const RECOMMENDED_BIRTHDAY_TEMPLATE =
   "Gentile %nome_cliente%, oggi è un giorno speciale: buon compleanno a %nome_pet%! Da tutto lo staff di %nome_attivita% i nostri auguri più affettuosi. Saremo lieti di festeggiarLo presto in salone.";
 
+function statusText(status: ConnectionStatus) {
+  if (status === "CONNECTED") return "Operativo";
+  if (status === "DEGRADED") return "Operativo con errori";
+  if (status === "CONNECTING") return "Collegamento in corso";
+  if (status === "EXPIRED") return "Sessione scaduta";
+  if (status === "DISABLED") return "Disabilitato";
+  return "Non collegato";
+}
+
+function isConnected(status: ConnectionStatus) {
+  return status === "CONNECTED" || status === "DEGRADED";
+}
+
 export function WhatsAppClient({ initialSalon }: { initialSalon: any }) {
   const [salon, setSalon] = useState(initialSalon);
+  const [connection, setConnection] = useState<ConnectionData | null>(initialSalon.whatsappConnection || null);
+  const [diagnostics, setDiagnostics] = useState<DiagnosticsData | null>(initialSalon.whatsappDiagnostics || null);
+  const [qrData, setQrData] = useState<string | null>(null);
+  const [qrExpiresAt, setQrExpiresAt] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [diagRows, setDiagRows] = useState<DiagnosticsRow[]>([]);
+  const [diagScope, setDiagScope] = useState<"CURRENT_SALON" | "GROUP">("CURRENT_SALON");
+  const [gatewayConfigured, setGatewayConfigured] = useState(true);
+
   const [campaignType, setCampaignType] = useState<CampaignType>("SERVICE");
   const [campaignTitle, setCampaignTitle] = useState("");
   const [campaignMessage, setCampaignMessage] = useState("");
@@ -47,13 +151,140 @@ export function WhatsAppClient({ initialSalon }: { initialSalon: any }) {
   const [campaignPreviewCount, setCampaignPreviewCount] = useState<number | null>(null);
   const [campaignPreviewLoading, setCampaignPreviewLoading] = useState(false);
 
-  const isTemplatesConfigured = useMemo(
-    () =>
-      Boolean(salon.whatsappApiEnabled) &&
-      Boolean((salon.whatsappApiPhoneNumberId || "").trim()) &&
-      Boolean((salon.whatsappApiAccessToken || "").trim()),
-    [salon.whatsappApiAccessToken, salon.whatsappApiEnabled, salon.whatsappApiPhoneNumberId],
-  );
+  const channelReady = useMemo(() => {
+    if (!connection) return false;
+    return isConnected(connection.status);
+  }, [connection]);
+
+  async function loadConnection() {
+    const res = await fetch("/api/whatsapp/connection", { cache: "no-store" });
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data.error || "Errore caricamento stato connessione");
+      return;
+    }
+    setConnection(data.connection);
+    setDiagnostics(data.diagnostics);
+  }
+
+  async function loadDiagnosticsSummary() {
+    const res = await fetch("/api/whatsapp/diagnostics", { cache: "no-store" });
+    const data = await res.json();
+    if (!res.ok) return;
+    setDiagScope(data.scope || "CURRENT_SALON");
+    setGatewayConfigured(Boolean(data.gatewayConfigured));
+    setDiagRows(Array.isArray(data.rows) ? data.rows : []);
+  }
+
+  async function startPairing() {
+    setBusy(true);
+    try {
+      const res = await fetch("/api/whatsapp/connection?includeQr=1", { method: "POST", headers: { "Content-Type": "application/json" } });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Impossibile avviare collegamento");
+        return;
+      }
+      const qrPayload = data?.qr?.qrData;
+      if (typeof qrPayload === "string" && qrPayload.trim().length > 0) {
+        setQrData(qrPayload);
+      } else {
+        setQrData(null);
+      }
+      setQrExpiresAt(typeof data?.qr?.expiresAt === "string" ? data.qr.expiresAt : null);
+      await loadConnection();
+      await loadDiagnosticsSummary();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function refreshGatewayState() {
+    setBusy(true);
+    try {
+      const res = await fetch("/api/whatsapp/connection?mode=sync", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Aggiornamento stato non riuscito");
+        return;
+      }
+      setConnection(data.connection);
+      setDiagnostics(data.diagnostics);
+      await loadDiagnosticsSummary();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function refreshQr() {
+    setBusy(true);
+    try {
+      const res = await fetch("/api/whatsapp/connection?mode=qr", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "QR non disponibile");
+        setQrData(null);
+        setQrExpiresAt(null);
+        return;
+      }
+      setQrData(typeof data?.qr?.qrData === "string" ? data.qr.qrData : null);
+      setQrExpiresAt(typeof data?.qr?.expiresAt === "string" ? data.qr.expiresAt : null);
+      await refreshGatewayState();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function disconnectWhatsApp() {
+    if (!confirm("Disconnettere WhatsApp da questo salone?")) return;
+    setBusy(true);
+    try {
+      const res = await fetch("/api/whatsapp/connection", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: "Disconnessione manuale" }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Errore durante la disconnessione");
+        return;
+      }
+      setConnection(data.connection);
+      setDiagnostics(data.diagnostics);
+      setQrData(null);
+      setQrExpiresAt(null);
+      await loadDiagnosticsSummary();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function toggleKillSwitch(enable: boolean) {
+    setBusy(true);
+    try {
+      const res = await fetch("/api/whatsapp/connection", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(enable ? { action: "enable" } : { action: "disable", reason: "Kill-switch manuale da UI" }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Operazione non riuscita");
+        return;
+      }
+      setConnection(data.connection);
+      setDiagnostics(data.diagnostics);
+      await loadDiagnosticsSummary();
+    } finally {
+      setBusy(false);
+    }
+  }
 
   const saveTemplates = async () => {
     const res = await fetch("/api/settings", {
@@ -68,10 +299,6 @@ export function WhatsAppClient({ initialSalon }: { initialSalon: any }) {
         whatsappDayBeforeEnabled: Boolean(salon.whatsappDayBeforeEnabled),
         whatsappOneHourEnabled: Boolean(salon.whatsappOneHourEnabled),
         whatsappBirthdayEnabled: Boolean(salon.whatsappBirthdayEnabled),
-        whatsappApiEnabled: Boolean(salon.whatsappApiEnabled),
-        whatsappApiPhoneNumberId: salon.whatsappApiPhoneNumberId || "",
-        whatsappApiVersion: salon.whatsappApiVersion || "v23.0",
-        whatsappApiAccessToken: salon.whatsappApiAccessToken || "",
       }),
     });
     const data = await res.json();
@@ -84,7 +311,7 @@ export function WhatsAppClient({ initialSalon }: { initialSalon: any }) {
   };
 
   const loadCampaigns = async () => {
-    const res = await fetch("/api/whatsapp/campaigns");
+    const res = await fetch("/api/whatsapp/campaigns", { cache: "no-store" });
     const data = await res.json();
     if (!res.ok) {
       alert(data.error || "Errore caricamento campagne");
@@ -95,23 +322,22 @@ export function WhatsAppClient({ initialSalon }: { initialSalon: any }) {
 
   useEffect(() => {
     void loadCampaigns();
+    void loadConnection();
+    void loadDiagnosticsSummary();
   }, []);
 
   async function dispatchCampaign(campaignId: string) {
     setCampaignLoading(true);
     try {
-      for (let i = 0; i < 20; i += 1) {
-        const res = await fetch(`/api/whatsapp/campaigns/${campaignId}/dispatch`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ batchSize: 100 }),
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          alert(data.error || "Errore invio campagna");
-          break;
-        }
-        if (data.status === "COMPLETED" || data.processed === 0) break;
+      const res = await fetch(`/api/whatsapp/campaigns/${campaignId}/dispatch`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ batchSize: 120 }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Errore invio campagna");
+        return;
       }
       await loadCampaigns();
     } finally {
@@ -145,7 +371,7 @@ export function WhatsAppClient({ initialSalon }: { initialSalon: any }) {
       await dispatchCampaign(data.campaignId);
       setCampaignTitle("");
       setCampaignMessage("");
-      alert("Campagna avviata");
+      alert("Campagna accodata");
     } finally {
       setCampaignLoading(false);
     }
@@ -174,10 +400,178 @@ export function WhatsAppClient({ initialSalon }: { initialSalon: any }) {
   return (
     <div className="space-y-4">
       <Card className="space-y-3">
+        <h2 className="font-semibold">Connessione WhatsApp</h2>
+        {!gatewayConfigured ? (
+          <div className="rounded-md border border-rose-200 bg-rose-50 p-2 text-xs text-rose-800">
+            Gateway linked non configurato (`WHATSAPP_LINKED_GATEWAY_URL` mancante): la coda può accumulare failure.
+          </div>
+        ) : null}
+        <div
+          className={`rounded-md border p-2 text-xs ${
+            channelReady ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-amber-200 bg-amber-50 text-amber-800"
+          }`}
+        >
+          Stato canale: <strong>{connection ? statusText(connection.status) : "Non configurato"}</strong>
+          {connection?.disabledReason ? <span> - {connection.disabledReason}</span> : null}
+        </div>
+        {connection?.status === "DEGRADED" ? (
+          <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">
+            Canale degradato: verificare provider e coda. I messaggi possono andare in retry.
+          </div>
+        ) : null}
+        {connection?.status === "DISABLED" ? (
+          <div className="rounded-md border border-rose-200 bg-rose-50 p-2 text-xs text-rose-900">
+            Kill-switch attivo: gli invii automatici sono bloccati finché non riabiliti il canale.
+          </div>
+        ) : null}
+        <div className="grid gap-2 rounded-md border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-700 md:grid-cols-2">
+          <p>
+            <span className="font-semibold">Provider:</span> {connection?.providerType || "-"}
+          </p>
+          <p>
+            <span className="font-semibold">Numero collegato:</span> {connection?.displayPhoneNumber || "-"}
+          </p>
+          <p>
+            <span className="font-semibold">Connesso il:</span>{" "}
+            {connection?.connectedAt ? new Date(connection.connectedAt).toLocaleString("it-IT") : "-"}
+          </p>
+          <p>
+            <span className="font-semibold">Ultimo heartbeat:</span>{" "}
+            {connection?.lastSeenAt ? new Date(connection.lastSeenAt).toLocaleString("it-IT") : "-"}
+          </p>
+          <p>
+            <span className="font-semibold">Messaggi in coda:</span> {diagnostics?.queued ?? 0}
+          </p>
+          <p>
+            <span className="font-semibold">Messaggi in retry:</span> {diagnostics?.retrying ?? 0}
+          </p>
+        </div>
+
+        <div className="rounded-md border border-sky-200 bg-sky-50 p-3 text-xs text-sky-900">
+          <p className="font-semibold">Collegamento tramite sessione linked (QR/code)</p>
+          <ol className="mt-2 list-decimal space-y-1 pl-4">
+            <li>Clicchi &quot;Avvia collegamento&quot;.</li>
+            <li>Se il canale è in stato QR pronto, scansiona il QR con WhatsApp Business del salone.</li>
+            <li>Dopo scansione, premi &quot;Aggiorna stato&quot; per confermare lo stato collegato.</li>
+          </ol>
+          {qrData ? (
+            <div className="mt-2 rounded border border-sky-200 bg-white p-2 text-[11px]">
+              <p className="mb-2"><strong>QR sessione disponibile</strong></p>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={qrData} alt="QR WhatsApp" className="h-56 w-56 rounded border border-zinc-200 object-contain" />
+              {qrExpiresAt ? <p className="mt-2"><strong>Scade:</strong> {new Date(qrExpiresAt).toLocaleString("it-IT")}</p> : null}
+            </div>
+          ) : null}
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={() => startPairing()} disabled={busy}>Avvia collegamento</Button>
+          <Button variant="outline" onClick={refreshQr} disabled={busy}>
+            Mostra/Aggiorna QR
+          </Button>
+          <Button variant="outline" onClick={refreshGatewayState} disabled={busy}>
+            Aggiorna stato
+          </Button>
+          <Button variant="outline" onClick={disconnectWhatsApp} disabled={busy || !connection || connection.status === "DISCONNECTED"}>
+            Disconnetti
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => toggleKillSwitch(false)}
+            disabled={busy || !connection || connection.status === "DISABLED"}
+          >
+            Attiva kill-switch
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => toggleKillSwitch(true)}
+            disabled={busy || !connection || connection.status !== "DISABLED"}
+          >
+            Riabilita canale
+          </Button>
+        </div>
+      </Card>
+
+      <Card className="space-y-3">
+        <h2 className="font-semibold">Diagnostics operativi</h2>
+        <p className="text-xs text-zinc-600">
+          Scope: {diagScope === "GROUP" ? "Tutte le sedi del gruppo" : "Sede corrente"}
+        </p>
+        <div className="space-y-2">
+          {diagRows.length === 0 ? <p className="text-sm text-zinc-500">Nessun dato diagnostico disponibile.</p> : null}
+          {diagRows.map((row) => {
+            const conn = row.connection;
+            const status = conn?.status || "DISCONNECTED";
+            const statusClass =
+              status === "CONNECTED"
+                ? "bg-emerald-100 text-emerald-800"
+                : status === "DEGRADED"
+                  ? "bg-amber-100 text-amber-800"
+                  : status === "DISABLED"
+                    ? "bg-rose-100 text-rose-800"
+                    : "bg-zinc-100 text-zinc-700";
+            const anomaly =
+              row.queue.backlogTotal > 40 ||
+              row.delivery24h.failed > row.delivery24h.accepted ||
+              !row.gateway.reachable;
+            return (
+              <div key={row.salonId} className="rounded-md border border-zinc-200 p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm font-semibold">{row.salonName}</p>
+                  <span className={`rounded px-2 py-1 text-xs font-semibold ${statusClass}`}>{statusText(status)}</span>
+                </div>
+                <div className="mt-2 grid gap-2 text-xs text-zinc-700 md:grid-cols-3">
+                  <p>Provider: <strong>{conn?.providerType || "-"}</strong></p>
+                  <p>Failure count: <strong>{conn?.failureCount ?? 0}</strong></p>
+                  <p>Kill-switch: <strong>{row.killSwitchActive ? "ON" : "OFF"}</strong></p>
+                  <p>Gateway reachable: <strong>{row.gateway.reachable ? "SI" : "NO"}</strong></p>
+                  <p>Gateway status: <strong>{row.gateway.rawStatus || "-"}</strong></p>
+                  <p>QR disponibile: <strong>{row.gateway.qrAvailable ? "SI" : "NO"}</strong></p>
+                  <p>Queued: <strong>{row.queue.queued}</strong></p>
+                  <p>Locked: <strong>{row.queue.locked}</strong></p>
+                  <p>Retry scheduled: <strong>{row.queue.retryScheduled}</strong></p>
+                  <p>Failed permanent: <strong>{row.queue.failedPermanent}</strong></p>
+                  <p>Accepted 24h: <strong>{row.delivery24h.accepted}</strong></p>
+                  <p>Failure 24h: <strong>{row.delivery24h.failed}</strong></p>
+                  <p>Last seen: <strong>{conn?.lastSeenAt ? new Date(conn.lastSeenAt).toLocaleString("it-IT") : "-"}</strong></p>
+                  <p>Last success: <strong>{row.signals.lastAcceptedEvent?.createdAt ? new Date(row.signals.lastAcceptedEvent.createdAt).toLocaleString("it-IT") : "-"}</strong></p>
+                  <p>Last error: <strong>{row.signals.lastErrorEvent?.createdAt ? new Date(row.signals.lastErrorEvent.createdAt).toLocaleString("it-IT") : "-"}</strong></p>
+                  <p>Auto 24h: <strong>{row.automations.dayBeforeEnabled ? "ON" : "OFF"}</strong></p>
+                  <p>Auto 1h: <strong>{row.automations.hourBeforeEnabled ? "ON" : "OFF"}</strong></p>
+                  <p>Compleanno: <strong>{row.automations.birthdayEnabled ? "ON" : "OFF"}</strong></p>
+                </div>
+                {conn?.disabledReason ? (
+                  <p className="mt-2 text-xs text-rose-700">Motivo: {conn.disabledReason}</p>
+                ) : null}
+                {!row.gateway.reachable && row.gateway.lastErrorCode ? (
+                  <p className="mt-1 text-xs text-rose-700">
+                    Gateway error: {row.gateway.lastErrorCode} {row.gateway.lastErrorMessage ? `- ${row.gateway.lastErrorMessage}` : ""}
+                  </p>
+                ) : null}
+                {row.signals.lastErrorEvent?.reasonMessage ? (
+                  <p className="mt-1 text-xs text-rose-700">
+                    Ultimo errore: {row.signals.lastErrorEvent.reasonMessage}
+                  </p>
+                ) : null}
+                {anomaly ? (
+                  <p className="mt-2 rounded border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-900">
+                    Anomalia rilevata: backlog alto o failure ratio elevata nelle ultime 24h.
+                  </p>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+
+      <Card className="space-y-3">
         <h2 className="font-semibold">Template automazioni WhatsApp</h2>
         <p className="text-xs text-zinc-500">
           Placeholder disponibili: %nome_cliente% %nome_pet% %data_appuntamento% %orario_appuntamento% %nome_attivita% %indirizzo_attivita%
         </p>
+        <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-900">
+          Conferma prenotazione: automatica lato backend quando il canale WhatsApp è operativo.
+        </div>
         <div className="space-y-2 rounded-md border border-zinc-200 p-3">
           <p className="text-xs font-medium text-zinc-700">Messaggio conferma immediata dopo prenotazione</p>
           <Textarea
@@ -258,86 +652,28 @@ export function WhatsAppClient({ initialSalon }: { initialSalon: any }) {
       </Card>
 
       <Card className="space-y-3">
-        <h2 className="font-semibold">WhatsApp API Meta</h2>
-        <div className="rounded-md border border-sky-200 bg-sky-50 p-3 text-xs text-sky-900">
-          <p className="font-semibold">Configurazione completa (consigliata)</p>
-          <ol className="mt-2 list-decimal space-y-1 pl-4">
-            <li>In Meta for Developers apra la Sua app e aggiunga il prodotto WhatsApp.</li>
-            <li>In WhatsApp Manager colleghi e verifichi un numero WhatsApp Business dedicato al salone.</li>
-            <li>Crei un System User in Business Manager e generi un token permanente con permessi invio messaggi.</li>
-            <li>Copi il Phone Number ID del numero mittente e lo inserisca qui.</li>
-            <li>Incolli il token API (se lascia vuoto, il token precedente resta invariato).</li>
-            <li>Lasci la versione API su v23.0 salvo specifiche diverse del Suo account Meta.</li>
-            <li>Attivi la checkbox e salvi la configurazione.</li>
-          </ol>
-          <p className="mt-2">
-            Con API attiva, il sistema invia reminder automatici (giorno prima e 1 ora prima), auguri compleanno cane e abilita le campagne massivo.
-            Se credenziali o permessi non sono validi, la piattaforma torna al metodo manuale (wa.me) senza bloccare l&apos;operatività.
-          </p>
-        </div>
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={Boolean(salon.whatsappApiEnabled)}
-            onChange={(e) => setSalon({ ...salon, whatsappApiEnabled: e.target.checked })}
-          />
-          Abilita invio automatico via WhatsApp API
-        </label>
-        <div className="grid gap-2 md:grid-cols-2">
-          <Input
-            value={salon.whatsappApiPhoneNumberId || ""}
-            onChange={(e) => setSalon({ ...salon, whatsappApiPhoneNumberId: e.target.value })}
-            placeholder="Phone Number ID (es. 123456789012345)"
-          />
-          <Input
-            value={salon.whatsappApiVersion || "v23.0"}
-            onChange={(e) => setSalon({ ...salon, whatsappApiVersion: e.target.value })}
-            placeholder="Versione API (es. v23.0)"
-          />
-        </div>
-        <Input
-          type="password"
-          value={salon.whatsappApiAccessToken || ""}
-          onChange={(e) => setSalon({ ...salon, whatsappApiAccessToken: e.target.value })}
-          placeholder="Access Token API (lasciare vuoto per mantenere quello esistente)"
-        />
-        <div
-          className={`rounded-md border p-2 text-xs ${
-            isTemplatesConfigured ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-amber-200 bg-amber-50 text-amber-800"
-          }`}
-        >
-          {isTemplatesConfigured
-            ? "Configurazione API pronta per invio automatico e campagne."
-            : "Configurazione incompleta: controlli Phone Number ID, token e checkbox attiva."}
-        </div>
-      </Card>
-
-      <Card className="space-y-3">
         <h2 className="font-semibold">Campagne WhatsApp</h2>
         <div
           className={`rounded-md border p-3 text-sm ${
-            salon.whatsappApiEnabled ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-amber-200 bg-amber-50 text-amber-800"
+            channelReady ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-amber-200 bg-amber-50 text-amber-800"
           }`}
         >
-          {salon.whatsappApiEnabled
-            ? "Invio massivo attivo: i messaggi partono tramite API Meta."
-            : "Per usare le campagne attivi prima la WhatsApp API in questa pagina."}
+          {channelReady
+            ? "Invio campagne disponibile tramite coda persistente con deduplica."
+            : "Canale non operativo: collega WhatsApp prima di inviare campagne."}
         </div>
+
         <div className="grid gap-3 md:grid-cols-2">
           <div className={`rounded-md border p-3 ${campaignType === "SERVICE" ? "border-emerald-300 bg-emerald-50" : "border-zinc-200 bg-white"}`}>
             <p className="text-sm font-semibold">Invio di servizio</p>
-            <p className="text-xs text-zinc-600">
-              Comunicazioni operative (es. chiusure, variazioni orari, informazioni importanti) su clienti del periodo scelto.
-            </p>
+            <p className="text-xs text-zinc-600">Comunicazioni operative su clienti del periodo scelto.</p>
             <Button variant={campaignType === "SERVICE" ? "default" : "outline"} className="mt-2" onClick={() => setCampaignType("SERVICE")}>
               Seleziona
             </Button>
           </div>
           <div className={`rounded-md border p-3 ${campaignType === "MARKETING" ? "border-amber-300 bg-amber-50" : "border-zinc-200 bg-white"}`}>
-            <p className="text-sm font-semibold">Invio marketing</p>
-            <p className="text-xs text-zinc-600">
-              Promo e offerte dedicate, inviate solo ai clienti con consenso promemoria attivo.
-            </p>
+            <p className="text-sm font-semibold">Invio marketing (opzionale)</p>
+            <p className="text-xs text-zinc-600">Solo con consenso promemoria attivo e uso responsabile.</p>
             <Button variant={campaignType === "MARKETING" ? "default" : "outline"} className="mt-2" onClick={() => setCampaignType("MARKETING")}>
               Seleziona
             </Button>
@@ -393,13 +729,14 @@ export function WhatsAppClient({ initialSalon }: { initialSalon: any }) {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button onClick={createCampaign} disabled={campaignLoading || !salon.whatsappApiEnabled}>
+          <Button onClick={createCampaign} disabled={campaignLoading || !channelReady}>
             {campaignLoading ? "Invio in corso..." : "Crea e invia campagna"}
           </Button>
           <Button variant="outline" onClick={loadCampaigns} disabled={campaignLoading}>
             Aggiorna storico
           </Button>
         </div>
+
         <div className="space-y-2">
           {campaigns.length === 0 ? <p className="text-sm text-zinc-500">Nessuna campagna presente.</p> : null}
           {campaigns.map((row) => {
@@ -418,13 +755,26 @@ export function WhatsAppClient({ initialSalon }: { initialSalon: any }) {
                 <p className="text-xs text-zinc-600">Restano da inviare: {remaining}</p>
                 <p className="text-xs text-zinc-500">Creata: {new Date(row.createdAt).toLocaleString("it-IT")}</p>
                 {row.status !== "COMPLETED" ? (
-                  <Button variant="outline" className="mt-2" onClick={() => dispatchCampaign(row.id)} disabled={campaignLoading || !salon.whatsappApiEnabled}>
+                  <Button variant="outline" className="mt-2" onClick={() => dispatchCampaign(row.id)} disabled={campaignLoading || !channelReady}>
                     Continua invio
                   </Button>
                 ) : null}
               </div>
             );
           })}
+        </div>
+
+        <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-700">
+          <p className="font-semibold">Ultimi eventi delivery</p>
+          <div className="mt-2 space-y-1">
+            {(diagnostics?.recentEvents || []).length === 0 ? <p>Nessun evento recente.</p> : null}
+            {(diagnostics?.recentEvents || []).map((event, idx) => (
+              <p key={`${event.createdAt}-${idx}`}>
+                {new Date(event.createdAt).toLocaleString("it-IT")} - {event.eventType} - {event.status}
+                {event.reasonCode ? ` (${event.reasonCode})` : ""}
+              </p>
+            ))}
+          </div>
         </div>
       </Card>
     </div>

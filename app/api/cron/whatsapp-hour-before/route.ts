@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { renderTemplate, reminderVariables } from "@/lib/reminders";
-import { sendWhatsAppTextViaApi } from "@/lib/whatsapp";
 import { assertCriticalEnv } from "@/lib/env-security";
 import { DEFAULT_WHATSAPP_ONE_HOUR_TEMPLATE } from "@/lib/default-templates";
+import { enqueueReminderHourBefore } from "@/lib/whatsapp-automation";
+import { processWhatsAppQueueBatch } from "@/lib/whatsapp-queue";
 
 function isAuthorized(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
@@ -26,9 +26,10 @@ export async function GET(req: NextRequest) {
   const salons = await (async () => {
     try {
       return await prisma.salon.findMany({
-        where: { whatsappApiEnabled: true, whatsappOneHourEnabled: true },
+        where: { whatsappOneHourEnabled: true },
         select: {
           id: true,
+          timezone: true,
           nomeAttivita: true,
           indirizzo: true,
           whatsappOneHourTemplate: true,
@@ -41,7 +42,7 @@ export async function GET(req: NextRequest) {
       ) {
         const legacy = await prisma.salon.findMany({
           where: { whatsappApiEnabled: true },
-          select: { id: true, nomeAttivita: true, indirizzo: true },
+          select: { id: true, timezone: true, nomeAttivita: true, indirizzo: true },
         });
         return legacy.map((s) => ({ ...s, whatsappOneHourTemplate: DEFAULT_WHATSAPP_ONE_HOUR_TEMPLATE }));
       }
@@ -50,7 +51,8 @@ export async function GET(req: NextRequest) {
   })();
 
   let processed = 0;
-  let sent = 0;
+  let enqueued = 0;
+  let deduped = 0;
   let failed = 0;
   let skipped = 0;
   let warnings: string[] = [];
@@ -87,87 +89,58 @@ export async function GET(req: NextRequest) {
         });
       } catch {
         warnings = [...warnings, "Migration reminder 1 ora non applicata"];
-        return NextResponse.json({ ok: true, salons: salons.length, processed, sent, failed, skipped, warnings });
+        return NextResponse.json({ ok: true, salons: salons.length, processed, enqueued, deduped, failed, skipped, warnings });
       }
       if (existing?.status === "SENT" || (existing && existing.attemptCount >= 3)) {
         skipped += 1;
         continue;
       }
 
-      const template =
-        typeof salon.whatsappOneHourTemplate === "string" && salon.whatsappOneHourTemplate.trim().length > 0
-          ? salon.whatsappOneHourTemplate
-          : DEFAULT_WHATSAPP_ONE_HOUR_TEMPLATE;
-      const text = renderTemplate(
-        template,
-        reminderVariables({
-          nomeCliente: `${appointment.cliente.nome} ${appointment.cliente.cognome}`.trim(),
-          nomePet: appointment.cane.nome,
-          startAt: appointment.startAt,
-          nomeAttivita: salon.nomeAttivita || "",
-          indirizzoAttivita: salon.indirizzo || "",
-        }),
-      );
-
-      const result = await sendWhatsAppTextViaApi({
+      const result = await enqueueReminderHourBefore({
+        id: appointment.id,
         salonId: salon.id,
+        startAt: appointment.startAt,
+        clientName: `${appointment.cliente.nome} ${appointment.cliente.cognome}`.trim(),
+        dogName: appointment.cane.nome,
         phone: appointment.cliente.telefono,
-        text,
       });
-      const nowAttempt = new Date();
-      const nextAttempt = (existing?.attemptCount ?? 0) + 1;
-      if (result.ok) {
-        sent += 1;
-        await prisma.appointmentReminder.upsert({
-          where: { appointmentId_kind: { appointmentId: appointment.id, kind: "HOUR_BEFORE_WHATSAPP" } },
-          update: {
-            status: "SENT",
-            attemptCount: nextAttempt,
-            messageId: result.messageId || null,
-            errorMessage: null,
-            sentAt: nowAttempt,
-            lastAttemptAt: nowAttempt,
-          },
-          create: {
-            appointmentId: appointment.id,
-            kind: "HOUR_BEFORE_WHATSAPP",
-            status: "SENT",
-            attemptCount: nextAttempt,
-            messageId: result.messageId || null,
-            sentAt: nowAttempt,
-            lastAttemptAt: nowAttempt,
-          },
-        });
-      } else {
+      if (!result.enqueued) {
         failed += 1;
-        await prisma.appointmentReminder.upsert({
-          where: { appointmentId_kind: { appointmentId: appointment.id, kind: "HOUR_BEFORE_WHATSAPP" } },
-          update: {
-            status: nextAttempt >= 3 ? "SKIPPED" : "FAILED",
-            attemptCount: nextAttempt,
-            errorMessage: result.error,
-            lastAttemptAt: nowAttempt,
-          },
-          create: {
+        continue;
+      }
+      await prisma.appointmentReminder.upsert({
+        where: {
+          appointmentId_kind: {
             appointmentId: appointment.id,
             kind: "HOUR_BEFORE_WHATSAPP",
-            status: nextAttempt >= 3 ? "SKIPPED" : "FAILED",
-            attemptCount: nextAttempt,
-            errorMessage: result.error,
-            lastAttemptAt: nowAttempt,
           },
-        });
-      }
+        },
+        update: {
+          status: "PENDING",
+          errorMessage: null,
+        },
+        create: {
+          appointmentId: appointment.id,
+          kind: "HOUR_BEFORE_WHATSAPP",
+          status: "PENDING",
+          attemptCount: 0,
+        },
+      });
+      if (result.dedup) deduped += 1;
+      else enqueued += 1;
     }
   }
+  const worker = await processWhatsAppQueueBatch({ batchSize: 120, workerId: "cron-hour-before" });
 
   return NextResponse.json({
     ok: true,
     salons: salons.length,
     processed,
-    sent,
+    enqueued,
+    deduped,
     failed,
     skipped,
     warnings,
+    worker,
   });
 }

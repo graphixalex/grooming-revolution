@@ -9,6 +9,7 @@ import {
   DEFAULT_WHATSAPP_ONE_HOUR_TEMPLATE,
   normalizeWhatsAppReminderTemplate,
 } from "@/lib/default-templates";
+import { getWhatsAppConnectionDiagnostics } from "@/lib/whatsapp-connection";
 
 export default async function WhatsAppPage() {
   const session = await getRequiredSession();
@@ -16,7 +17,8 @@ export default async function WhatsAppPage() {
     redirect("/planner");
   }
 
-  const salon = await (async () => {
+  const [salon, connectionState] = await Promise.all([
+    (async () => {
     try {
       return await prisma.salon.findUnique({
         where: { id: session.user.salonId },
@@ -31,7 +33,10 @@ export default async function WhatsAppPage() {
           whatsappBirthdayEnabled: true,
           whatsappApiEnabled: true,
           whatsappApiPhoneNumberId: true,
+          whatsappApiBusinessAccountId: true,
+          whatsappApiDisplayPhoneNumber: true,
           whatsappApiVersion: true,
+          whatsappApiConnectedAt: true,
         },
       });
     } catch (error) {
@@ -46,7 +51,10 @@ export default async function WhatsAppPage() {
             whatsappTemplate: true,
             whatsappApiEnabled: true,
             whatsappApiPhoneNumberId: true,
+            whatsappApiBusinessAccountId: true,
+            whatsappApiDisplayPhoneNumber: true,
             whatsappApiVersion: true,
+            whatsappApiConnectedAt: true,
           },
         });
         return legacy
@@ -59,12 +67,17 @@ export default async function WhatsAppPage() {
               whatsappDayBeforeEnabled: true,
               whatsappOneHourEnabled: true,
               whatsappBirthdayEnabled: true,
+              whatsappApiBusinessAccountId: null,
+              whatsappApiDisplayPhoneNumber: null,
+              whatsappApiConnectedAt: null,
             }
           : legacy;
       }
       throw error;
     }
-  })();
+  })(),
+    getWhatsAppConnectionDiagnostics(session.user.salonId),
+  ]);
 
   const initialSalon = {
     ...(salon || {}),
@@ -75,14 +88,20 @@ export default async function WhatsAppPage() {
     whatsappDayBeforeEnabled: Boolean(salon?.whatsappDayBeforeEnabled ?? true),
     whatsappOneHourEnabled: Boolean(salon?.whatsappOneHourEnabled ?? true),
     whatsappBirthdayEnabled: Boolean(salon?.whatsappBirthdayEnabled ?? true),
+    whatsappApiBusinessAccountId: salon?.whatsappApiBusinessAccountId || null,
+    whatsappApiDisplayPhoneNumber: salon?.whatsappApiDisplayPhoneNumber || null,
+    whatsappApiConnectedAt: salon?.whatsappApiConnectedAt || null,
     whatsappApiAccessToken: "",
+    whatsappConnection: connectionState.connection,
+    whatsappGateway: connectionState.gateway,
+    whatsappDiagnostics: connectionState.diagnostics,
   };
 
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-semibold">WhatsApp</h1>
       <p className="text-sm text-zinc-600">
-        Gestisca in un unico punto template promemoria, API Meta e campagne WhatsApp.
+        Gestisca connessione canale, automazioni transazionali e diagnostica invii in un unico punto.
       </p>
       <WhatsAppClient initialSalon={initialSalon} />
     </div>

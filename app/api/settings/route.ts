@@ -15,6 +15,7 @@ import {
   DEFAULT_WHATSAPP_REMINDER_TEMPLATE,
   normalizeWhatsAppReminderTemplate,
 } from "@/lib/default-templates";
+import { upsertWorkingHoursVersion } from "@/lib/working-hours";
 
 export async function GET() {
   const auth = await requireApiSession();
@@ -411,15 +412,25 @@ export async function PATCH(req: NextRequest) {
           whatsappDayBeforeEnabled: Boolean(body.whatsappDayBeforeEnabled ?? true),
           whatsappOneHourEnabled: Boolean(body.whatsappOneHourEnabled ?? true),
           whatsappBirthdayEnabled: Boolean(body.whatsappBirthdayEnabled ?? true),
-          whatsappApiEnabled: Boolean(body.whatsappApiEnabled),
-          whatsappApiPhoneNumberId:
-            typeof body.whatsappApiPhoneNumberId === "string" && body.whatsappApiPhoneNumberId.trim().length > 0
-              ? body.whatsappApiPhoneNumberId.trim()
-              : null,
-          whatsappApiVersion:
-            typeof body.whatsappApiVersion === "string" && body.whatsappApiVersion.trim().length > 0
-              ? body.whatsappApiVersion.trim()
-              : "v23.0",
+          ...(typeof body.whatsappApiEnabled === "boolean"
+            ? { whatsappApiEnabled: body.whatsappApiEnabled }
+            : {}),
+          ...(typeof body.whatsappApiPhoneNumberId === "string"
+            ? {
+                whatsappApiPhoneNumberId:
+                  body.whatsappApiPhoneNumberId.trim().length > 0
+                    ? body.whatsappApiPhoneNumberId.trim()
+                    : null,
+              }
+            : {}),
+          ...(typeof body.whatsappApiVersion === "string"
+            ? {
+                whatsappApiVersion:
+                  body.whatsappApiVersion.trim().length > 0
+                    ? body.whatsappApiVersion.trim()
+                    : "v23.0",
+              }
+            : {}),
           ...(typeof body.whatsappApiAccessToken === "string" && body.whatsappApiAccessToken.trim().length > 0
             ? { whatsappApiAccessToken: body.whatsappApiAccessToken.trim() }
             : {}),
@@ -566,7 +577,7 @@ export async function PATCH(req: NextRequest) {
     }
 
     const normalizedEmail = email.toLowerCase().trim();
-    const existsEmail = await prisma.user.findFirst({ where: { email: normalizedEmail }, select: { id: true } });
+    const existsEmail = await prisma.user.findUnique({ where: { email: normalizedEmail }, select: { id: true } });
     if (existsEmail) {
       return NextResponse.json({ error: "Email già in uso. Usa una email diversa per questo dipendente." }, { status: 400 });
     }
@@ -613,11 +624,11 @@ export async function PATCH(req: NextRequest) {
 
     const email = String(body.email || "").toLowerCase().trim();
     if (!email) return NextResponse.json({ error: "Email obbligatoria" }, { status: 400 });
-    const existsEmail = await prisma.user.findFirst({
-      where: { email, id: { not: userId } },
+    const existsEmail = await prisma.user.findUnique({
+      where: { email },
       select: { id: true },
     });
-    if (existsEmail) {
+    if (existsEmail && existsEmail.id !== userId) {
       return NextResponse.json({ error: "Email già in uso. Inserisci una email diversa." }, { status: 400 });
     }
 
@@ -712,12 +723,14 @@ export async function PATCH(req: NextRequest) {
       agendaColumns?: number | string | null;
       color?: string | null;
       workingHoursJson?: unknown;
+      applyFromDate?: string | null;
       kpiTargetRevenue?: number | string | null;
       kpiTargetAppointments?: number | null;
     }>).filter((o) => String(o.nome || "").trim().length > 0);
 
-    const existing = await prisma.operator.findMany({ where: { salonId }, select: { id: true } });
+    const existing = await prisma.operator.findMany({ where: { salonId }, select: { id: true, workingHoursJson: true } });
     const existingIds = new Set(existing.map((e) => e.id));
+    const existingById = new Map(existing.map((e) => [e.id, e]));
     const incomingExistingIds = new Set(
       incoming
         .map((o) => o.id)
@@ -766,8 +779,26 @@ export async function PATCH(req: NextRequest) {
         kpiTargetAppointments: payload.kpiTargetAppointments,
       };
       if (o.id && existingIds.has(o.id)) {
+        const existingOperator = existingById.get(o.id);
+        const now = new Date();
+        const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+        const applyFromDate =
+          typeof o.applyFromDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(o.applyFromDate)
+            ? o.applyFromDate
+            : today;
+        const nextWorkingHoursJson = upsertWorkingHoursVersion(
+          (existingOperator?.workingHoursJson as any) ?? null,
+          (payload.workingHoursJson as any) ?? null,
+          applyFromDate,
+        );
         try {
-          await prisma.operator.update({ where: { id: o.id }, data: payload });
+          await prisma.operator.update({
+            where: { id: o.id },
+            data: {
+              ...payload,
+              workingHoursJson: nextWorkingHoursJson as unknown as Prisma.InputJsonValue,
+            },
+          });
         } catch (error) {
           if (
             error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -779,8 +810,25 @@ export async function PATCH(req: NextRequest) {
           }
         }
       } else {
+        const now = new Date();
+        const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+        const applyFromDate =
+          typeof o.applyFromDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(o.applyFromDate)
+            ? o.applyFromDate
+            : today;
+        const nextWorkingHoursJson = upsertWorkingHoursVersion(
+          null,
+          (payload.workingHoursJson as any) ?? null,
+          applyFromDate,
+        );
         try {
-          await prisma.operator.create({ data: { salonId, ...payload } });
+          await prisma.operator.create({
+            data: {
+              salonId,
+              ...payload,
+              workingHoursJson: nextWorkingHoursJson as unknown as Prisma.InputJsonValue,
+            },
+          });
         } catch (error) {
           if (
             error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -806,5 +854,6 @@ export async function PATCH(req: NextRequest) {
 
   return NextResponse.json({ error: "Sezione non supportata" }, { status: 400 });
 }
+
 
 

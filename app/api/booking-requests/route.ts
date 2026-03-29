@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/api-auth";
 import { estimateBookingDuration, isBookingSlotStillAvailable } from "@/lib/booking";
 import { addMinutes } from "date-fns";
+import { normalizePhoneCanonical } from "@/lib/phone";
+import { enqueueBookingConfirmationForAppointment } from "@/lib/whatsapp-automation";
 
 function extractDogNodi(note: string | null | undefined): "NESSUNO" | "MODERATI" | "MOLTI" {
   const text = String(note || "").toLowerCase();
@@ -38,6 +40,10 @@ export async function PATCH(req: NextRequest) {
   const auth = await requireApiSession();
   if ("error" in auth) return auth.error;
   const salonId = auth.session.user.salonId;
+  const salonMeta = await prisma.salon.findUnique({
+    where: { id: salonId },
+    select: { paese: true },
+  });
   const body = await req.json();
   const requestId = String(body.requestId || "");
   const action = String(body.action || "");
@@ -137,12 +143,13 @@ export async function PATCH(req: NextRequest) {
 
     let clientId = request.existingClientId;
     if (!clientId) {
+      const normalizedPhone = normalizePhoneCanonical(request.clientTelefono, { countryCode: salonMeta?.paese }) || request.clientTelefono;
       const createdClient = await trx.client.create({
         data: {
           salonId,
           nome: request.clientNome,
           cognome: request.clientCognome,
-          telefono: request.clientTelefono,
+          telefono: normalizedPhone,
           email: request.clientEmail || null,
           consensoPromemoria: true,
           consensoTimestamp: new Date(),
@@ -187,7 +194,7 @@ export async function PATCH(req: NextRequest) {
       select: { id: true },
     });
 
-    return trx.bookingRequest.update({
+    const bookingUpdate = await trx.bookingRequest.update({
       where: { id: request.id },
       data: {
         status: "APPROVED",
@@ -198,6 +205,7 @@ export async function PATCH(req: NextRequest) {
         reviewedAt: new Date(),
       },
     });
+    return { bookingUpdate, appointmentId: appointment.id };
   }, {
     isolationLevel: "Serializable",
   }).catch((error: unknown) => {
@@ -211,7 +219,9 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "Slot non più disponibile: aggiorna le opzioni o scegli un altro orario." }, { status: 409 });
   }
 
-  return NextResponse.json(approved);
+  await enqueueBookingConfirmationForAppointment(approved.appointmentId).catch(() => null);
+
+  return NextResponse.json(approved.bookingUpdate);
 }
 
 export async function DELETE(req: NextRequest) {
