@@ -204,53 +204,76 @@ export async function gatewaySendMessage(input: {
     providerStatus: string;
   }>
 > {
-  // Compatibility payload: support both current and legacy gateway field names.
-  const payload = {
-    to: input.to,
-    number: input.to,
-    phone: input.to,
-    text: input.text,
-    message: input.text,
-    body: input.text,
-    content: input.text,
-    messageText: input.text,
-    messageId: input.messageId,
-    metadata: input.metadata || {},
-  };
-  const response = await gatewayFetch<any>(`/session/${encodeURIComponent(input.salonId)}/send`, {
-    method: "POST",
-    body: JSON.stringify(payload),
-    timeoutMs: 15000,
-  });
-  if (!response.ok) {
-    const messageLower = String(response.message || "").toLowerCase();
-    const shouldFallbackForm =
-      response.status === 400 &&
-      (messageLower.includes("number") || messageLower.includes("message")) &&
-      (messageLower.includes("obbligatori") || messageLower.includes("required"));
+  const sendPath = `/session/${encodeURIComponent(input.salonId)}/send`;
 
-    if (!shouldFallbackForm) return response;
+  const attempts: Array<() => Promise<GatewayResult<any>>> = [
+    () =>
+      gatewayFetch<any>(sendPath, {
+        method: "POST",
+        body: JSON.stringify({
+          number: input.to,
+          message: input.text,
+          messageId: input.messageId,
+          metadata: input.metadata || {},
+        }),
+        timeoutMs: 15000,
+      }),
+    () =>
+      gatewayFetch<any>(sendPath, {
+        method: "POST",
+        body: JSON.stringify({
+          to: input.to,
+          text: input.text,
+          phone: input.to,
+          body: input.text,
+          content: input.text,
+          messageText: input.text,
+          messageId: input.messageId,
+          metadata: input.metadata || {},
+        }),
+        timeoutMs: 15000,
+      }),
+    () =>
+      gatewayFetch<any>(sendPath, {
+        method: "POST",
+        body: new URLSearchParams({
+          number: input.to,
+          message: input.text,
+          to: input.to,
+          text: input.text,
+        }).toString(),
+        timeoutMs: 15000,
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+      }),
+    () =>
+      gatewayFetch<any>(
+        `${sendPath}?${new URLSearchParams({
+          number: input.to,
+          message: input.text,
+          to: input.to,
+          text: input.text,
+        }).toString()}`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            messageId: input.messageId,
+            metadata: input.metadata || {},
+          }),
+          timeoutMs: 15000,
+        },
+      ),
+  ];
 
-    const formBody = new URLSearchParams({
-      number: input.to,
-      message: input.text,
-      to: input.to,
-      text: input.text,
-    }).toString();
-
-    const formResponse = await gatewayFetch<any>(`/session/${encodeURIComponent(input.salonId)}/send`, {
-      method: "POST",
-      body: formBody,
-      timeoutMs: 15000,
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-    });
-    if (!formResponse.ok) return formResponse;
-    return normalizeGatewaySendSuccess(formResponse);
+  let lastError: GatewayResult<any> | null = null;
+  for (let i = 0; i < attempts.length; i += 1) {
+    const response = await attempts[i]();
+    if (response.ok) return normalizeGatewaySendSuccess(response);
+    lastError = response;
+    if (!isRequiredPayloadError(response)) return response;
   }
-
-  return normalizeGatewaySendSuccess(response);
+  return lastError || buildGatewayError(502, "GATEWAY_SEND_FAILED", "Invio non riuscito", true);
 }
 
 function normalizeGatewaySendSuccess(response: GatewayResult<any>): GatewayResult<{ accepted: boolean; externalId: string | null; providerStatus: string }> {
@@ -276,4 +299,13 @@ function normalizeGatewaySendSuccess(response: GatewayResult<any>): GatewayResul
     status: response.status,
     data: { accepted, externalId, providerStatus },
   };
+}
+
+function isRequiredPayloadError(response: GatewayResult<any>) {
+  if (response.ok) return false;
+  const messageLower = String(response.message || "").toLowerCase();
+  if (response.status !== 400) return false;
+  const hasFields = messageLower.includes("number") || messageLower.includes("message");
+  const saysRequired = messageLower.includes("obbligatori") || messageLower.includes("required");
+  return hasFields && saysRequired;
 }
