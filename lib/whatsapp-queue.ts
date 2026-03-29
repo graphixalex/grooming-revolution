@@ -32,8 +32,10 @@ type EnqueueResult =
   | { created: true; messageId: string; dedup: false }
   | { created: false; messageId: string; dedup: true };
 
-function jitteredBackoffSeconds(attempt: number) {
-  const raw = Math.min(MAX_BACKOFF_SECONDS, BASE_BACKOFF_SECONDS * Math.pow(2, Math.max(0, attempt - 1)));
+function jitteredBackoffSeconds(attempt: number, kind?: WhatsAppMessageKind) {
+  const base = kind === "BOOKING_CONFIRM" ? 5 : BASE_BACKOFF_SECONDS;
+  const max = kind === "BOOKING_CONFIRM" ? 120 : MAX_BACKOFF_SECONDS;
+  const raw = Math.min(max, base * Math.pow(2, Math.max(0, attempt - 1)));
   const jitter = Math.floor(raw * (0.2 + Math.random() * 0.4));
   return raw + jitter;
 }
@@ -399,6 +401,7 @@ async function scheduleRetryOrFail(
   message: {
     id: string;
     salonId: string;
+    kind: WhatsAppMessageKind;
     dedupKey: string;
     attempts: number;
     maxAttempts: number;
@@ -414,7 +417,7 @@ async function scheduleRetryOrFail(
   const nextAttempt = message.attempts + 1;
   const canRetry = retryable && nextAttempt < message.maxAttempts;
   if (canRetry) {
-    const delaySec = jitteredBackoffSeconds(nextAttempt);
+    const delaySec = jitteredBackoffSeconds(nextAttempt, message.kind);
     const nextAttemptAt = new Date(Date.now() + delaySec * 1000);
     await prisma.whatsAppOutboundMessage.update({
       where: { id: message.id },
