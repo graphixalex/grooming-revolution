@@ -222,8 +222,39 @@ export async function gatewaySendMessage(input: {
     body: JSON.stringify(payload),
     timeoutMs: 15000,
   });
-  if (!response.ok) return response;
+  if (!response.ok) {
+    const messageLower = String(response.message || "").toLowerCase();
+    const shouldFallbackForm =
+      response.status === 400 &&
+      (messageLower.includes("number") || messageLower.includes("message")) &&
+      (messageLower.includes("obbligatori") || messageLower.includes("required"));
 
+    if (!shouldFallbackForm) return response;
+
+    const formBody = new URLSearchParams({
+      number: input.to,
+      message: input.text,
+      to: input.to,
+      text: input.text,
+    }).toString();
+
+    const formResponse = await gatewayFetch<any>(`/session/${encodeURIComponent(input.salonId)}/send`, {
+      method: "POST",
+      body: formBody,
+      timeoutMs: 15000,
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+    });
+    if (!formResponse.ok) return formResponse;
+    return normalizeGatewaySendSuccess(formResponse);
+  }
+
+  return normalizeGatewaySendSuccess(response);
+}
+
+function normalizeGatewaySendSuccess(response: GatewayResult<any>): GatewayResult<{ accepted: boolean; externalId: string | null; providerStatus: string }> {
+  if (!response.ok) return response;
   const raw = response.data || {};
   const accepted = raw.accepted === false ? false : (raw.success === false ? false : true);
   const externalId =
@@ -240,7 +271,6 @@ export async function gatewaySendMessage(input: {
       : accepted
         ? "accepted"
         : "rejected";
-
   return {
     ok: true,
     status: response.status,
