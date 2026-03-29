@@ -23,6 +23,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!campaign) {
     return NextResponse.json({ error: "Campagna non trovata" }, { status: 404 });
   }
+  if (campaign.type === "MARKETING") {
+    return NextResponse.json({ error: "Gli invii marketing sono disattivati" }, { status: 403 });
+  }
 
   if (campaign.status === "COMPLETED") {
     return NextResponse.json({ ok: true, status: "COMPLETED" });
@@ -67,7 +70,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
     const queueResult = await enqueueWhatsAppMessage({
       salonId,
-      kind: campaign.type === "MARKETING" ? "CAMPAIGN_MARKETING" : "CAMPAIGN_SERVICE",
+      kind: "CAMPAIGN_SERVICE",
       dedupKey: buildDedupKey([salonId, "CAMPAIGN", id, recipient.id, 1]),
       recipientPhone: phone,
       messageText: recipient.renderedMessage,

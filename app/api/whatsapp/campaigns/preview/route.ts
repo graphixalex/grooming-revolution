@@ -21,10 +21,9 @@ export async function GET(req: NextRequest) {
   if ("error" in auth) return auth.error;
   const salonId = auth.session.user.salonId;
 
-  const typeParam = req.nextUrl.searchParams.get("type");
   const monthsBackParam = req.nextUrl.searchParams.get("monthsBack");
   const segmentParam = req.nextUrl.searchParams.get("segment");
-  const type = typeParam === "MARKETING" ? "MARKETING" : "SERVICE";
+  const type = "SERVICE";
   const monthsBack = Math.max(1, Math.min(36, Number(monthsBackParam) || 12));
   const segment = parseCampaignSegment(segmentParam);
 

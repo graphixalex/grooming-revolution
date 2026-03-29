@@ -101,7 +101,7 @@ export default async function WhatsAppPage() {
     <div className="space-y-4">
       <h1 className="text-2xl font-semibold">WhatsApp</h1>
       <p className="text-sm text-zinc-600">
-        Gestisca connessione canale, automazioni transazionali e diagnostica invii in un unico punto.
+        Qui può collegare WhatsApp della sede, gestire i messaggi automatici e controllare se gli invii stanno funzionando.
       </p>
       <WhatsAppClient initialSalon={initialSalon} />
     </div>

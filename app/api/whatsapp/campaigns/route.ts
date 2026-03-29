@@ -14,7 +14,7 @@ type CreateCampaignBody = {
 };
 
 function isValidType(value: unknown): value is WhatsAppCampaignType {
-  return value === "MARKETING" || value === "SERVICE";
+  return value === "SERVICE";
 }
 
 function parseCampaignSegment(value: unknown): CampaignAudienceSegment {
@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
   const body = (await req.json()) as CreateCampaignBody;
 
   if (!isValidType(body.type)) {
-    return NextResponse.json({ error: "Tipo campagna non valido" }, { status: 400 });
+    return NextResponse.json({ error: "Sono consentiti solo invii di servizio" }, { status: 400 });
   }
   const title = String(body.title || "").trim();
   const messageTemplate = String(body.messageTemplate || "").trim();
