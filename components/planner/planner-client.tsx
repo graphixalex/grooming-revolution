@@ -407,6 +407,7 @@ export function PlannerClient({
   const [incassoTipAmount, setIncassoTipAmount] = useState<string>("");
   const [incassoMethod, setIncassoMethod] = useState<"POS" | "CASH">("POS");
   const [incassoNote, setIncassoNote] = useState<string>("");
+  const [incassoMultiDogEnabled, setIncassoMultiDogEnabled] = useState(true);
   const [listinoQuote, setListinoQuote] = useState<ListinoQuote | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [selectedOperatorId, setSelectedOperatorId] = useState<string>("");
@@ -449,6 +450,20 @@ export function PlannerClient({
     for (const treatment of treatments) map.set(treatment.id, treatment);
     return map;
   }, [treatments]);
+
+  const incassoGroupCandidates = useMemo(() => {
+    if (!selectedAppointment || isPersonalNoteAppointment(selectedAppointment)) return [] as Appointment[];
+    const selectedDay = toDateInputValue(new Date(selectedAppointment.startAt));
+    return appointments
+      .filter((appt) => {
+        if (isPersonalNoteAppointment(appt)) return false;
+        if (appt.stato === "CANCELLATO") return false;
+        if ((appt.transactions?.length ?? 0) > 0) return false;
+        if (appt.cliente.id !== selectedAppointment.cliente.id) return false;
+        return toDateInputValue(new Date(appt.startAt)) === selectedDay;
+      })
+      .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
+  }, [appointments, selectedAppointment]);
 
   function getAppointmentBgColor(appt: Appointment) {
     if (isPersonalNoteAppointment(appt)) return "#475569";
@@ -1333,9 +1348,15 @@ export function PlannerClient({
       alert("Inserisci una mancia valida");
       return;
     }
+    const appointmentIds =
+      incassoMultiDogEnabled && incassoGroupCandidates.length > 1
+        ? incassoGroupCandidates.map((appt) => appt.id)
+        : [selectedAppointment.id];
+
     await updateAppointment({
       transaction: {
         appointmentId: selectedAppointment.id,
+        appointmentIds,
         amount,
         tipAmount,
         method: incassoMethod,
@@ -1346,6 +1367,11 @@ export function PlannerClient({
     setIncassoTipAmount("");
     setIncassoNote("");
   }
+
+  useEffect(() => {
+    if (!selectedAppointment) return;
+    setIncassoMultiDogEnabled(incassoGroupCandidates.length > 1);
+  }, [selectedAppointment, incassoGroupCandidates.length]);
 
   useEffect(() => {
     if (!resizeDrag) return;
@@ -2751,6 +2777,28 @@ export function PlannerClient({
             {!isPersonalNoteAppointment(selectedAppointment) ? (
             <div className="border-t border-zinc-200 pt-3">
               <p className="mb-2 text-sm font-medium">Registra incasso</p>
+              {incassoGroupCandidates.length > 1 ? (
+                <div className="mb-2 rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">
+                  <label className="flex items-center gap-2 font-medium">
+                    <input
+                      type="checkbox"
+                      checked={incassoMultiDogEnabled}
+                      onChange={(e) => setIncassoMultiDogEnabled(e.target.checked)}
+                    />
+                    Incassa in un'unica operazione tutti i cani del cliente in questa giornata ({incassoGroupCandidates.length} appuntamenti)
+                  </label>
+                  <div className="mt-2 grid gap-1">
+                    {incassoGroupCandidates.map((appt) => (
+                      <p key={`incasso-group-${appt.id}`}>
+                        {format(new Date(appt.startAt), "HH:mm")} - {appt.cane.nome}
+                        {appt.trattamentiSelezionati.length
+                          ? ` (${appt.trattamentiSelezionati.map((t) => t.treatment.nome).join(", ")})`
+                          : ""}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
               <div className="grid gap-2 md:grid-cols-4">
                 <Input
                   type="number"
@@ -2785,7 +2833,7 @@ export function PlannerClient({
                 onChange={(e) => setIncassoNote(e.target.value)}
               />
               <p className="mt-2 text-xs text-zinc-500">
-                Importo precompilato dal listino quando disponibile. Puoi modificarlo liberamente per sconti o variazioni.
+                Inserisci l'importo totale incassato. Se è attivo l'incasso unico multi-cane, il sistema ripartisce automaticamente il totale sui singoli appuntamenti.
               </p>
             </div>
             ) : null}

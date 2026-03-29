@@ -22,6 +22,13 @@ async function flushWhatsAppQueueBestEffort(workerId: string) {
   }
 }
 
+function splitCents(total: number, count: number) {
+  if (count <= 0) return [];
+  const base = Math.floor(total / count);
+  const remainder = total - base * count;
+  return Array.from({ length: count }, (_, index) => base + (index < remainder ? 1 : 0));
+}
+
 async function ensurePersonalNoteEntities(salonId: string) {
   let client = await prisma.client.findFirst({
     where: {
@@ -425,14 +432,34 @@ export async function PATCH(req: NextRequest) {
     const parsedTx = transactionSchema.safeParse(body.transaction);
     if (!parsedTx.success) return NextResponse.json({ error: parsedTx.error.flatten() }, { status: 400 });
 
-    const amount = new Prisma.Decimal(parsedTx.data.amount);
-    const tipAmount = new Prisma.Decimal(parsedTx.data.tipAmount ?? 0);
-    const vatRate = new Prisma.Decimal(appointment.salon.vatRate);
-    const vatAmount = appointment.salon.vatIncluded
-      ? amount.mul(vatRate).div(new Prisma.Decimal(100).plus(vatRate))
-      : amount.mul(vatRate).div(new Prisma.Decimal(100));
-    const netAmount = appointment.salon.vatIncluded ? amount.sub(vatAmount) : amount;
-    const grossAmount = appointment.salon.vatIncluded ? amount.plus(tipAmount) : amount.plus(vatAmount).plus(tipAmount);
+    const requestedIds = Array.isArray(parsedTx.data.appointmentIds) ? parsedTx.data.appointmentIds : [];
+    const targetAppointmentIds = Array.from(new Set([appointmentId, ...requestedIds]));
+    const allTargets = await prisma.appointment.findMany({
+      where: {
+        id: { in: targetAppointmentIds },
+        salonId,
+        deletedAt: null,
+        stato: { not: "CANCELLATO" },
+      },
+      select: {
+        id: true,
+        clienteId: true,
+      },
+    });
+    if (!allTargets.length || !allTargets.some((row) => row.id === appointmentId)) {
+      return NextResponse.json({ error: "Appuntamenti da incassare non validi" }, { status: 400 });
+    }
+    if (allTargets.some((row) => row.clienteId !== appointment.clienteId)) {
+      return NextResponse.json({ error: "Puoi incassare insieme solo appuntamenti dello stesso cliente" }, { status: 400 });
+    }
+    const targetIds = allTargets.map((row) => row.id);
+    const amountCents = Math.round(parsedTx.data.amount * 100);
+    const tipCents = Math.round((parsedTx.data.tipAmount ?? 0) * 100);
+    if (amountCents <= 0) {
+      return NextResponse.json({ error: "Inserisci un importo valido" }, { status: 400 });
+    }
+    const amountParts = splitCents(amountCents, targetIds.length);
+    const tipParts = splitCents(Math.max(0, tipCents), targetIds.length);
     const openCashSession =
       parsedTx.data.method === "CASH"
         ? await prisma.cashSession.findFirst({
@@ -443,38 +470,61 @@ export async function PATCH(req: NextRequest) {
         : null;
 
     const tx = await prisma.$transaction(async (trx) => {
-      const alreadyPaid = await trx.transaction.findFirst({
-        where: { salonId, appointmentId },
-        select: { id: true },
+      const alreadyPaidCount = await trx.transaction.count({
+        where: { salonId, appointmentId: { in: targetIds } },
       });
-      if (alreadyPaid) {
+      if (alreadyPaidCount > 0) {
         throw new Error("APPOINTMENT_ALREADY_PAID");
       }
 
-      const created = await trx.transaction.create({
-        data: {
-          salonId,
-          appointmentId,
-          cashSessionId: openCashSession?.id ?? null,
-          amount,
-          tipAmount,
-          method: parsedTx.data.method,
-          vatRate,
-          vatAmount,
-          netAmount,
-          grossAmount,
-          dateTime: new Date(),
-          note: parsedTx.data.note || null,
-          createdById: auth.session.user.id,
-        },
-      });
+      const vatRate = new Prisma.Decimal(appointment.salon.vatRate);
+      const createdTransactions: Array<{ id: string; appointmentId: string }> = [];
+      for (let index = 0; index < targetIds.length; index += 1) {
+        const splitAmount = new Prisma.Decimal((amountParts[index] / 100).toFixed(2));
+        const splitTip = new Prisma.Decimal((tipParts[index] / 100).toFixed(2));
+        const vatAmount = appointment.salon.vatIncluded
+          ? splitAmount.mul(vatRate).div(new Prisma.Decimal(100).plus(vatRate))
+          : splitAmount.mul(vatRate).div(new Prisma.Decimal(100));
+        const netAmount = appointment.salon.vatIncluded ? splitAmount.sub(vatAmount) : splitAmount;
+        const grossAmount = appointment.salon.vatIncluded
+          ? splitAmount.plus(splitTip)
+          : splitAmount.plus(vatAmount).plus(splitTip);
 
-      await trx.appointment.update({
-        where: { id: appointmentId },
+        const created = await trx.transaction.create({
+          data: {
+            salonId,
+            appointmentId: targetIds[index],
+            cashSessionId: openCashSession?.id ?? null,
+            amount: splitAmount,
+            tipAmount: splitTip,
+            method: parsedTx.data.method,
+            vatRate,
+            vatAmount,
+            netAmount,
+            grossAmount,
+            dateTime: new Date(),
+            note:
+              targetIds.length > 1
+                ? `${parsedTx.data.note || ""}${parsedTx.data.note ? " " : ""}[Incasso unico multi-cane: ${targetIds.length} appuntamenti]`
+                : parsedTx.data.note || null,
+            createdById: auth.session.user.id,
+          },
+          select: { id: true, appointmentId: true },
+        });
+        createdTransactions.push(created);
+      }
+
+      await trx.appointment.updateMany({
+        where: { id: { in: targetIds } },
         data: { stato: "COMPLETATO" },
       });
 
-      return created;
+      return {
+        grouped: targetIds.length > 1,
+        count: targetIds.length,
+        appointmentIds: targetIds,
+        transactions: createdTransactions,
+      };
     }, {
       isolationLevel: "Serializable",
     }).catch((error: unknown) => {
@@ -489,7 +539,7 @@ export async function PATCH(req: NextRequest) {
     });
 
     if (!tx) {
-      return NextResponse.json({ error: "Incasso già registrato per questo appuntamento" }, { status: 409 });
+      return NextResponse.json({ error: "Incasso già registrato per uno degli appuntamenti selezionati" }, { status: 409 });
     }
 
     return NextResponse.json(tx);

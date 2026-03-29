@@ -64,6 +64,7 @@ export const appointmentSchema = z.object({
 
 export const transactionSchema = z.object({
   appointmentId: z.string().min(1),
+  appointmentIds: z.array(z.string().min(1)).optional().default([]),
   amount: z.number().positive(),
   tipAmount: z.number().min(0).default(0),
   method: z.enum(["POS", "CASH"]),
