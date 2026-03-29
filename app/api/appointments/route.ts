@@ -5,6 +5,7 @@ import { requireApiSession } from "@/lib/api-auth";
 import { appointmentSchema, transactionSchema } from "@/lib/validators";
 import { computeEndAt, hasOverlap, isInsideWorkingHours } from "@/lib/business-rules";
 import { enqueueBookingConfirmationForAppointment } from "@/lib/whatsapp-automation";
+import { processWhatsAppQueueBatch } from "@/lib/whatsapp-queue";
 
 const INTERNAL_NOTE_PHONE = "__NOTE__";
 const INTERNAL_NOTE_EMAIL = "note@sistema.local";
@@ -12,6 +13,14 @@ const INTERNAL_NOTE_CLIENT_NAME = "Nota";
 const INTERNAL_NOTE_CLIENT_SURNAME = "Personale";
 const INTERNAL_NOTE_DOG_NAME = "Nota personale";
 const MAX_BULK_APPOINTMENTS = 24;
+
+async function flushWhatsAppQueueBestEffort(workerId: string) {
+  try {
+    await processWhatsAppQueueBatch({ batchSize: 20, workerId });
+  } catch {
+    // Best effort: cron dispatch will process any remaining messages.
+  }
+}
 
 async function ensurePersonalNoteEntities(salonId: string) {
   let client = await prisma.client.findFirst({
@@ -155,7 +164,10 @@ export async function POST(req: NextRequest) {
       },
       include: { trattamentiSelezionati: true },
     });
-    await enqueueBookingConfirmationForAppointment(appointment.id).catch(() => null);
+    const enqueueResult = await enqueueBookingConfirmationForAppointment(appointment.id).catch(() => null);
+    if (enqueueResult?.enqueued) {
+      await flushWhatsAppQueueBestEffort("appointment-create-note");
+    }
 
     return NextResponse.json(appointment, { status: 201 });
   }
@@ -319,9 +331,12 @@ export async function POST(req: NextRequest) {
       }
       return ids;
     });
-    await Promise.all(
+    const enqueueResults = await Promise.all(
       createdIds.map((id) => enqueueBookingConfirmationForAppointment(id).catch(() => null)),
     );
+    if (enqueueResults.some((row) => row?.enqueued)) {
+      await flushWhatsAppQueueBestEffort("appointment-create-bulk");
+    }
 
     return NextResponse.json({ createdCount: createdIds.length, ids: createdIds }, { status: 201 });
   }
@@ -375,7 +390,10 @@ export async function POST(req: NextRequest) {
     },
     include: { operator: true, trattamentiSelezionati: true },
   });
-  await enqueueBookingConfirmationForAppointment(appointment.id).catch(() => null);
+  const enqueueResult = await enqueueBookingConfirmationForAppointment(appointment.id).catch(() => null);
+  if (enqueueResult?.enqueued) {
+    await flushWhatsAppQueueBestEffort("appointment-create-single");
+  }
 
   return NextResponse.json(appointment, { status: 201 });
 }
@@ -581,7 +599,10 @@ export async function PATCH(req: NextRequest) {
       },
     });
     if (nextStatus === "PRENOTATO") {
-      await enqueueBookingConfirmationForAppointment(appointmentId).catch(() => null);
+      const enqueueResult = await enqueueBookingConfirmationForAppointment(appointmentId).catch(() => null);
+      if (enqueueResult?.enqueued) {
+        await flushWhatsAppQueueBestEffort("appointment-update-start");
+      }
     }
   }
 
