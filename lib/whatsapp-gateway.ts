@@ -204,9 +204,14 @@ export async function gatewaySendMessage(input: {
     providerStatus: string;
   }>
 > {
+  // Compatibility payload: support both current and legacy gateway field names.
   const payload = {
     to: input.to,
+    number: input.to,
+    phone: input.to,
     text: input.text,
+    message: input.text,
+    body: input.text,
     messageId: input.messageId,
     metadata: input.metadata || {},
   };
@@ -218,7 +223,7 @@ export async function gatewaySendMessage(input: {
   if (!response.ok) return response;
 
   const raw = response.data || {};
-  const accepted = raw.accepted !== false;
+  const accepted = raw.accepted === false ? false : (raw.success === false ? false : true);
   const externalId =
     typeof raw.id === "string"
       ? raw.id
