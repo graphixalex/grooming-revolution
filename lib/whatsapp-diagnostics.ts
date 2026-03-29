@@ -74,7 +74,7 @@ export async function getWhatsAppDiagnosticsSummary(input: {
           prisma.whatsAppDeliveryEvent.count({
             where: {
               salonId: salon.id,
-              status: { in: ["FAILED_PERMANENT", "FAILED_TEMPORARY", "CANCELLED", "SKIPPED"] },
+              status: { in: ["FAILED_PERMANENT", "FAILED_TEMPORARY"] },
               createdAt: { gte: since24h },
             },
           }),
@@ -101,7 +101,7 @@ export async function getWhatsAppDiagnosticsSummary(input: {
           prisma.whatsAppDeliveryEvent.findFirst({
             where: {
               salonId: salon.id,
-              status: { in: ["FAILED_PERMANENT", "FAILED_TEMPORARY", "CANCELLED", "SKIPPED"] },
+              status: { in: ["FAILED_PERMANENT", "FAILED_TEMPORARY"] },
             },
             orderBy: { createdAt: "desc" },
             select: {

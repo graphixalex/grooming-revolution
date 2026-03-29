@@ -212,6 +212,8 @@ export async function gatewaySendMessage(input: {
     text: input.text,
     message: input.text,
     body: input.text,
+    content: input.text,
+    messageText: input.text,
     messageId: input.messageId,
     metadata: input.metadata || {},
   };

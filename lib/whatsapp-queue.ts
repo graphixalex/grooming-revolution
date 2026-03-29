@@ -191,12 +191,13 @@ export async function processWhatsAppQueueBatch(args?: {
       }
     }
     if (!isConnectionSendable(connection.status)) {
+      const retryableConnectionState = isConnectionNotReadyRetryable(connection.status);
       const result = await scheduleRetryOrFail(
         message,
         workerId,
         "CONNECTION_NOT_READY",
         `Connessione non pronta (${connection.status})`,
-        false,
+        retryableConnectionState,
       );
       if (result === "retry") retried += 1;
       else failedPermanent += 1;
@@ -350,6 +351,14 @@ function shouldCancelBeforeSend(
 
 function isConnectionSendable(status: WhatsAppConnectionStatus) {
   return status === "CONNECTED" || status === "DEGRADED";
+}
+
+function isConnectionNotReadyRetryable(status: WhatsAppConnectionStatus) {
+  // While pairing/reconnecting, keep retrying instead of burning the message as permanent failure.
+  if (status === "CONNECTING" || status === "DISCONNECTED") return true;
+  // Manual stop / expired auth require explicit user action.
+  if (status === "DISABLED" || status === "EXPIRED") return false;
+  return false;
 }
 
 async function cancelMessage(
