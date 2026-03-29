@@ -81,8 +81,10 @@ async function gatewayFetch<T = any>(path: string, init?: RequestInit & { timeou
       },
     });
     let json: any = null;
+    let rawText = "";
     try {
-      json = await response.json();
+      rawText = await response.text();
+      json = rawText ? JSON.parse(rawText) : null;
     } catch {
       json = null;
     }
@@ -93,7 +95,12 @@ async function gatewayFetch<T = any>(path: string, init?: RequestInit & { timeou
       const retryable = response.status >= 500 || response.status === 429 || response.status === 408;
       return buildGatewayError(response.status, code, message, retryable);
     }
-    return { ok: true, data: (json || {}) as T, status: response.status };
+    const contentType = response.headers.get("content-type") || "";
+    return {
+      ok: true,
+      data: (json || { __rawText: rawText, __contentType: contentType }) as T,
+      status: response.status,
+    };
   } catch (error: unknown) {
     if (error instanceof Error && error.name === "AbortError") {
       return buildGatewayError(504, "GATEWAY_TIMEOUT", "Gateway timeout", true);
@@ -136,7 +143,7 @@ export async function gatewayGetStatus(salonId: string): Promise<GatewayResult<G
     data: {
       status: mapped.status,
       rawStatus: rawStatus || "unknown",
-      qrReady: mapped.qrReady || Boolean(raw.qrReady),
+      qrReady: mapped.qrReady || Boolean(raw.qrReady) || Boolean(raw.qrAvailable),
       initialized: mapped.initialized || Boolean(raw.initialized),
       displayPhoneNumber,
       reason: mapped.reason,
@@ -155,11 +162,20 @@ export async function gatewayGetQr(salonId: string): Promise<GatewayResult<{ qrD
     (typeof raw.qrData === "string" && raw.qrData) ||
     (typeof raw.data === "string" && raw.data) ||
     "";
-  if (!qrDataRaw) {
+  const rawHtml = typeof raw.__rawText === "string" ? raw.__rawText : "";
+  const htmlImgMatch = rawHtml.match(/<img[^>]+src=["']([^"']+)["']/i);
+  const htmlImg = htmlImgMatch?.[1] || "";
+  const htmlSaysNotReady = /qr non ancora disponibile/i.test(rawHtml);
+  const htmlExpiresMatch = rawHtml.match(/Scade:\s*<\/strong>\s*([^<]+)/i);
+  const htmlExpires = htmlExpiresMatch?.[1]?.trim() || null;
+  if (!qrDataRaw && !htmlImg) {
+    if (htmlSaysNotReady) {
+      return buildGatewayError(409, "QR_PENDING", "QR in preparazione: riprovi tra pochi secondi", true);
+    }
     return buildGatewayError(404, "QR_NOT_AVAILABLE", "QR non disponibile per questa sessione", false);
   }
 
-  let qrData = qrDataRaw.trim();
+  let qrData = (qrDataRaw || htmlImg).trim();
   if (!qrData.startsWith("data:image/")) {
     const likelyBase64 = /^[A-Za-z0-9+/=\r\n]+$/.test(qrData) && qrData.length > 80;
     if (likelyBase64) qrData = `data:image/png;base64,${qrData.replace(/\s+/g, "")}`;
@@ -170,7 +186,7 @@ export async function gatewayGetQr(salonId: string): Promise<GatewayResult<{ qrD
     status: response.status,
     data: {
       qrData,
-      expiresAt: typeof raw.expiresAt === "string" ? raw.expiresAt : null,
+      expiresAt: typeof raw.expiresAt === "string" ? raw.expiresAt : htmlExpires,
     },
   };
 }

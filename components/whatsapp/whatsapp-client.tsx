@@ -168,6 +168,27 @@ export function WhatsAppClient({ initialSalon }: { initialSalon: any }) {
     return isConnected(connection.status);
   }, [connection]);
 
+  async function waitForQrAvailability(maxAttempts = 8, delayMs = 1800) {
+    for (let i = 0; i < maxAttempts; i += 1) {
+      // eslint-disable-next-line no-await-in-loop
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+      // eslint-disable-next-line no-await-in-loop
+      const res = await fetch("/api/whatsapp/connection?mode=qr", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await res.json().catch(() => ({}));
+      const maybeQr = typeof data?.qr?.qrData === "string" ? data.qr.qrData.trim() : "";
+      if (res.ok && maybeQr.length > 0) {
+        setQrData(maybeQr);
+        setQrExpiresAt(typeof data?.qr?.expiresAt === "string" ? data.qr.expiresAt : null);
+        setQrMessage(null);
+        return true;
+      }
+    }
+    return false;
+  }
+
   async function loadConnection() {
     const res = await fetch("/api/whatsapp/connection", { cache: "no-store" });
     const data = await res.json();
@@ -208,6 +229,7 @@ export function WhatsAppClient({ initialSalon }: { initialSalon: any }) {
             ? data.qrError.message
             : "Codice QR non ancora disponibile. Attenda pochi secondi e premi «Mostra/Aggiorna QR».";
         setQrMessage(serverMessage);
+        void waitForQrAvailability();
       }
       setQrExpiresAt(typeof data?.qr?.expiresAt === "string" ? data.qr.expiresAt : null);
       await loadConnection();
