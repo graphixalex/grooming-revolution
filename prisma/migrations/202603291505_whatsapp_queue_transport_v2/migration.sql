@@ -1,4 +1,4 @@
-﻿-- CreateEnum
+-- CreateEnum
 CREATE TYPE "WhatsAppProviderType" AS ENUM ('LINKED_SESSION', 'LEGACY_META');
 
 -- CreateEnum
