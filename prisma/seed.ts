@@ -62,7 +62,7 @@ async function main() {
   });
 
   const owner = await prisma.user.upsert({
-    where: { salonId_email: { salonId: salon.id, email: emailOwner } },
+    where: { email: emailOwner },
     update: { passwordHash },
     create: {
       salonId: salon.id,
@@ -73,7 +73,7 @@ async function main() {
   });
 
   const staff = await prisma.user.upsert({
-    where: { salonId_email: { salonId: salon.id, email: "staff@groomingrevolution.local" } },
+    where: { email: "staff@groomingrevolution.local" },
     update: { passwordHash },
     create: {
       salonId: salon.id,
@@ -84,7 +84,7 @@ async function main() {
   });
 
   await prisma.user.upsert({
-    where: { salonId_email: { salonId: salon.id, email: "manager@groomingrevolution.local" } },
+    where: { email: "manager@groomingrevolution.local" },
     update: { passwordHash, ruolo: UserRole.MANAGER },
     create: {
       salonId: salon.id,

@@ -57,6 +57,11 @@ export default function PrivacyPage() {
           secondo le policy del provider e i rapporti contrattuali applicabili.
         </p>
 
+        <h2 className="text-lg font-semibold">Integrazione WhatsApp ufficiale Meta</h2>
+        <p>Quando una sede viene collegata tramite Embedded Signup, il gestionale conserva gli identificativi WABA e numero, il numero visualizzato, la versione API, la data del collegamento e un token cifrato. Il token viene decifrato sul server per le richieste autorizzate a Meta e non viene restituito al browser.</p>
+        <p>Le notifiche webhook sono verificate e correlate alla sede per diagnostica. Questa release non offre una inbox dei messaggi ricevuti o uno storico persistente delle letture. La disconnessione Meta rimuove le credenziali dalla configurazione attiva del gestionale; non revoca automaticamente le autorizzazioni o la subscription presso Meta e non elimina log, messaggi storici o backup.</p>
+        <p>Le istruzioni sono disponibili nella pagina <a className="underline" href="/legal/data-deletion">cancellazione dati Meta</a>. Le funzioni Meta restano nascoste in questa release; il collegamento QR mantiene il proprio funzionamento.</p>
+
         <h2 className="text-lg font-semibold">7. Trasferimenti internazionali</h2>
         <p>
           Quando necessari, eventuali trasferimenti internazionali avvengono con garanzie adeguate previste dalla normativa

@@ -73,6 +73,7 @@ enum WhatsAppRecipientStatus {
 enum WhatsAppProviderType {
   LINKED_SESSION
   LEGACY_META
+  META_EMBEDDED
 }
 
 enum WhatsAppConnectionStatus {

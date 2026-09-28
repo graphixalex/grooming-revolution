@@ -1,4 +1,6 @@
+import { hasCredentialPatch, allowsCredentialPatch } from "@/lib/meta-provider-policy";
 import { NextRequest, NextResponse } from "next/server";
+import { salonJson } from "@/lib/salon-response";
 import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/api-auth";
 import bcrypt from "bcryptjs";
@@ -193,7 +195,7 @@ export async function GET() {
     operatorsPromise,
   ]);
 
-  return NextResponse.json({
+  return salonJson({
     salon: salon
       ? {
           ...salon,
@@ -379,7 +381,7 @@ export async function PATCH(req: NextRequest) {
           bookingLogoUrl: body.bookingLogoUrl || null,
         },
       });
-      return NextResponse.json(salon);
+      return salonJson(salon);
     } catch (error: unknown) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
         return NextResponse.json({ error: "Slug booking già in uso. Scegline uno diverso." }, { status: 400 });
@@ -389,9 +391,14 @@ export async function PATCH(req: NextRequest) {
   }
 
   if (body.section === "templates") {
+    const credentialsRequested = hasCredentialPatch(body);
+    if (credentialsRequested) {
+      const connection = await prisma.whatsAppConnection.findUnique({ where: { salonId }, select: { providerType: true } });
+      if (!allowsCredentialPatch(connection?.providerType)) return NextResponse.json({ error: "Credenziali Meta gestite solo tramite Embedded Signup" }, { status: 409 });
+    }
     try {
       const salon = await prisma.salon.update({
-        where: { id: salonId },
+        where: { id: salonId, ...(credentialsRequested ? { whatsappConnection: { is: { providerType: "LEGACY_META" as const } } } : {}) },
         data: {
           whatsappTemplate:
             typeof body.whatsappTemplate === "string" && body.whatsappTemplate.trim().length > 0
@@ -436,10 +443,11 @@ export async function PATCH(req: NextRequest) {
             : {}),
         },
       });
-      return NextResponse.json({ ...salon, whatsappApiAccessToken: "" });
+      return salonJson({ ...salon, whatsappApiAccessToken: "" });
     } catch (error: unknown) {
+      if (credentialsRequested) return NextResponse.json({ error: "Aggiornamento credenziali legacy non completato" }, { status: 409 });
       if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
+        !credentialsRequested && error instanceof Prisma.PrismaClientKnownRequestError &&
         (error.code === "P2021" || error.code === "P2022")
       ) {
         const legacy = await prisma.salon.update({
@@ -451,7 +459,7 @@ export async function PATCH(req: NextRequest) {
                 : DEFAULT_WHATSAPP_REMINDER_TEMPLATE,
           },
         });
-        return NextResponse.json({
+        return salonJson({
           ...legacy,
           whatsappBookingTemplate: DEFAULT_WHATSAPP_BOOKING_CONFIRM_TEMPLATE,
           whatsappOneHourTemplate: DEFAULT_WHATSAPP_ONE_HOUR_TEMPLATE,
@@ -475,7 +483,7 @@ export async function PATCH(req: NextRequest) {
       where: { id: salonId },
       data: { workingHoursJson: body.workingHoursJson, overlapAllowed: Boolean(body.overlapAllowed) },
     });
-    return NextResponse.json(salon);
+    return salonJson(salon);
   }
 
   if (body.section === "tags") {

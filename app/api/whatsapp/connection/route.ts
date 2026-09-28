@@ -1,3 +1,5 @@
+import { prisma } from "@/lib/prisma";
+import { qrActionDenied } from "@/lib/meta-provider-policy";
 import { NextRequest, NextResponse } from "next/server";
 import { requireApiSession } from "@/lib/api-auth";
 import {
@@ -7,6 +9,12 @@ import {
   initLinkedGatewaySession,
   updateConnectionStatus,
 } from "@/lib/whatsapp-connection";
+
+async function rejectMetaAction(salonId: string) {
+  const connection = await prisma.whatsAppConnection.findUnique({ where: { salonId }, select: { providerType: true } });
+  const denied = qrActionDenied(connection?.providerType);
+  return denied ? NextResponse.json({ error: denied.message, code: denied.code }, { status: denied.status }) : null;
+}
 
 export async function GET() {
   const auth = await requireApiSession();
@@ -20,6 +28,8 @@ export async function POST(req: NextRequest) {
   const auth = await requireApiSession();
   if ("error" in auth) return auth.error;
   const salonId = auth.session.user.salonId;
+  const blocked = await rejectMetaAction(salonId);
+  if (blocked) return blocked;
   const init = await initLinkedGatewaySession(salonId);
   if (!init.ok) {
     return NextResponse.json({ error: init.message, code: init.code }, { status: init.status || 502 });
@@ -59,9 +69,12 @@ export async function DELETE(req: NextRequest) {
   const auth = await requireApiSession();
   if ("error" in auth) return auth.error;
   const salonId = auth.session.user.salonId;
+  const blocked = await rejectMetaAction(salonId);
+  if (blocked) return blocked;
   const body = await req.json().catch(() => ({}));
   const reason = typeof body.reason === "string" ? body.reason.trim() : "Disconnessione manuale";
-  await disconnectLinkedGatewaySession(salonId);
+  const result = await disconnectLinkedGatewaySession(salonId);
+  if (!result.ok && result.code === "META_PROVIDER_ACTIVE") return NextResponse.json({ error: result.message }, { status: 409 });
   await updateConnectionStatus(salonId, "DISCONNECTED", reason);
   const diagnostics = await getWhatsAppConnectionDiagnostics(salonId);
   return NextResponse.json({ ok: true, ...diagnostics });
@@ -71,6 +84,8 @@ export async function PATCH(req: NextRequest) {
   const auth = await requireApiSession();
   if ("error" in auth) return auth.error;
   const salonId = auth.session.user.salonId;
+  const blocked = await rejectMetaAction(salonId);
+  if (blocked) return blocked;
   const body = await req.json().catch(() => ({}));
   const action = String(body.action || "").trim().toLowerCase();
 

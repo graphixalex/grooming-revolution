@@ -1,9 +1,12 @@
+import { requireMetaScope } from "@/lib/meta-api-auth";
+import { metaSignup } from "@/lib/whatsapp-embedded-signup";
+import { metaErrorResponse } from "@/lib/meta-errors";
+import { salonJson } from "@/lib/salon-response";
+export const runtime = "nodejs";
 export async function POST() {
-  return Response.json(
-    {
-      error: "embedded_signup_deprecated",
-      message: "Il collegamento WhatsApp tramite Meta Embedded Signup è dismesso. Usa il collegamento linked session nella pagina WhatsApp.",
-    },
-    { status: 410 },
-  );
+  try {
+    const scope = await requireMetaScope();
+    const result = await metaSignup.start(scope);
+    return salonJson(result, { headers: { "Cache-Control": "no-store" } });
+  } catch (error) { return metaErrorResponse(error); }
 }

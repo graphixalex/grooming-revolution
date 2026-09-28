@@ -24,14 +24,15 @@ export interface WhatsAppTransport {
   send(input: TransportSendInput): Promise<TransportSendResult>;
 }
 
-class LegacyMetaAdapter implements WhatsAppTransport {
-  providerType: WhatsAppProviderType = "LEGACY_META";
+class MetaApiAdapter implements WhatsAppTransport {
+  constructor(public providerType: "LEGACY_META" | "META_EMBEDDED") {}
 
   async send(input: TransportSendInput): Promise<TransportSendResult> {
     const result = await sendWhatsAppTextViaApi({
       salonId: input.salonId,
       phone: input.recipientPhone,
       text: input.messageText,
+      providerType: this.providerType,
     });
     if (result.ok) {
       return {
@@ -90,7 +91,8 @@ class LinkedSessionAdapter implements WhatsAppTransport {
 }
 
 const adapters: Record<WhatsAppProviderType, WhatsAppTransport> = {
-  LEGACY_META: new LegacyMetaAdapter(),
+  LEGACY_META: new MetaApiAdapter("LEGACY_META"),
+  META_EMBEDDED: new MetaApiAdapter("META_EMBEDDED"),
   LINKED_SESSION: new LinkedSessionAdapter(),
 };
 

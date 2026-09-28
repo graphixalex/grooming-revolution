@@ -29,7 +29,8 @@ const publicRoutes = [
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const isHome = pathname === "/";
-  const isPublic = isHome || publicRoutes.some((route) => pathname.startsWith(route));
+  const isMetaWebhook = pathname === "/api/whatsapp/webhook";
+  const isPublic = isHome || isMetaWebhook || publicRoutes.some((route) => pathname.startsWith(route));
 
   if (!isPublic) {
     const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });

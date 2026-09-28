@@ -10,6 +10,7 @@ import {
   normalizeWhatsAppReminderTemplate,
 } from "@/lib/default-templates";
 import { getWhatsAppConnectionDiagnostics } from "@/lib/whatsapp-connection";
+import { isMetaSignupEnabledForSalon } from "@/lib/meta-rollout";
 
 export default async function WhatsAppPage() {
   const session = await getRequiredSession();
@@ -80,6 +81,8 @@ export default async function WhatsAppPage() {
   ]);
 
   const initialSalon = {
+    canManageMeta: session.user.role === "OWNER" || session.user.role === "MANAGER",
+    metaEmbeddedSignupAllowed: isMetaSignupEnabledForSalon(session.user.salonId),
     ...(salon || {}),
     whatsappTemplate: normalizeWhatsAppReminderTemplate(salon?.whatsappTemplate),
     whatsappBookingTemplate: salon?.whatsappBookingTemplate || DEFAULT_WHATSAPP_BOOKING_CONFIRM_TEMPLATE,

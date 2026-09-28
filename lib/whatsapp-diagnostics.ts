@@ -52,8 +52,9 @@ export async function getWhatsAppDiagnosticsSummary(input: {
 
   const rows = await Promise.all(
     salons.map(async (salon) => {
-      const gatewayStatus = isGatewayConfigured() ? await gatewayGetStatus(salon.id) : null;
-      const gatewayQr = isGatewayConfigured() ? await gatewayGetQr(salon.id) : null;
+      const usesGateway = salon.whatsappConnection?.providerType !== "META_EMBEDDED";
+      const gatewayStatus = usesGateway && isGatewayConfigured() ? await gatewayGetStatus(salon.id) : null;
+      const gatewayQr = usesGateway && isGatewayConfigured() ? await gatewayGetQr(salon.id) : null;
       const [queued, locked, retryScheduled, failedPermanent, accepted24h, failures24h, lastEvent, lastAcceptedEvent, lastErrorEvent] =
         await Promise.all([
           prisma.whatsAppOutboundMessage.count({

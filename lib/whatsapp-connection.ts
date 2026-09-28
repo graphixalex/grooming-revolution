@@ -1,3 +1,4 @@
+import { qrActionDenied } from "@/lib/meta-provider-policy";
 import { Prisma, WhatsAppConnectionStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getOrCreateWhatsAppConnection } from "@/lib/whatsapp-queue";
@@ -15,9 +16,12 @@ function isManualDisabled(connection: { status: WhatsAppConnectionStatus; disabl
 
 export async function syncConnectionWithGateway(salonId: string) {
   const connection = await getOrCreateWhatsAppConnection(salonId);
+  if (connection.providerType === "META_EMBEDDED") {
+    return { connection, gateway: { reachable: false, status: "not_used_meta_embedded", qrReady: false, initialized: false } };
+  }
   if (!isGatewayConfigured()) {
     const updated = await prisma.whatsAppConnection.update({
-      where: { id: connection.id },
+      where: { id: connection.id, providerType: { not: "META_EMBEDDED" } },
       data: {
         status: isManualDisabled(connection) ? "DISABLED" : "DEGRADED",
         lastSeenAt: new Date(),
@@ -34,7 +38,7 @@ export async function syncConnectionWithGateway(salonId: string) {
   const statusResult = await gatewayGetStatus(salonId);
   if (!statusResult.ok) {
     const updated = await prisma.whatsAppConnection.update({
-      where: { id: connection.id },
+      where: { id: connection.id, providerType: { not: "META_EMBEDDED" } },
       data: {
         status: isManualDisabled(connection) ? "DISABLED" : "DEGRADED",
         lastSeenAt: new Date(),
@@ -59,7 +63,7 @@ export async function syncConnectionWithGateway(salonId: string) {
 
   const mappedStatus = isManualDisabled(connection) ? "DISABLED" : statusResult.data.status;
   const updated = await prisma.whatsAppConnection.update({
-    where: { id: connection.id },
+    where: { id: connection.id, providerType: { not: "META_EMBEDDED" } },
     data: {
       providerType: "LINKED_SESSION",
       status: mappedStatus,
@@ -92,10 +96,12 @@ export async function syncConnectionWithGateway(salonId: string) {
 
 export async function initLinkedGatewaySession(salonId: string) {
   const connection = await getOrCreateWhatsAppConnection(salonId);
+  const denied = qrActionDenied(connection.providerType);
+  if (denied) return denied;
   const initResult = await gatewayInitSession(salonId);
   if (!initResult.ok) {
     await prisma.whatsAppConnection.update({
-      where: { id: connection.id },
+      where: { id: connection.id, providerType: { not: "META_EMBEDDED" } },
       data: {
         status: isManualDisabled(connection) ? "DISABLED" : "DEGRADED",
         lastSeenAt: new Date(),
@@ -113,14 +119,19 @@ export async function initLinkedGatewaySession(salonId: string) {
 }
 
 export async function getLinkedGatewayQr(salonId: string) {
+  const connection = await getOrCreateWhatsAppConnection(salonId);
+  const denied = qrActionDenied(connection.providerType);
+  if (denied) return denied;
   return gatewayGetQr(salonId);
 }
 
 export async function disconnectLinkedGatewaySession(salonId: string) {
   const connection = await getOrCreateWhatsAppConnection(salonId);
+  const denied = qrActionDenied(connection.providerType);
+  if (denied) return denied;
   const result = await gatewayDisconnectSession(salonId);
   await prisma.whatsAppConnection.update({
-    where: { id: connection.id },
+    where: { id: connection.id, providerType: { not: "META_EMBEDDED" } },
     data: {
       status: "DISCONNECTED",
       failureCount: 0,
@@ -175,7 +186,7 @@ export async function getWhatsAppConnectionDiagnostics(salonId: string) {
 export async function updateConnectionStatus(salonId: string, status: WhatsAppConnectionStatus, reason?: string) {
   const connection = await getOrCreateWhatsAppConnection(salonId);
   return prisma.whatsAppConnection.update({
-    where: { id: connection.id },
+    where: { id: connection.id, providerType: { not: "META_EMBEDDED" } },
     data: {
       status,
       disabledReason: reason || null,

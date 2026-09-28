@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { MetaSignupPanel } from "@/components/whatsapp/meta-signup-panel";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -29,7 +30,7 @@ type ConnectionStatus = "DISCONNECTED" | "CONNECTING" | "CONNECTED" | "DEGRADED"
 
 type ConnectionData = {
   id: string;
-  providerType: "LINKED_SESSION" | "LEGACY_META";
+  providerType: "LINKED_SESSION" | "LEGACY_META" | "META_EMBEDDED";
   status: ConnectionStatus;
   displayPhoneNumber?: string | null;
   connectedAt?: string | null;
@@ -130,6 +131,7 @@ function isConnected(status: ConnectionStatus) {
 }
 
 function providerText(provider?: ConnectionData["providerType"] | null) {
+  if (provider === "META_EMBEDDED") return "Meta ufficiale";
   if (provider === "LINKED_SESSION") return "Collegamento QR della sede";
   if (provider === "LEGACY_META") return "Canale storico";
   return "-";
@@ -170,9 +172,7 @@ export function WhatsAppClient({ initialSalon }: { initialSalon: any }) {
 
   async function waitForQrAvailability(maxAttempts = 8, delayMs = 1800) {
     for (let i = 0; i < maxAttempts; i += 1) {
-      // eslint-disable-next-line no-await-in-loop
       await new Promise((resolve) => setTimeout(resolve, delayMs));
-      // eslint-disable-next-line no-await-in-loop
       const res = await fetch("/api/whatsapp/connection?mode=qr", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -494,6 +494,14 @@ export function WhatsAppClient({ initialSalon }: { initialSalon: any }) {
           </p>
         </div>
 
+        {initialSalon.canManageMeta && (initialSalon.metaEmbeddedSignupAllowed || connection?.providerType === "META_EMBEDDED") ? (
+          <MetaSignupPanel connected={connection?.providerType === "META_EMBEDDED"} onConnected={result => {
+            setSalon((previous: typeof salon) => ({ ...previous, ...result.salon }));
+            setConnection(result.connection);
+            void loadDiagnosticsSummary();
+          }} />
+        ) : null}
+        {connection?.providerType !== "META_EMBEDDED" ? <>
         <div className="rounded-md border border-sky-200 bg-sky-50 p-3 text-xs text-sky-900">
           <p className="font-semibold">Come collegare WhatsApp in modo semplice</p>
           <ol className="mt-2 list-decimal space-y-1 pl-4">
@@ -542,6 +550,7 @@ export function WhatsAppClient({ initialSalon }: { initialSalon: any }) {
             Riattiva invii automatici
           </Button>
         </div>
+        </> : <p className="text-sm">Provider Meta attivo. Le azioni QR non sono disponibili.</p>}
       </Card>
 
       <Card className="space-y-3 p-4 sm:p-5">
@@ -565,7 +574,7 @@ export function WhatsAppClient({ initialSalon }: { initialSalon: any }) {
             const anomaly =
               row.queue.backlogTotal > 40 ||
               row.delivery24h.failed > row.delivery24h.accepted ||
-              !row.gateway.reachable;
+              (conn?.providerType !== "META_EMBEDDED" && !row.gateway.reachable);
             return (
               <div key={row.salonId} className="rounded-md border border-zinc-200 p-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">

@@ -1,3 +1,4 @@
+import { sendMetaText } from "@/lib/meta-cloud";
 import { prisma } from "@/lib/prisma";
 import { normalizePhone } from "@/lib/reminders";
 
@@ -18,7 +19,15 @@ export async function sendWhatsAppTextViaApi(input: {
   salonId: string;
   phone: string;
   text: string;
+  providerType?: "LEGACY_META" | "META_EMBEDDED";
 }) {
+  if (input.providerType === "META_EMBEDDED") {
+    return sendMetaText({ ...input, phone: normalizePhone(input.phone) }, salonId => prisma.salon.findUnique({
+      where: { id: salonId },
+      select: { whatsappApiEnabled: true, whatsappApiPhoneNumberId: true, whatsappApiAccessToken: true, whatsappApiVersion: true,
+        whatsappConnection: { select: { providerType: true, status: true } } },
+    }));
+  }
   const config = await getSalonWhatsAppApiConfig(input.salonId);
   if (!config?.whatsappApiEnabled || !config.whatsappApiPhoneNumberId || !config.whatsappApiAccessToken) {
     return { ok: false as const, error: "whatsapp_api_not_configured" };

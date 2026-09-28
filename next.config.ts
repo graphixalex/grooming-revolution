@@ -12,7 +12,7 @@ const securityHeaders = [
   {
     key: "Content-Security-Policy",
     value:
-      "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; script-src 'self' 'unsafe-inline' https://cdn.paddle.com https://*.paddle.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' https://api.paddle.com https://sandbox-api.paddle.com https://*.paddle.com; frame-src https://checkout.paddle.com https://sandbox-checkout.paddle.com https://*.paddle.com; form-action 'self' https://checkout.paddle.com https://sandbox-checkout.paddle.com https://*.paddle.com;",
+      "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; script-src 'self' 'unsafe-inline' https://cdn.paddle.com https://*.paddle.com https://connect.facebook.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' https://api.paddle.com https://sandbox-api.paddle.com https://*.paddle.com https://www.facebook.com https://web.facebook.com https://business.facebook.com; frame-src https://checkout.paddle.com https://sandbox-checkout.paddle.com https://*.paddle.com https://www.facebook.com https://web.facebook.com https://business.facebook.com; form-action 'self' https://checkout.paddle.com https://sandbox-checkout.paddle.com https://*.paddle.com;",
   },
 ];
 
